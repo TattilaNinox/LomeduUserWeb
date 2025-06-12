@@ -414,6 +414,14 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
     final file = await openFile(acceptedTypeGroups: [typeGroup]);
     if (file != null) {
       final bytes = await file.readAsBytes();
+      if (bytes.length > 5 * 1024 * 1024) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('A hangfájl mérete nem haladhatja meg az 5 MB-ot!')),
+        );
+        return;
+      }
       setState(() => _selectedMp3File = {
             'name': file.name, 'size': bytes.length, 'bytes': bytes
       });
@@ -425,6 +433,14 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
     final file = await openFile(acceptedTypeGroups: [typeGroup]);
     if (file != null) {
       final bytes = await file.readAsBytes();
+       if (bytes.length > 5 * 1024 * 1024) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('A videófájl mérete nem haladhatja meg az 5 MB-ot!')),
+        );
+        return;
+      }
       setState(() {
         _selectedVideoFile = {'name': file.name, 'size': bytes.length, 'bytes': bytes, 'path': file.path};
         _videoController?.dispose();
