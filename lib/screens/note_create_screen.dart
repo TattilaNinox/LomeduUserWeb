@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:file_selector/file_selector.dart';
+import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:io' show File;
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'dart:html' as html;
+import 'package:html/parser.dart' show parse;
+import 'package:web/web.dart' as web;
+import 'dart:ui_web' as ui_web;
 
 import '../widgets/sidebar.dart';
-import '../widgets/header.dart';
 
 class NoteCreateScreen extends StatefulWidget {
   const NoteCreateScreen({super.key});
@@ -20,42 +20,61 @@ class NoteCreateScreen extends StatefulWidget {
   State<NoteCreateScreen> createState() => _NoteCreateScreenState();
 }
 
-class _NoteCreateScreenState extends State<NoteCreateScreen> {
+class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerProviderStateMixin {
   final _titleController = TextEditingController();
-  final _htmlSourceController = TextEditingController();
+  final _htmlContentController = TextEditingController();
   String? _selectedCategory;
   Map<String, dynamic>? _selectedMp3File;
   Map<String, dynamic>? _selectedVideoFile;
   bool _isUploading = false;
   List<String> _categories = [];
   VideoPlayerController? _videoController;
-  WebViewController? _previewWebViewController;
+  final List<String> _tags = [];
+  final _tagController = TextEditingController();
+  late TabController _tabController;
+  final ValueNotifier<double> _editorFontSize = ValueNotifier<double>(9.0);
+
+  late final String _previewViewId;
+  final web.HTMLIFrameElement _previewIframeElement = web.HTMLIFrameElement();
   bool _showPreview = false;
-  String? _blobUrl;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _previewViewId = 'note-create-preview-iframe-${hashCode}';
+    
+    _previewIframeElement
+      ..style.width = '100%'
+      ..style.height = '100%'
+      ..style.border = 'none';
+
+    // ignore: undefined_prefixed_name
+    ui_web.platformViewRegistry.registerViewFactory(
+        _previewViewId, (int viewId) => _previewIframeElement);
+
     _loadCategories();
   }
 
   @override
   void dispose() {
-    if (_blobUrl != null) {
-      html.Url.revokeObjectUrl(_blobUrl!);
-    }
     _titleController.dispose();
-    _htmlSourceController.dispose();
+    _htmlContentController.dispose();
     _videoController?.dispose();
+    _tagController.dispose();
+    _tabController.dispose();
+    _editorFontSize.dispose();
     super.dispose();
   }
 
   Future<void> _loadCategories() async {
     final snapshot =
         await FirebaseFirestore.instance.collection('categories').get();
-    setState(() {
-      _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
-    });
+    if(mounted) {
+      setState(() {
+        _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+      });
+    }
   }
 
   bool isFileValid(Map<String, dynamic>? file) {
@@ -65,39 +84,27 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> {
   }
 
   Future<void> _pickMp3File() async {
-    final typeGroup = XTypeGroup(
+    const typeGroup = XTypeGroup(
       label: 'MP3',
-      extensions: const ['mp3'],
+      extensions: ['mp3'],
     );
     final file = await openFile(acceptedTypeGroups: [typeGroup]);
     if (file != null) {
       final bytes = await file.readAsBytes();
       if (bytes.isNotEmpty) {
-        if (bytes.length > 5 * 1024 * 1024) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content:
-                    Text('A hangfájl mérete nem haladhatja meg az 5 MB-ot!')),
-          );
-          return;
-        }
         setState(() => _selectedMp3File = {
               'name': file.name,
               'size': bytes.length,
               'bytes': bytes,
             });
-      } else {
-        debugPrint(
-            'Az MP3 fájl nem tartalmaz adatot vagy nem sikerült betölteni.');
       }
     }
   }
 
   Future<void> _pickVideoFile() async {
-    final typeGroup = XTypeGroup(
+    const typeGroup = XTypeGroup(
       label: 'Video',
-      extensions: const ['mp4', 'mov', 'avi'],
+      extensions: ['mp4', 'mov', 'avi'],
     );
     final file = await openFile(acceptedTypeGroups: [typeGroup]);
     if (file != null) {
@@ -125,19 +132,14 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> {
           if (!mounted) return;
           setState(() {});
         }
-      } else {
-        debugPrint(
-            'A videófájl nem tartalmaz adatot vagy nem sikerült betölteni.');
       }
     }
   }
 
   Future<void> _uploadNote() async {
-    final htmlContent = _htmlSourceController.text;
-
     if (_titleController.text.isEmpty ||
         _selectedCategory == null ||
-        htmlContent.isEmpty) {
+        _htmlContentController.text.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -152,6 +154,13 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> {
     try {
       final noteRef = FirebaseFirestore.instance.collection('notes').doc();
       final noteId = noteRef.id;
+
+      for (final tag in _tags) {
+        FirebaseFirestore.instance
+            .collection('tags')
+            .doc(tag)
+            .set({'name': tag});
+      }
 
       String? mp3Url;
       if (isFileValid(_selectedMp3File)) {
@@ -171,13 +180,14 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> {
         videoUrl = await videoRef.getDownloadURL();
       }
 
-      // Firestore mentés
       final noteData = {
         'title': _titleController.text,
         'category': _selectedCategory,
         'status': 'Draft',
         'modified': Timestamp.now(),
-        'pages': [htmlContent],
+        'pages': [_htmlContentController.text],
+        'type': 'text', 
+        'tags': _tags,
       };
       if (mp3Url != null) noteData['audioUrl'] = mp3Url;
       if (videoUrl != null) noteData['videoUrl'] = videoUrl;
@@ -191,12 +201,14 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> {
 
         setState(() {
           _titleController.clear();
-          _htmlSourceController.clear();
+          _htmlContentController.clear();
           _selectedCategory = null;
           _selectedMp3File = null;
           _selectedVideoFile = null;
           _videoController?.dispose();
           _videoController = null;
+          _tags.clear();
+          _tagController.clear();
         });
       }
     } catch (e) {
@@ -216,163 +228,339 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 249, 250, 251),
+      appBar: AppBar(
+        title: const Text('Új szöveges jegyzet'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/notes'),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 20.0),
+            child: ElevatedButton.icon(
+              icon: _isUploading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.save),
+              label: const Text('Mentés'),
+              onPressed: _isUploading ? null : _uploadNote,
+            ),
+          )
+        ],
+      ),
       body: Row(
         children: [
-          const Sidebar(selectedMenu: 'categories'),
-          Expanded(
-            child: Column(
-              children: [
-                Header(onSearchChanged: (_) {}),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 800),
+          const Sidebar(selectedMenu: 'notes'),
+           Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: _buildTextField(_titleController, 'Jegyzet címe'),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              flex: 1,
+                              child: _buildCategoryDropdown(),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        _buildEditorAndPreview(),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                  Expanded(
+                    flex: 1,
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: SingleChildScrollView(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('Új Jegyzet Létrehozása',
-                                style: TextStyle(
-                                    fontSize: 20, fontWeight: FontWeight.bold)),
+                            _buildTagsSection(),
                             const SizedBox(height: 24),
-                            TextField(
-                              controller: _titleController,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green),
-                              decoration: const InputDecoration(
-                                labelText: 'Jegyzet címe',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            DropdownButtonFormField<String>(
-                              value: _selectedCategory,
-                              items: _categories.map((category) {
-                                return DropdownMenuItem(
-                                  value: category,
-                                  child: Text(category),
-                                );
-                              }).toList(),
-                              onChanged: (value) =>
-                                  setState(() => _selectedCategory = value),
-                              decoration: const InputDecoration(
-                                labelText: 'Kategória',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            const Text('Jegyzet tartalma (HTML)',
-                                style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 8),
-                            TextField(
-                              controller: _htmlSourceController,
-                              decoration: const InputDecoration(
-                                labelText: 'HTML forráskód',
-                                border: OutlineInputBorder(),
-                                alignLabelWithHint: true,
-                              ),
-                              style: const TextStyle(fontSize: 9.0),
-                              maxLines: 15,
-                            ),
-                            const SizedBox(height: 8),
-                            ElevatedButton.icon(
-                              icon: const Icon(Icons.visibility),
-                              label: const Text('Előnézet'),
-                              onPressed: () {
-                                final htmlContent = _htmlSourceController.text;
-                                if (mounted) {
-                                  setState(() {
-                                    if (_blobUrl != null) {
-                                      html.Url.revokeObjectUrl(_blobUrl!);
-                                    }
-                                    final blob = html.Blob([htmlContent], 'text/html');
-                                    _blobUrl = html.Url.createObjectUrlFromBlob(blob);
-                                    _previewWebViewController = WebViewController()
-                                      ..loadRequest(Uri.parse(_blobUrl!));
-                                    _showPreview = true;
-                                  });
-                                }
-                              },
-                            ),
-                            if (_showPreview && _previewWebViewController != null) ...[
-                              const SizedBox(height: 16),
-                              Container(
-                                height: 500,
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.grey.shade300),
-                                ),
-                                child: WebViewWidget(
-                                  controller: _previewWebViewController!,
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 24),
-                            Row(
-                              children: [
-                                ElevatedButton.icon(
-                                  icon: const Icon(Icons.audiotrack),
-                                  label: const Text('MP3 feltöltése'),
-                                  onPressed: _pickMp3File,
-                                ),
-                                const SizedBox(width: 16),
-                                if (_selectedMp3File != null)
-                                  Text(
-                                      'Fájl: ${_selectedMp3File!['name']} (${(_selectedMp3File!['size'] / 1024).toStringAsFixed(2)} KB)'),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                ElevatedButton.icon(
-                                  icon: const Icon(Icons.video_library),
-                                  label: const Text('Videó feltöltése'),
-                                  onPressed: _pickVideoFile,
-                                ),
-                                const SizedBox(width: 16),
-                                if (_selectedVideoFile != null)
-                                  Text(
-                                      'Fájl: ${_selectedVideoFile!['name']} (${(_selectedVideoFile!['size'] / 1024).toStringAsFixed(2)} KB)'),
-                              ],
-                            ),
-                            if (!kIsWeb &&
-                                _videoController != null &&
-                                _videoController!.value.isInitialized)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 16.0),
-                                child: AspectRatio(
-                                  aspectRatio:
-                                      _videoController!.value.aspectRatio,
-                                  child: VideoPlayer(_videoController!),
-                                ),
-                              ),
-                            const SizedBox(height: 24),
-                            ElevatedButton(
-                              onPressed: _isUploading ? null : _uploadNote,
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 16, horizontal: 32),
-                              ),
-                              child: _isUploading
-                                  ? const CircularProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                          Colors.white),
-                                    )
-                                  : const Text('Jegyzet Létrehozása'),
-                            ),
+                            _buildFileUploadSection(),
                           ],
                         ),
                       ),
                     ),
                   ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildTextField(TextEditingController controller, String label) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+    );
+  }
+
+  Widget _buildCategoryDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedCategory,
+      items: _categories.map((String category) {
+        return DropdownMenuItem<String>(
+          value: category,
+          child: Text(category),
+        );
+      }).toList(),
+      onChanged: (newValue) {
+        setState(() {
+          _selectedCategory = newValue;
+        });
+      },
+      decoration: const InputDecoration(
+        labelText: 'Kategória',
+        border: OutlineInputBorder(),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+    );
+  }
+
+    Widget _buildEditorAndPreview() {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: TabBar(
+                  controller: _tabController,
+                  labelColor: Theme.of(context).primaryColor,
+                  unselectedLabelColor: Colors.grey,
+                  tabs: const [
+                    Tab(text: 'Szerkesztő'),
+                    Tab(text: 'Előnézet'),
+                  ],
+                  onTap: (index) {
+                    if (index == 1) { // Preview tab
+                      final htmlContent = _htmlContentController.text;
+                      if (htmlContent.isNotEmpty) {
+                        if (parse(htmlContent).documentElement == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Figyelem: A HTML kód érvénytelennek tűnik.'), backgroundColor: Colors.orange),
+                            );
+                            _tabController.index = 0; 
+                            return;
+                        }
+                        setState(() {
+                          _previewIframeElement.srcdoc = htmlContent;
+                          _showPreview = true;
+                        });
+                      } else {
+                        setState(() { _showPreview = false; });
+                      }
+                    } else {
+                      setState(() { _showPreview = false; });
+                    }
+                  },
                 ),
+              ),
+               const SizedBox(width: 16),
+              ValueListenableBuilder<double>(
+                valueListenable: _editorFontSize,
+                builder: (context, fontSize, child) {
+                  return Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove),
+                        onPressed: () => { if (fontSize > 8.0) _editorFontSize.value-- },
+                        tooltip: 'Betűméret csökkentése',
+                      ),
+                      Text('${fontSize.toInt()}pt'),
+                      IconButton(
+                        icon: const Icon(Icons.add),
+                        onPressed: () => { if (fontSize < 24.0) _editorFontSize.value++ },
+                        tooltip: 'Betűméret növelése',
+                      ),
+                    ],
+                  );
+                }
+              ),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: ValueListenableBuilder<double>(
+                    valueListenable: _editorFontSize,
+                    builder: (context, fontSize, child) {
+                      return TextField(
+                        controller: _htmlContentController,
+                        style: TextStyle(fontSize: fontSize, fontFamily: 'monospace'),
+                        maxLines: null,
+                        expands: true,
+                        textAlignVertical: TextAlignVertical.top,
+                        decoration: const InputDecoration(
+                          hintText: 'Írd ide a HTML tartalmat...',
+                          border: OutlineInputBorder(),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                      );
+                    }
+                  ),
+                ),
+                _showPreview
+                  ? Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Container(
+                      decoration: BoxDecoration(border: Border.all(color: Colors.grey[300]!)),
+                      child: HtmlElementView(viewType: _previewViewId)
+                    ),
+                  )
+                  : const Center(child: Text('Az előnézethez írj be HTML tartalmat és válts fület.')),
               ],
             ),
           )
         ],
       ),
+    );
+  }
+
+  Widget _buildTagsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text('Címkék', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8.0,
+          runSpacing: 4.0,
+          children: _tags.map((tag) => Chip(
+            label: Text(tag),
+            onDeleted: () {
+              setState(() => _tags.remove(tag));
+            },
+          )).toList(),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _tagController,
+          decoration: InputDecoration(
+            labelText: 'Új címke',
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                if (_tagController.text.isNotEmpty && !_tags.contains(_tagController.text)) {
+                  setState(() {
+                    _tags.add(_tagController.text);
+                    _tagController.clear();
+                  });
+                }
+              },
+            ),
+          ),
+          onSubmitted: (value) {
+            if (value.isNotEmpty && !_tags.contains(value)) {
+              setState(() {
+                _tags.add(value);
+                _tagController.clear();
+              });
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFileUploadSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text('Fájlok', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 16),
+        _buildFileUploadButton(
+          label: 'MP3 Feltöltés',
+          icon: Icons.audiotrack,
+          file: _selectedMp3File,
+          onPressed: _pickMp3File,
+        ),
+        const SizedBox(height: 12),
+        _buildFileUploadButton(
+          label: 'Videó Feltöltés',
+          icon: Icons.videocam,
+          file: _selectedVideoFile,
+          onPressed: _pickVideoFile,
+        ),
+         if (_selectedVideoFile != null && _selectedVideoFile!['path'] != null && !kIsWeb)
+           Padding(
+             padding: const EdgeInsets.only(top: 8.0),
+             child: AspectRatio(
+               aspectRatio: _videoController!.value.aspectRatio,
+               child: VideoPlayer(_videoController!),
+             ),
+           )
+      ],
+    );
+  }
+
+  Widget _buildFileUploadButton({
+    required String label,
+    required IconData icon,
+    required Map<String, dynamic>? file,
+    required VoidCallback onPressed,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ElevatedButton.icon(
+          onPressed: onPressed,
+          icon: Icon(icon),
+          label: Text(label),
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+        ),
+        if (file != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(
+              'Kiválasztva: ${file['name']}',
+              style: const TextStyle(fontStyle: FontStyle.italic),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+      ],
     );
   }
 }

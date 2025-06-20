@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:just_audio/just_audio.dart';
+import 'package:audioplayers/audioplayers.dart';
 
+/// Egy kompakt, beágyazható audiolejátszó widget.
+///
+/// Ez a `StatefulWidget` az `audioplayers` csomagot használja egyetlen
+/// audiofájl lejátszására a megadott URL-ről. A widget saját maga kezeli
+/// az összes állapotot, ami a lejátszáshoz szükséges. A projektben ez az
+/// egységesített audiolejátszó csomag.
 class MiniAudioPlayer extends StatefulWidget {
+  /// A lejátszandó audiofájl URL-je.
   final String audioUrl;
 
   const MiniAudioPlayer({super.key, required this.audioUrl});
@@ -10,13 +17,19 @@ class MiniAudioPlayer extends StatefulWidget {
   State<MiniAudioPlayer> createState() => _MiniAudioPlayerState();
 }
 
+/// A `MiniAudioPlayer` állapotát kezelő osztály.
 class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
+  // Az `audioplayers` csomag lejátszó példánya.
   late AudioPlayer _audioPlayer;
-  bool _isPlaying = false;
+
+  // Állapotváltozók a lejátszó állapotának követésére.
+  PlayerState? _playerState;
+  Duration _duration = Duration.zero;
+  Duration _position = Duration.zero;
   bool _isInitialized = false;
   bool _hasError = false;
-  Duration _position = Duration.zero;
-  Duration _duration = Duration.zero;
+
+  bool get _isPlaying => _playerState == PlayerState.playing;
 
   @override
   void initState() {
@@ -25,36 +38,46 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
     _initAudioPlayer();
   }
 
+  /// A lejátszó inicializálását és a listenerekre való feliratkozást végző metódus.
   Future<void> _initAudioPlayer() async {
     try {
-      await _audioPlayer.setUrl(widget.audioUrl);
-      if (!mounted) return;
-      setState(() {
-        _isInitialized = true;
-        _hasError = false;
-      });
-      _audioPlayer.playerStateStream.listen((state) {
+      // Beállítja a forrás URL-t. Ez a lejátszás előfeltétele.
+      await _audioPlayer.setSourceUrl(widget.audioUrl);
+
+      // Feliratkozás a lejátszó eseményeire (listenerek), hogy az UI
+      // valós időben frissüljön az állapotváltozásoknak megfelelően.
+      _audioPlayer.onPlayerStateChanged.listen((state) {
         if (!mounted) return;
-        setState(() {
-          _isPlaying = state.playing;
-          _position = _audioPlayer.position;
-        });
+        setState(() => _playerState = state);
       });
-      _audioPlayer.positionStream.listen((position) {
+
+      _audioPlayer.onDurationChanged.listen((duration) {
+        if (!mounted) return;
+        setState(() => _duration = duration);
+      });
+
+      _audioPlayer.onPositionChanged.listen((position) {
         if (!mounted) return;
         setState(() => _position = position);
       });
-      _audioPlayer.durationStream.listen((duration) {
+      
+      _audioPlayer.onPlayerComplete.listen((event) {
         if (!mounted) return;
-        if (duration != null) {
-          setState(() => _duration = duration);
-        }
+        setState(() {
+            _playerState = PlayerState.completed;
+            _position = _duration; // Vagy Duration.zero, ízlés szerint
+        });
       });
+
+      if (!mounted) return;
+      setState(() => _isInitialized = true);
+
     } catch (e) {
-      debugPrint('Hiba az audio inicializálásakor: $e');
+      debugPrint('Hiba az audio inicializálásakor (audioplayers): $e');
       if (mounted) {
         setState(() {
           _hasError = true;
+          _isInitialized = true; // Jelezzük, hogy a hibaüzenet megjelenhessen.
         });
       }
     }
@@ -62,17 +85,20 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
 
   @override
   void dispose() {
-    _audioPlayer.stop();
+    // A dispose() metódus automatikusan meghívja a stop() metódust is.
     _audioPlayer.dispose();
     super.dispose();
   }
 
+  /// Relatív tekerés a hangfájlban.
   void _seekRelative(int seconds) {
     final newPos = _position + Duration(seconds: seconds);
     _audioPlayer.seek(newPos < Duration.zero ? Duration.zero : newPos);
   }
 
+  /// Egy `Duration` objektumot formáz "pp:mm" formátumú String-gé.
   String _formatDuration(Duration d) {
+    if (d == Duration.zero) return "00:00";
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     final minutes = twoDigits(d.inMinutes.remainder(60));
     final seconds = twoDigits(d.inSeconds.remainder(60));
@@ -82,9 +108,9 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
   @override
   Widget build(BuildContext context) {
     if (_hasError) {
-      return const Text(
-        'Hangfájl nem található',
-        style: TextStyle(color: Colors.red, fontSize: 12),
+      return const Tooltip(
+        message: 'A hangfájl nem tölthető be vagy hibás.',
+        child: Icon(Icons.error, color: Colors.red),
       );
     }
     if (!_isInitialized) {
@@ -112,11 +138,16 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
           ),
           IconButton(
             icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow, size: 16),
-            onPressed: () {
+            onPressed: () async {
               if (_isPlaying) {
-                _audioPlayer.pause();
-              } else {
-                _audioPlayer.play();
+                await _audioPlayer.pause();
+              } else if (_playerState == PlayerState.paused) {
+                await _audioPlayer.resume();
+              }
+              else {
+                // Ha a lejátszás befejeződött vagy le lett állítva,
+                // a play metódus újra elindítja a forrástól.
+                await _audioPlayer.play(UrlSource(widget.audioUrl));
               }
             },
             color: Colors.green,
@@ -134,8 +165,9 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
           ),
           IconButton(
             icon: const Icon(Icons.stop, size: 16),
-            onPressed: () {
-              _audioPlayer.stop();
+            onPressed: () async {
+              await _audioPlayer.stop();
+              setState(() => _position = Duration.zero);
             },
             color: Colors.green,
             padding: EdgeInsets.zero,
@@ -144,18 +176,18 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
           ),
           Expanded(
             child: SliderTheme(
-              data: SliderThemeData(
-                trackHeight: 1,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                minThumbSeparation: 0,
+              data: const SliderThemeData(
+                trackHeight: 2.0,
+                thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6.0),
+                overlayShape: RoundSliderOverlayShape(overlayRadius: 12.0),
+                activeTrackColor: Color(0xFF1E3A8A),
+                inactiveTrackColor: Color(0xFFD1D5DB),
+                thumbColor: Color(0xFF1E3A8A),
+                overlayColor: Color(0x291E3A8A),
               ),
               child: Slider(
                 value: _position.inSeconds.toDouble(),
-                min: 0,
-                max: _duration.inSeconds.toDouble() > 0
-                    ? _duration.inSeconds.toDouble()
-                    : 1,
+                max: _duration.inSeconds.toDouble(),
                 onChanged: (value) {
                   _audioPlayer.seek(Duration(seconds: value.toInt()));
                 },

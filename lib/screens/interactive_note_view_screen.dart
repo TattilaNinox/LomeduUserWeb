@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:html/parser.dart' show parse;
-import 'dart:html' as html;
+import 'package:web/web.dart' as web;
+import 'dart:ui_web' as ui_web;
+import 'dart:async';
+
+import '../widgets/audio_preview_player.dart';
 
 class InteractiveNoteViewScreen extends StatefulWidget {
   final String noteId;
@@ -18,72 +20,59 @@ class InteractiveNoteViewScreen extends StatefulWidget {
 
 class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
   DocumentSnapshot? _noteSnapshot;
-  WebViewController? _webViewController;
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  String? _blobUrl;
+  late final String _viewId;
+  final web.HTMLIFrameElement _iframeElement = web.HTMLIFrameElement();
+  bool _hasContent = false;
+
+  late final StreamSubscription<DocumentSnapshot> _subscription;
 
   @override
   void initState() {
     super.initState();
-    _loadNote();
-  }
 
-  @override
-  void dispose() {
-    if (_blobUrl != null) {
-      html.Url.revokeObjectUrl(_blobUrl!);
-    }
-    _audioPlayer.dispose();
-    super.dispose();
-  }
+    _viewId = "interactive-note-iframe-${widget.noteId}";
 
-  Future<void> _loadNote() async {
-    final snapshot = await FirebaseFirestore.instance
+    _iframeElement
+      ..style.width = '100%'
+      ..style.height = '100%'
+      ..style.border = 'none';
+
+    // ignore: undefined_prefixed_name
+    ui_web.platformViewRegistry
+        .registerViewFactory(_viewId, (int viewId) => _iframeElement);
+
+    _subscription = FirebaseFirestore.instance
         .collection('notes')
         .doc(widget.noteId)
-        .get();
+        .snapshots()
+        .listen(_handleSnapshot);
+  }
 
+  void _handleSnapshot(DocumentSnapshot snapshot) {
     if (!mounted) return;
 
-    WebViewController? newWebViewController;
-    final data = snapshot.data();
+    String? htmlContentToLoad;
+    final data = snapshot.data() as Map<String, dynamic>?;
     if (data != null) {
       final pages = data['pages'] as List<dynamic>? ?? [];
       if (pages.isNotEmpty) {
-        final htmlContent = pages.first as String;
+        final htmlContent = pages.first as String? ?? '';
         if (htmlContent.isNotEmpty) {
-          // HTML validáció
-          final document = parse(htmlContent);
-          if (document.documentElement == null) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('Érvénytelen HTML tartalom!'),
-                    backgroundColor: Colors.red),
-              );
-            }
-          } else {
-            // A HTML érvényes, létrehozzuk a WebView-t
-            final blob = html.Blob([htmlContent], 'text/html');
-            _blobUrl = html.Url.createObjectUrlFromBlob(blob);
-
-            newWebViewController = WebViewController()
-              ..loadRequest(Uri.parse(_blobUrl!));
-          }
+          htmlContentToLoad = htmlContent;
         }
       }
-      final audioUrl = data['audioUrl'] as String?;
-      if (audioUrl != null && audioUrl.isNotEmpty) {
-        _audioPlayer.setUrl(audioUrl);
-      }
     }
 
-    if (mounted) {
-      setState(() {
-        _noteSnapshot = snapshot;
-        _webViewController = newWebViewController;
-      });
-    }
+    setState(() {
+      _noteSnapshot = snapshot;
+      if (htmlContentToLoad != null) {
+        _iframeElement.src =
+            'data:text/html;charset=utf-8,${Uri.encodeComponent(htmlContentToLoad)}';
+        _hasContent = true;
+      } else {
+        _hasContent = false;
+      }
+    });
   }
 
   @override
@@ -103,7 +92,7 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
 
     final data = _noteSnapshot!.data() as Map<String, dynamic>;
     final title = data['title'] as String? ?? 'Cím nélkül';
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
@@ -117,9 +106,9 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (_webViewController != null)
+            if (_hasContent)
               Expanded(
-                child: WebViewWidget(controller: _webViewController!),
+                child: HtmlElementView(viewType: _viewId),
               )
             else
               const Expanded(
@@ -131,26 +120,20 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
                   ),
                 ),
               ),
-            if (data['audioUrl'] != null && data['audioUrl'].toString().isNotEmpty) ...[
+            if (data['audioUrl'] != null &&
+                data['audioUrl'].toString().isNotEmpty) ...[
               const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(
-                    onPressed: _audioPlayer.play,
-                    child: const Icon(Icons.play_arrow),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _audioPlayer.pause,
-                    child: const Icon(Icons.pause),
-                  ),
-                ],
-              )
+              AudioPreviewPlayer(audioUrl: data['audioUrl']),
             ]
           ],
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
   }
 } 

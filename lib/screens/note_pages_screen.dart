@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import '../widgets/audio_preview_player.dart';
 
 class NotePagesScreen extends StatefulWidget {
   final String noteId;
@@ -17,7 +17,6 @@ class NotePagesScreen extends StatefulWidget {
 class _NotePagesScreenState extends State<NotePagesScreen> {
   DocumentSnapshot? _noteSnapshot;
   int _currentPageIndex = 0;
-  final AudioPlayer _audioPlayer = AudioPlayer();
   WebViewController? _webViewController;
 
   @override
@@ -28,7 +27,6 @@ class _NotePagesScreenState extends State<NotePagesScreen> {
 
   @override
   void dispose() {
-    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -47,11 +45,6 @@ class _NotePagesScreenState extends State<NotePagesScreen> {
   void _setupMedia(Map<String, dynamic>? data) {
     if (data == null) return;
     
-    final audioUrl = data['audioUrl'] as String?;
-    if (audioUrl != null && audioUrl.isNotEmpty) {
-      _audioPlayer.setUrl(audioUrl);
-    }
-
     final pages = data['pages'] as List<dynamic>? ?? [];
     if (pages.isNotEmpty) {
       final currentPage = pages[_currentPageIndex] as String;
@@ -157,22 +150,14 @@ class _NotePagesScreenState extends State<NotePagesScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            if (data['audioUrl'] != null && data['audioUrl'].toString().isNotEmpty)
-              Row(
-                children: [
-                  ElevatedButton(
-                    onPressed: _audioPlayer.play,
-                    child: const Icon(Icons.play_arrow),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _audioPlayer.pause,
-                    child: const Icon(Icons.pause),
-                  ),
-                ],
-              )
+            if (data['audioUrl'] != null &&
+                data['audioUrl'].toString().isNotEmpty)
+              AudioPreviewPlayer(audioUrl: data['audioUrl'])
             else
-              const Text('Nincs hanganyag elérhető.'),
+              const Padding(
+                padding: EdgeInsets.only(top: 20.0),
+                child: Text('Nincs hanganyag elérhető.'),
+              ),
           ],
         ),
       ),

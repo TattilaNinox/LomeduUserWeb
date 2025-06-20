@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 
+/// Egy nagyobb méretű, előnézeti célokat szolgáló audiolejátszó widget.
+///
+/// Ez a `StatefulWidget` az `audioplayers` csomagot használja egyetlen
+/// audiofájl lejátszására a megadott URL-ről. A `MiniAudioPlayer`-rel ellentétben
+/// ez egy nagyobb, hangsúlyosabb felületet biztosít a lejátszáshoz,
+/// jellemzően egy előnézeti ablakban vagy dedikált képernyőn való használatra.
 class AudioPreviewPlayer extends StatefulWidget {
+  /// A lejátszandó audiofájl URL-je.
   final String audioUrl;
 
   const AudioPreviewPlayer({super.key, required this.audioUrl});
@@ -10,10 +17,13 @@ class AudioPreviewPlayer extends StatefulWidget {
   State<AudioPreviewPlayer> createState() => _AudioPreviewPlayerState();
 }
 
+/// Az `AudioPreviewPlayer` állapotát kezelő osztály.
 class _AudioPreviewPlayerState extends State<AudioPreviewPlayer> {
+  // Az `audioplayers` csomag lejátszó példánya.
   late AudioPlayer _audioPlayer;
-  bool _isPlaying = false;
-  bool _isInitialized = false;
+  
+  // Állapotváltozók a lejátszó állapotának követésére.
+  PlayerState _playerState = PlayerState.stopped;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
 
@@ -24,22 +34,26 @@ class _AudioPreviewPlayerState extends State<AudioPreviewPlayer> {
     _initializePlayer();
   }
 
+  /// Inicializálja a lejátszót és feliratkozik a releváns eseményfigyelőkre.
   Future<void> _initializePlayer() async {
     try {
+      // Beállítja a forrás URL-t. Fontos, hogy a lejátszás (`play`) előtt
+      // a forrás már be legyen állítva.
       await _audioPlayer.setSourceUrl(widget.audioUrl);
-      _audioPlayer.onDurationChanged.listen((Duration d) {
+      
+      // Feliratkozás a lejátszó eseményeire (listenerek), hogy az UI
+      // valós időben frissüljön az állapotváltozásoknak megfelelően.
+      _audioPlayer.onDurationChanged.listen((d) {
         if (mounted) setState(() => _duration = d);
       });
-      _audioPlayer.onPositionChanged.listen((Duration p) {
+      _audioPlayer.onPositionChanged.listen((p) {
         if (mounted) setState(() => _position = p);
       });
-      _audioPlayer.onPlayerStateChanged.listen((PlayerState state) {
-        if (mounted) {
-          setState(() => _isPlaying = state == PlayerState.playing);
-        }
+      _audioPlayer.onPlayerStateChanged.listen((s) {
+        if (mounted) setState(() => _playerState = s);
       });
-      if (mounted) setState(() => _isInitialized = true);
     } catch (e) {
+      // Hibakezelés, ha a forrás URL beállítása sikertelen.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Hiba a hangfájl betöltésekor: $e')),
@@ -48,6 +62,7 @@ class _AudioPreviewPlayerState extends State<AudioPreviewPlayer> {
     }
   }
 
+  /// A widget eltávolításakor felszabadítja a lejátszó erőforrásait.
   @override
   void dispose() {
     _audioPlayer.stop();
@@ -55,41 +70,77 @@ class _AudioPreviewPlayerState extends State<AudioPreviewPlayer> {
     super.dispose();
   }
 
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(duration.inHours);
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return [if (duration.inHours > 0) hours, minutes, seconds].join(':');
+  }
+
   @override
   Widget build(BuildContext context) {
-    return _isInitialized
-        ? Column(
-            mainAxisSize: MainAxisSize.min,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Csúszka a lejátszási pozíció jelzésére és a tekerésre.
+        Slider(
+          value: _position.inSeconds.toDouble().clamp(0.0, _duration.inSeconds.toDouble()),
+          max: _duration.inSeconds.toDouble(),
+          onChanged: (value) async {
+            final position = Duration(seconds: value.toInt());
+            await _audioPlayer.seek(position);
+          },
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Slider(
-                value: _position.inSeconds.toDouble(),
-                max: _duration.inSeconds.toDouble(),
-                onChanged: (value) async {
-                  final position = Duration(seconds: value.toInt());
-                  await _audioPlayer.seek(position);
-                  setState(() => _position = position);
-                },
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      _isPlaying ? Icons.pause : Icons.play_arrow,
-                      size: 48,
-                    ),
-                    onPressed: () async {
-                      if (_isPlaying) {
-                        await _audioPlayer.pause();
-                      } else {
-                        await _audioPlayer.play(UrlSource(widget.audioUrl));
-                      }
-                    },
-                  ),
-                ],
-              ),
+              Text(_formatDuration(_position)),
+              Text(_formatDuration(_duration - _position)),
             ],
-          )
-        : const Center(child: CircularProgressIndicator());
+          ),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.replay_10),
+              onPressed: () {
+                final newPosition = _position - const Duration(seconds: 10);
+                _audioPlayer.seek(newPosition > Duration.zero ? newPosition : Duration.zero);
+              },
+            ),
+            IconButton(
+              iconSize: 48,
+              icon: Icon(
+                _playerState == PlayerState.playing ? Icons.pause_circle_filled : Icons.play_circle_filled,
+              ),
+              onPressed: () {
+                if (_playerState == PlayerState.playing) {
+                  _audioPlayer.pause();
+                } else {
+                  _audioPlayer.resume();
+                }
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.forward_10),
+              onPressed: () {
+                final newPosition = _position + const Duration(seconds: 10);
+                _audioPlayer.seek(newPosition < _duration ? newPosition : _duration);
+              },
+            ),
+             IconButton(
+              icon: const Icon(Icons.stop),
+              onPressed: () {
+                _audioPlayer.stop();
+              },
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }
