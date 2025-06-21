@@ -43,7 +43,9 @@ class _BundleViewScreenState extends State<BundleViewScreen> {
   void initState() {
     super.initState();
     
-    _viewId = "bundle-view-iframe-${widget.bundleId}";
+    // Az ID-t a state objektum hash kódjából generáljuk, hogy mindig egyedi legyen.
+    // Így elkerüljük a platform view cache-elési problémákat.
+    _viewId = "bundle-view-iframe-${this.hashCode}";
     
     // A view factory-t úgy módosítjuk, hogy mindig új iframe-et hozzon létre
     // az aktuális HTML tartalommal.
