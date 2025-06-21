@@ -42,7 +42,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _previewViewId = 'note-create-preview-iframe-${hashCode}';
+    _previewViewId = 'note-create-preview-iframe-$hashCode';
     
     _previewIframeElement
       ..style.width = '100%'
@@ -254,7 +254,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
       body: Row(
         children: [
           const Sidebar(selectedMenu: 'notes'),
-           Expanded(
+          Expanded(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Row(
@@ -421,23 +421,32 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
               children: [
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0),
-                  child: ValueListenableBuilder<double>(
-                    valueListenable: _editorFontSize,
-                    builder: (context, fontSize, child) {
-                      return TextField(
-                        controller: _htmlContentController,
-                        style: TextStyle(fontSize: fontSize, fontFamily: 'monospace'),
-                        maxLines: null,
-                        expands: true,
-                        textAlignVertical: TextAlignVertical.top,
-                        decoration: const InputDecoration(
-                          hintText: 'Írd ide a HTML tartalmat...',
-                          border: OutlineInputBorder(),
-                          filled: true,
-                          fillColor: Colors.white,
-                        ),
-                      );
-                    }
+                  child: SizedBox(
+                    height: 300,
+                    child: ValueListenableBuilder<double>(
+                      valueListenable: _editorFontSize,
+                      builder: (context, fontSize, child) {
+                        return TextField(
+                          controller: _htmlContentController,
+                          onChanged: (value) {
+                            if (_tabController.index == 1) {
+                              setState(() {
+                                _previewIframeElement.src = 'data:text/html;charset=utf-8,${Uri.encodeComponent(value)}';
+                              });
+                            }
+                          },
+                          style: TextStyle(fontSize: fontSize, fontFamily: 'monospace'),
+                          maxLines: 15,
+                          textAlignVertical: TextAlignVertical.top,
+                          decoration: const InputDecoration(
+                            hintText: 'Írd ide a HTML tartalmat...',
+                            border: OutlineInputBorder(),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
                 _showPreview

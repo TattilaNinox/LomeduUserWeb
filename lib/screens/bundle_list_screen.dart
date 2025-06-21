@@ -261,7 +261,7 @@ class _BundleListScreenState extends State<BundleListScreen> {
                                           vertical: 4,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Theme.of(context).primaryColor.withOpacity(0.1),
+                                          color: Theme.of(context).primaryColor.withAlpha(26),
                                           borderRadius: BorderRadius.circular(12),
                                         ),
                                         child: Text(

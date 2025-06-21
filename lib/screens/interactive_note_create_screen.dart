@@ -43,8 +43,7 @@ class _InteractiveNoteCreateScreenState
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-
-    _previewViewId = 'interactive-note-create-preview-iframe-${hashCode}';
+    _previewViewId = 'interactive-note-create-preview-iframe-$hashCode';
 
     _previewIframeElement
       ..style.width = '100%'
@@ -448,31 +447,34 @@ class _InteractiveNoteCreateScreenState
               controller: _tabController,
               children: [
                 // Editor
-                SizedBox(
-                  height: 300,
-                  child: ValueListenableBuilder<double>(
-                    valueListenable: _editorFontSize,
-                    builder: (context, fontSize, child) {
-                      return TextField(
-                        controller: _htmlContentController,
-                        onChanged: (value) {
-                          if (_tabController.index == 1) {
-                            setState(() {
-                              _previewIframeElement.src = 'data:text/html;charset=utf-8,${Uri.encodeComponent(value)}';
-                            });
-                          }
-                        },
-                        style: TextStyle(fontSize: fontSize, fontFamily: 'monospace'),
-                        maxLines: 15,
-                        textAlignVertical: TextAlignVertical.top,
-                        decoration: const InputDecoration(
-                          hintText: 'Írd ide a HTML tartalmat...',
-                          border: OutlineInputBorder(),
-                          filled: true,
-                          fillColor: Colors.white,
-                        ),
-                      );
-                    }
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: SizedBox(
+                    height: 300,
+                    child: ValueListenableBuilder<double>(
+                      valueListenable: _editorFontSize,
+                      builder: (context, fontSize, child) {
+                        return TextField(
+                          controller: _htmlContentController,
+                          onChanged: (value) {
+                            if (_tabController.index == 1) {
+                              setState(() {
+                                _previewIframeElement.src = 'data:text/html;charset=utf-8,${Uri.encodeComponent(value)}';
+                              });
+                            }
+                          },
+                          style: TextStyle(fontSize: fontSize, fontFamily: 'monospace'),
+                          maxLines: 15,
+                          textAlignVertical: TextAlignVertical.top,
+                          decoration: const InputDecoration(
+                            hintText: 'Írd ide a HTML tartalmat...',
+                            border: OutlineInputBorder(),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                        );
+                      }
+                    ),
                   ),
                 ),
                 // Preview

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
-import 'package:html/parser.dart' show parse;
 import 'package:web/web.dart' as web;
 import 'dart:ui_web' as ui_web;
 import 'dart:async';
@@ -45,7 +44,7 @@ class _BundleViewScreenState extends State<BundleViewScreen> {
     
     // Az ID-t a state objektum hash kódjából generáljuk, hogy mindig egyedi legyen.
     // Így elkerüljük a platform view cache-elési problémákat.
-    _viewId = "bundle-view-iframe-${this.hashCode}";
+    _viewId = "bundle-view-iframe-$hashCode";
     
     // A view factory-t úgy módosítjuk, hogy mindig új iframe-et hozzon létre
     // az aktuális HTML tartalommal.
@@ -276,7 +275,7 @@ class _BundleViewScreenState extends State<BundleViewScreen> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withAlpha(26),
                   blurRadius: 4,
                   offset: const Offset(0, -2),
                 ),

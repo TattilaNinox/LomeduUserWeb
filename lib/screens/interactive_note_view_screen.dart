@@ -1,11 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
-import 'package:html/parser.dart' show parse;
 import 'package:web/web.dart' as web;
 import 'dart:ui_web' as ui_web;
 import 'dart:async';
-
 import '../widgets/audio_preview_player.dart';
 
 class InteractiveNoteViewScreen extends StatefulWidget {

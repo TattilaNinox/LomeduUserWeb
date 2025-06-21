@@ -390,7 +390,7 @@ class _BundleEditScreenState extends State<BundleEditScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withAlpha(13),
                       blurRadius: 2,
                       offset: const Offset(0, 1),
                     ),
@@ -426,7 +426,7 @@ class _BundleEditScreenState extends State<BundleEditScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withAlpha(13),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -532,7 +532,7 @@ class _BundleEditScreenState extends State<BundleEditScreen> {
                                           width: 32,
                                           height: 32,
                                           decoration: BoxDecoration(
-                                            color: Theme.of(context).primaryColor.withOpacity(0.1),
+                                            color: Theme.of(context).primaryColor.withAlpha(26),
                                             shape: BoxShape.circle,
                                           ),
                                           child: Center(

@@ -426,31 +426,32 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                 // Editor
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0),
-                  child: ValueListenableBuilder<double>(
-                    valueListenable: _editorFontSize,
-                    builder: (context, fontSize, child) {
-                      return TextField(
-                        controller: _htmlContentController,
-                        onChanged: (value) {
-                          // Az előnézet automatikus frissítése, ha az előnézeti fül aktív.
-                          if (_tabController.index == 1) {
-                            setState(() {
-                              _previewIframeElement.src = 'data:text/html;charset=utf-8,${Uri.encodeComponent(value)}';
-                            });
-                          }
-                        },
-                        style: TextStyle(fontSize: fontSize, fontFamily: 'monospace'),
-                        maxLines: null,
-                        expands: true,
-                        textAlignVertical: TextAlignVertical.top,
-                        decoration: const InputDecoration(
-                          hintText: 'Írd ide a HTML tartalmat...',
-                          border: OutlineInputBorder(),
-                          filled: true,
-                          fillColor: Colors.white,
-                        ),
-                      );
-                    },
+                  child: SizedBox(
+                    height: 300,
+                    child: ValueListenableBuilder<double>(
+                      valueListenable: _editorFontSize,
+                      builder: (context, fontSize, child) {
+                        return TextField(
+                          controller: _htmlContentController,
+                          onChanged: (value) {
+                            if (_tabController.index == 1) {
+                              setState(() {
+                                _previewIframeElement.src = 'data:text/html;charset=utf-8,${Uri.encodeComponent(value)}';
+                              });
+                            }
+                          },
+                          style: TextStyle(fontSize: fontSize, fontFamily: 'monospace'),
+                          maxLines: 15,
+                          textAlignVertical: TextAlignVertical.top,
+                          decoration: const InputDecoration(
+                            hintText: 'Írd ide a HTML tartalmat...',
+                            border: OutlineInputBorder(),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                        );
+                      }
+                    ),
                   ),
                 ),
                 // Preview
