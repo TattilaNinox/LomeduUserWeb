@@ -62,6 +62,7 @@ class Sidebar extends StatelessWidget {
           // kiemelt állapotban jelenjen-e meg.
           _buildMenuItem(context, 'notes', 'Jegyzetek', selectedMenu == 'notes'),
           _buildMenuItem(context, 'interactive_notes', 'Interaktív Jegyzetek', selectedMenu == 'interactive_notes'),
+          _buildMenuItem(context, 'bundles', 'Kötegek', selectedMenu == 'bundles'),
           _buildMenuItem(context, 'categories', 'Kategóriák', selectedMenu == 'categories'),
           // A `Spacer` kitölti a rendelkezésre álló függőleges teret,
           // így a kijelentkezés gombot az aljára tolja.
@@ -100,6 +101,9 @@ class Sidebar extends StatelessWidget {
       case 'interactive_notes':
         iconData = Icons.dynamic_feed;
         break;
+      case 'bundles':
+        iconData = Icons.collections_bookmark;
+        break;
       case 'categories':
         iconData = Icons.category;
         break;
@@ -129,6 +133,8 @@ class Sidebar extends StatelessWidget {
           context.go('/notes');
         } else if (routeName == 'interactive_notes') {
           context.go('/interactive-notes/create');
+        } else if (routeName == 'bundles') {
+          context.go('/bundles');
         } else if (routeName == 'categories') {
           context.go('/categories');
         }

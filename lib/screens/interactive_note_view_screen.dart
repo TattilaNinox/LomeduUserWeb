@@ -10,8 +10,13 @@ import '../widgets/audio_preview_player.dart';
 
 class InteractiveNoteViewScreen extends StatefulWidget {
   final String noteId;
+  final String? from;
 
-  const InteractiveNoteViewScreen({super.key, required this.noteId});
+  const InteractiveNoteViewScreen({
+    super.key,
+    required this.noteId,
+    this.from,
+  });
 
   @override
   State<InteractiveNoteViewScreen> createState() =>
@@ -83,7 +88,13 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
           title: const Text('Betöltés...'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.go('/notes'),
+            onPressed: () {
+              if (widget.from != null && widget.from!.isNotEmpty) {
+                context.go(widget.from!);
+              } else {
+                context.go('/notes');
+              }
+            },
           ),
         ),
         body: const Center(child: CircularProgressIndicator()),
@@ -98,7 +109,13 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
         title: Text(title),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/notes'),
+          onPressed: () {
+            if (widget.from != null && widget.from!.isNotEmpty) {
+              context.go(widget.from!);
+            } else {
+              context.go('/notes');
+            }
+          },
         ),
       ),
       body: Padding(

@@ -7,8 +7,13 @@ import '../widgets/audio_preview_player.dart';
 
 class NotePagesScreen extends StatefulWidget {
   final String noteId;
+  final String? from;
 
-  const NotePagesScreen({super.key, required this.noteId});
+  const NotePagesScreen({
+    super.key,
+    required this.noteId,
+    this.from,
+  });
 
   @override
   State<NotePagesScreen> createState() => _NotePagesScreenState();
@@ -110,7 +115,13 @@ class _NotePagesScreenState extends State<NotePagesScreen> {
         title: Text(title),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/notes'),
+          onPressed: () {
+            if (widget.from != null && widget.from!.isNotEmpty) {
+              context.go(widget.from!);
+            } else {
+              context.go('/notes');
+            }
+          },
         ),
       ),
       body: Padding(

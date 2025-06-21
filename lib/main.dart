@@ -10,6 +10,9 @@ import 'screens/interactive_note_view_screen.dart';
 import 'screens/note_edit_screen.dart';
 import 'screens/registration_screen.dart';
 import 'screens/forgot_password_screen.dart';
+import 'screens/bundle_list_screen.dart';
+import 'screens/bundle_edit_screen.dart';
+import 'screens/bundle_view_screen.dart';
 import 'theme/app_theme.dart'; // <-- AppTheme importálása
 
 /// Az alkalmazás fő belépési pontja.
@@ -63,14 +66,41 @@ final _router = GoRouter(
       path: '/categories',
       builder: (context, state) => const CategoryManagerScreen(),
     ),
+    // Kötegek listája képernyő.
+    GoRoute(
+      path: '/bundles',
+      builder: (context, state) => const BundleListScreen(),
+    ),
+    // Új köteg létrehozása képernyő.
+    GoRoute(
+      path: '/bundles/create',
+      builder: (context, state) => const BundleEditScreen(),
+    ),
+    // Köteg szerkesztése képernyő.
+    GoRoute(
+      path: '/bundles/edit/:bundleId',
+      builder: (context, state) {
+        final bundleId = state.pathParameters['bundleId']!;
+        return BundleEditScreen(bundleId: bundleId);
+      },
+    ),
+    // Köteg megtekintése prezentáció módban.
+    GoRoute(
+      path: '/bundles/view/:bundleId',
+      builder: (context, state) {
+        final bundleId = state.pathParameters['bundleId']!;
+        return BundleViewScreen(bundleId: bundleId);
+      },
+    ),
     // Egy konkrét jegyzet oldalainak megjelenítése.
     // A `:noteId` egy dinamikus paraméter, ami az adott jegyzet azonosítóját jelöli.
     GoRoute(
       path: '/note/:noteId',
       builder: (context, state) {
-        // Kiolvassa a `noteId` értékét az útvonalból.
         final noteId = state.pathParameters['noteId']!;
-        return NotePagesScreen(noteId: noteId);
+        // A 'from' query paraméter kiolvasása
+        final from = state.uri.queryParameters['from'];
+        return NotePagesScreen(noteId: noteId, from: from);
       },
     ),
     // Egy konkrét interaktív jegyzet megtekintése.
@@ -78,7 +108,9 @@ final _router = GoRouter(
       path: '/interactive-note/:noteId',
       builder: (context, state) {
         final noteId = state.pathParameters['noteId']!;
-        return InteractiveNoteViewScreen(noteId: noteId);
+        // A 'from' query paraméter kiolvasása
+        final from = state.uri.queryParameters['from'];
+        return InteractiveNoteViewScreen(noteId: noteId, from: from);
       },
     ),
     // Egy konkrét jegyzet szerkesztése.

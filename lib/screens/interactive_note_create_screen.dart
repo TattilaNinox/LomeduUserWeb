@@ -448,8 +448,8 @@ class _InteractiveNoteCreateScreenState
               controller: _tabController,
               children: [
                 // Editor
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
+                SizedBox(
+                  height: 300,
                   child: ValueListenableBuilder<double>(
                     valueListenable: _editorFontSize,
                     builder: (context, fontSize, child) {
@@ -463,8 +463,7 @@ class _InteractiveNoteCreateScreenState
                           }
                         },
                         style: TextStyle(fontSize: fontSize, fontFamily: 'monospace'),
-                        maxLines: null,
-                        expands: true,
+                        maxLines: 15,
                         textAlignVertical: TextAlignVertical.top,
                         decoration: const InputDecoration(
                           hintText: 'Írd ide a HTML tartalmat...',
