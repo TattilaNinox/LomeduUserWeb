@@ -49,7 +49,7 @@ class _NotePagesScreenState extends State<NotePagesScreen> {
 
   void _setupMedia(Map<String, dynamic>? data) {
     if (data == null) return;
-    
+
     final pages = data['pages'] as List<dynamic>? ?? [];
     if (pages.isNotEmpty) {
       final currentPage = pages[_currentPageIndex] as String;

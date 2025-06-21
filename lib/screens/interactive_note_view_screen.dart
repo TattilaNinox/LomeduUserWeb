@@ -62,19 +62,19 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
         final htmlContent = pages.first as String? ?? '';
         if (htmlContent.isNotEmpty) {
           htmlContentToLoad = htmlContent;
+          }
         }
       }
-    }
 
-    setState(() {
-      _noteSnapshot = snapshot;
+      setState(() {
+        _noteSnapshot = snapshot;
       if (htmlContentToLoad != null) {
         _iframeElement.src =
             'data:text/html;charset=utf-8,${Uri.encodeComponent(htmlContentToLoad)}';
         _hasContent = true;
       } else {
         _hasContent = false;
-      }
+    }
     });
   }
 
@@ -101,7 +101,7 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
 
     final data = _noteSnapshot!.data() as Map<String, dynamic>;
     final title = data['title'] as String? ?? 'Cím nélkül';
-
+    
     return Scaffold(
       appBar: AppBar(
         title: Text(title),

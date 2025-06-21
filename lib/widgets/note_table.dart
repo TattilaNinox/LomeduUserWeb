@@ -110,32 +110,32 @@ class NoteTable extends StatelessWidget {
               // A `DataTable` widget a jegyzetek táblázatos megjelenítéséért felelős.
               child: DataTable(
                 columnSpacing: 40,
-                columns: const [
-                  DataColumn(label: Text('Cím')),
-                  DataColumn(label: Text('Kategória')),
+              columns: const [
+                DataColumn(label: Text('Cím')),
+                DataColumn(label: Text('Kategória')),
                   DataColumn(label: Text('Címkék')),
-                  DataColumn(label: Text('Státusz')),
-                  DataColumn(label: Text('Módosítva')),
-                  DataColumn(label: Text('Fájlok')),
-                  DataColumn(label: Text('Műveletek')),
-                ],
+                DataColumn(label: Text('Státusz')),
+                DataColumn(label: Text('Módosítva')),
+                DataColumn(label: Text('Fájlok')),
+                DataColumn(label: Text('Műveletek')),
+              ],
                 // A `rows` tulajdonság a `filteredNotes` listából generálja
                 // a táblázat sorait a `.map()` függvénnyel.
-                rows: filteredNotes.map((doc) {
-                  final data = doc.data() as Map<String, dynamic>? ?? {};
-                  final title = (data['title'] ?? '') as String;
-                  final category = (data['category'] ?? '') as String;
-                  final status = (data['status'] ?? '') as String;
+              rows: filteredNotes.map((doc) {
+                final data = doc.data() as Map<String, dynamic>? ?? {};
+                final title = (data['title'] ?? '') as String;
+                final category = (data['category'] ?? '') as String;
+                final status = (data['status'] ?? '') as String;
                   final displayStatus = status == 'Public' ? 'Published' : status;
-                  final modified = (data['modified'] is Timestamp)
-                      ? (data['modified'] as Timestamp).toDate()
-                      : DateTime.now();
-                  final hasDocx = data['docxUrl'] != null &&
-                      data['docxUrl'].toString().isNotEmpty;
-                  final hasAudio = data['audioUrl'] != null &&
-                      data['audioUrl'].toString().isNotEmpty;
-                  final hasVideo = data['videoUrl'] != null &&
-                      data['videoUrl'].toString().isNotEmpty;
+                final modified = (data['modified'] is Timestamp)
+                    ? (data['modified'] as Timestamp).toDate()
+                    : DateTime.now();
+                final hasDocx = data['docxUrl'] != null &&
+                    data['docxUrl'].toString().isNotEmpty;
+                final hasAudio = data['audioUrl'] != null &&
+                    data['audioUrl'].toString().isNotEmpty;
+                final hasVideo = data['videoUrl'] != null &&
+                    data['videoUrl'].toString().isNotEmpty;
                   final noteType = data['type'] as String? ?? 'standard';
 
                   final tags = (data['tags'] as List<dynamic>? ?? []).cast<String>();
@@ -143,7 +143,7 @@ class NoteTable extends StatelessWidget {
                   const TextStyle cellStyle = TextStyle(fontSize: 12);
 
                   // Minden egyes jegyzet egy `DataRow`-t kap a táblázatban.
-                  return DataRow(cells: [
+                return DataRow(cells: [
                     DataCell(Text(title, style: cellStyle)),
                     DataCell(Text(category, style: cellStyle)),
                     DataCell(Row(
@@ -160,46 +160,46 @@ class NoteTable extends StatelessWidget {
                       ],
                     )),
                     DataCell(Text(displayStatus, style: cellStyle)),
-                    DataCell(Text(
+                  DataCell(Text(
                         '${modified.year}-${modified.month.toString().padLeft(2, '0')}-${modified.day.toString().padLeft(2, '0')}',
                         style: cellStyle)),
                     // Fájl ikonok cellája. Az ikonok feltételesen jelennek meg,
                     // attól függően, hogy a jegyzethez tartozik-e adott típusú fájl.
-                    DataCell(Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (hasDocx)
-                          Tooltip(
-                            message: 'Dokumentum',
-                            child: IconButton(
-                              icon: const Icon(Icons.description,
-                                  color: Colors.blue),
-                              onPressed: () {
+                  DataCell(Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (hasDocx)
+                        Tooltip(
+                          message: 'Dokumentum',
+                          child: IconButton(
+                            icon: const Icon(Icons.description,
+                                color: Colors.blue),
+                            onPressed: () {
                                 // A DOCX fájlokat a Google Docs Viewer segítségével
                                 // nyitja meg egy új böngészőfülön.
-                                final googleDocsUrl =
-                                    'https://docs.google.com/viewer?url=${Uri.encodeComponent(data['docxUrl'])}&embedded=true';
-                                launchUrl(Uri.parse(googleDocsUrl));
-                              },
-                            ),
+                              final googleDocsUrl =
+                                  'https://docs.google.com/viewer?url=${Uri.encodeComponent(data['docxUrl'])}&embedded=true';
+                              launchUrl(Uri.parse(googleDocsUrl));
+                            },
                           ),
-                        if (hasAudio) MiniAudioPlayer(audioUrl: data['audioUrl']),
-                        if (hasVideo)
-                          Tooltip(
-                            message: 'Videó',
-                            child: IconButton(
-                              icon: const Icon(Icons.movie,
-                                  color: Colors.deepOrange),
-                              onPressed: () =>
-                                  _showVideoDialog(context, data['videoUrl']),
-                            ),
+                        ),
+                      if (hasAudio) MiniAudioPlayer(audioUrl: data['audioUrl']),
+                      if (hasVideo)
+                        Tooltip(
+                          message: 'Videó',
+                          child: IconButton(
+                            icon: const Icon(Icons.movie,
+                                color: Colors.deepOrange),
+                            onPressed: () =>
+                                _showVideoDialog(context, data['videoUrl']),
                           ),
-                      ],
-                    )),
+                        ),
+                    ],
+                  )),
                     // Művelet gombok cellája.
-                    DataCell(Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
+                  DataCell(Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                         // Előnézet gomb, ami a jegyzet típusa alapján
                         // a megfelelő megtekintő képernyőre navigál.
                         _buildIconButton(
@@ -214,23 +214,23 @@ class NoteTable extends StatelessWidget {
                               }
                             }),
                         // Szerkesztés gomb.
-                        _buildIconButton(
-                            context,
-                            Icons.edit,
-                            AppTheme.primaryColor,
+                      _buildIconButton(
+                          context,
+                          Icons.edit,
+                          AppTheme.primaryColor,
                             () => context.go('/note/edit/${doc.id}')),
                         // Státuszváltó menü
                         _buildStatusMenu(context, doc.id, status),
                         // Törlés gomb.
-                        _buildIconButton(
-                            context,
-                            Icons.delete_forever,
-                            Colors.black,
-                            () => _showDeleteAllDialog(context, doc.id)),
-                      ],
-                    )),
-                  ]);
-                }).toList(),
+                      _buildIconButton(
+                          context,
+                          Icons.delete_forever,
+                          Colors.black,
+                          () => _showDeleteAllDialog(context, doc.id)),
+                    ],
+                  )),
+                ]);
+              }).toList(),
               ),
             );
           },
@@ -299,7 +299,7 @@ class NoteTable extends StatelessWidget {
       await FirebaseFirestore.instance.collection('notes').doc(noteId).update({
         'status': newStatus,
         'modified': Timestamp.now(),
-      });
+                      });
       _showSnackBar(context, 'Státusz sikeresen frissítve!');
     } catch (e) {
       _showSnackBar(context, 'Hiba a státusz frissítésekor: $e');
@@ -361,7 +361,7 @@ class NoteTable extends StatelessWidget {
 
               // A párbeszédablak bezárása a műveletek után.
               if (context.mounted) {
-                Navigator.of(context).pop();
+              Navigator.of(context).pop();
               }
             },
             child: const Text('Igen, törlés', style: TextStyle(fontFamily: 'Inter')),

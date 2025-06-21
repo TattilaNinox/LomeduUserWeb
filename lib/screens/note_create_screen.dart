@@ -254,7 +254,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
       body: Row(
         children: [
           const Sidebar(selectedMenu: 'notes'),
-          Expanded(
+           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Row(
@@ -423,11 +423,11 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
                   padding: const EdgeInsets.only(top: 8.0),
                   child: SizedBox(
                     height: 300,
-                    child: ValueListenableBuilder<double>(
-                      valueListenable: _editorFontSize,
-                      builder: (context, fontSize, child) {
-                        return TextField(
-                          controller: _htmlContentController,
+                  child: ValueListenableBuilder<double>(
+                    valueListenable: _editorFontSize,
+                    builder: (context, fontSize, child) {
+                      return TextField(
+                        controller: _htmlContentController,
                           onChanged: (value) {
                             if (_tabController.index == 1) {
                               setState(() {
@@ -435,16 +435,16 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
                               });
                             }
                           },
-                          style: TextStyle(fontSize: fontSize, fontFamily: 'monospace'),
+                        style: TextStyle(fontSize: fontSize, fontFamily: 'monospace'),
                           maxLines: 15,
-                          textAlignVertical: TextAlignVertical.top,
-                          decoration: const InputDecoration(
-                            hintText: 'Írd ide a HTML tartalmat...',
-                            border: OutlineInputBorder(),
-                            filled: true,
-                            fillColor: Colors.white,
-                          ),
-                        );
+                        textAlignVertical: TextAlignVertical.top,
+                        decoration: const InputDecoration(
+                          hintText: 'Írd ide a HTML tartalmat...',
+                          border: OutlineInputBorder(),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                      );
                       },
                     ),
                   ),

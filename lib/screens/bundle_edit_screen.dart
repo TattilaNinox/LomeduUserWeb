@@ -141,8 +141,15 @@ class _BundleEditScreenState extends State<BundleEditScreen> {
         }
       });
       
-      // Betöltjük az új jegyzetek adatait
+      // Betöltjük az új jegyzetek adatait és frissítjük a státuszukat
       await _loadNotesData(_selectedNoteIds);
+      final batch = FirebaseFirestore.instance.batch();
+      for (final noteId in selectedIds) {
+        final noteRef = FirebaseFirestore.instance.collection('notes').doc(noteId);
+        batch.update(noteRef, {'status': 'Archived'});
+      }
+      await batch.commit();
+
       setState(() {});
     }
   }
@@ -169,6 +176,9 @@ class _BundleEditScreenState extends State<BundleEditScreen> {
     );
 
     if (confirmed == true) {
+      // Frissítjük a jegyzet státuszát 'Draft'-ra
+      await FirebaseFirestore.instance.collection('notes').doc(noteId).update({'status': 'Draft'});
+
       setState(() {
         _selectedNoteIds.remove(noteId);
         _notesData.remove(noteId);

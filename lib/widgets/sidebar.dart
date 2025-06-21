@@ -45,16 +45,16 @@ class Sidebar extends StatelessWidget {
               borderRadius: BorderRadius.circular(8), // Lekerekítés a vizuális visszajelzéshez
               child: const Padding(
                 padding: EdgeInsets.all(8.0), // Belső tér a kattintható terület növeléséhez
-                child: Text(
+            child: Text(
                   'Lomed Admin',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1E3A8A),
-                  ),
-                ),
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1E3A8A),
               ),
+            ),
+          ),
             ),
           ),
           // Az egyes menüpontok létrehozása a `_buildMenuItem` segédmetódussal.
