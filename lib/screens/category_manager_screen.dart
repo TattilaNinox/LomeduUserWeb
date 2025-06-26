@@ -13,6 +13,43 @@ class CategoryManagerScreen extends StatefulWidget {
 class _CategoryManagerScreenState extends State<CategoryManagerScreen> {
   final _categoryController = TextEditingController();
   final _searchController = TextEditingController();
+  Map<String, int> _noteUsageCount = {};
+  Map<String, int> _bankUsageCount = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsageCounts();
+  }
+
+  Future<void> _loadUsageCounts() async {
+    // Jegyzetek számának lekérése
+    final notesSnap = await FirebaseFirestore.instance.collection('notes').get();
+    final tempNoteCounts = <String, int>{};
+    for (var doc in notesSnap.docs) {
+      final category = doc.data()['category'] as String?;
+      if (category != null) {
+        tempNoteCounts[category] = (tempNoteCounts[category] ?? 0) + 1;
+      }
+    }
+
+    // Kérdésbankok számának lekérése
+    final banksSnap = await FirebaseFirestore.instance.collection('question_banks').get();
+    final tempBankCounts = <String, int>{};
+    for (var doc in banksSnap.docs) {
+      final category = doc.data()['category'] as String?;
+      if (category != null) {
+        tempBankCounts[category] = (tempBankCounts[category] ?? 0) + 1;
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _noteUsageCount = tempNoteCounts;
+        _bankUsageCount = tempBankCounts;
+      });
+    }
+  }
 
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -197,19 +234,27 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> {
                                 itemBuilder: (context, index) {
                                   final doc = filteredCategories[index];
                                   final name = doc['name'] as String;
+                                  final noteCount = _noteUsageCount[name] ?? 0;
+                                  final bankCount = _bankUsageCount[name] ?? 0;
+                                  final isUsed = noteCount > 0 || bankCount > 0;
 
                                   return ListTile(
                                     title: Text(name),
+                                    subtitle: Text('Jegyzetek: $noteCount, Kérdésbankok: $bankCount'),
                                     trailing: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         IconButton(
-                                          icon: const Icon(Icons.edit, color: Colors.blue),
-                                          onPressed: () => _showEditCategoryDialog(doc.id, name),
+                                          icon: const Icon(Icons.edit),
+                                          color: isUsed ? Colors.grey : Colors.blue,
+                                          tooltip: isUsed ? 'Használatban lévő kategória nem szerkeszthető' : 'Szerkesztés',
+                                          onPressed: isUsed ? null : () => _showEditCategoryDialog(doc.id, name),
                                         ),
                                         IconButton(
-                                          icon: const Icon(Icons.delete, color: Colors.red),
-                                          onPressed: () => _confirmDeleteCategory(doc.id, name),
+                                          icon: const Icon(Icons.delete),
+                                          color: isUsed ? Colors.grey : Colors.red,
+                                          tooltip: isUsed ? 'Használatban lévő kategória nem törölhető' : 'Törlés',
+                                          onPressed: isUsed ? null : () => _confirmDeleteCategory(doc.id, name),
                                         ),
                                       ],
                                     ),
