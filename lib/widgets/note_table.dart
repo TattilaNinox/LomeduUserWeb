@@ -349,7 +349,6 @@ class NoteTable extends StatelessWidget {
                  _showSnackBar(context, 'Hiba a fájlok listázásakor: $e');
               }
 
-              // 2. Törlés a Firestore adatbázisból (a jegyzet dokumentuma)
               try {
                 await FirebaseFirestore.instance.collection('notes').doc(docId).delete();
                 if (!context.mounted) return;
@@ -359,9 +358,8 @@ class NoteTable extends StatelessWidget {
                  _showSnackBar(context, 'Hiba a jegyzet törlésekor: $e');
               }
 
-              // A párbeszédablak bezárása a műveletek után.
               if (context.mounted) {
-              Navigator.of(context).pop();
+                Navigator.of(context).pop();
               }
             },
             child: const Text('Igen, törlés', style: TextStyle(fontFamily: 'Inter')),

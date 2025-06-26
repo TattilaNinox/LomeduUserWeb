@@ -43,7 +43,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _previewViewId = 'note-create-preview-iframe-${this.hashCode}';
+    _previewViewId = 'note-create-preview-iframe-$hashCode';
     
     _previewIframeElement
       ..style.width = '100%'

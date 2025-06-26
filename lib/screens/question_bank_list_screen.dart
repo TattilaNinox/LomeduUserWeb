@@ -3,9 +3,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/sidebar.dart';
 
-class QuestionBankListScreen extends StatelessWidget {
+class QuestionBankListScreen extends StatefulWidget {
   const QuestionBankListScreen({super.key});
 
+  @override
+  State<QuestionBankListScreen> createState() => _QuestionBankListScreenState();
+}
+
+class _QuestionBankListScreenState extends State<QuestionBankListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -22,7 +27,9 @@ class QuestionBankListScreen extends StatelessWidget {
                   'createdAt': Timestamp.now(),
                   'questions': [],
                 }).then((_) {
-                  context.go('/question-banks/edit/${newBankRef.id}');
+                  if (mounted) {
+                    context.go('/question-banks/edit/${newBankRef.id}');
+                  }
                 });
               },
               icon: const Icon(Icons.add),

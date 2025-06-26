@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../screens/note_create_screen.dart';
 import 'package:go_router/go_router.dart';
 
 /// Az alkalmazás felső fejlécét (Header) megvalósító widget.

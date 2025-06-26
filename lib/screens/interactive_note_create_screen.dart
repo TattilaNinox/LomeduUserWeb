@@ -44,9 +44,7 @@ class _InteractiveNoteCreateScreenState
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-
-    // Az ID-t a state objektum hash kódjából generáljuk, hogy mindig egyedi legyen.
-    _previewViewId = 'interactive-note-create-preview-iframe-${this.hashCode}';
+    _previewViewId = 'interactive-note-create-preview-iframe-$hashCode';
 
     _previewIframeElement
       ..style.width = '100%'

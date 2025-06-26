@@ -52,8 +52,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-
-    _previewViewId = 'note-edit-preview-iframe-${this.hashCode}';
+    _previewViewId = 'note-edit-preview-iframe-$hashCode';
 
     _previewIframeElement
       ..style.width = '100%'

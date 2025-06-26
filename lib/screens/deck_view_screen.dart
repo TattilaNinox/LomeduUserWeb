@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:go_router/go_router.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import '../widgets/sidebar.dart';
 import 'package:flutter_html/flutter_html.dart';
+import '../widgets/sidebar.dart';
 
 class DeckViewScreen extends StatefulWidget {
   final String deckId;
