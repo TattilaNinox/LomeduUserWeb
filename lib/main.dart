@@ -13,7 +13,11 @@ import 'screens/forgot_password_screen.dart';
 import 'screens/bundle_list_screen.dart';
 import 'screens/bundle_edit_screen.dart';
 import 'screens/bundle_view_screen.dart';
+import 'screens/note_create_screen.dart';
 import 'theme/app_theme.dart'; // <-- AppTheme importálása
+import 'screens/flashcard_card_edit_screen.dart';
+import 'screens/question_bank_list_screen.dart';
+import 'screens/question_bank_edit_screen.dart';
 
 /// Az alkalmazás fő belépési pontja.
 void main() async {
@@ -55,6 +59,11 @@ final _router = GoRouter(
     GoRoute(
       path: '/notes',
       builder: (context, state) => const NoteListScreen(),
+    ),
+    // Új szöveges jegyzet létrehozása képernyő
+    GoRoute(
+      path: '/notes/create',
+      builder: (context, state) => const NoteCreateScreen(),
     ),
     // Új interaktív jegyzet létrehozása képernyő.
     GoRoute(
@@ -119,6 +128,27 @@ final _router = GoRouter(
       builder: (context, state) {
         final noteId = state.pathParameters['noteId']!;
         return NoteEditScreen(noteId: noteId);
+      },
+    ),
+    // Flashcard Card Edit
+    GoRoute(
+      path: '/flashcard-card/edit/:cardId',
+      builder: (context, state) {
+        final cardId = state.pathParameters['cardId']!;
+        return FlashcardCardEditScreen(cardId: cardId);
+      },
+    ),
+    // Question Bank List
+    GoRoute(
+      path: '/question-banks',
+      builder: (context, state) => const QuestionBankListScreen(),
+    ),
+    // Question Bank Edit
+    GoRoute(
+      path: '/question-banks/edit/:bankId',
+      builder: (context, state) {
+        final bankId = state.pathParameters['bankId']!;
+        return QuestionBankEditScreen(bankId: bankId);
       },
     ),
   ],

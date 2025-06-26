@@ -24,6 +24,7 @@ dependencies:
   webview_flutter: ^4.7.0
   webview_flutter_web: ^0.2.3+4
   flutter_html: ^3.0.0-beta.2
+  excel: ^2.1.0
   html: ^0.15.4
   web: ^0.5.1
 

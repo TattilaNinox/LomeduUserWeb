@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../screens/note_create_screen.dart';
+import 'package:go_router/go_router.dart';
 
 /// Az alkalmazás felső fejlécét (Header) megvalósító widget.
 ///
@@ -75,15 +76,8 @@ class Header extends StatelessWidget {
           // "Új jegyzet" gomb.
           ElevatedButton(
             onPressed: () {
-              // Fontos: Ez a navigáció a `go_router`-t megkerülve, a régebbi
-              // `Navigator.of(context).push` módszerrel történik. Ez akkor
-              // lehet indokolt, ha egy modális ablakot vagy egy olyan oldalt
-              // akarunk megjeleníteni, ami nem része a fő URL-alapú navigációnak.
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const NoteCreateScreen(),
-                ),
-              );
+              // Navigáció a go_router segítségével az új, dedikált útvonalra
+              context.go('/notes/create');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFF97316),

@@ -43,7 +43,9 @@ class _InteractiveNoteCreateScreenState
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _previewViewId = 'interactive-note-create-preview-iframe-$hashCode';
+
+    // Az ID-t a state objektum hash kódjából generáljuk, hogy mindig egyedi legyen.
+    _previewViewId = 'interactive-note-create-preview-iframe-${this.hashCode}';
 
     _previewIframeElement
       ..style.width = '100%'
@@ -247,6 +249,11 @@ class _InteractiveNoteCreateScreenState
           onPressed: () => context.go('/notes'),
         ),
         actions: [
+          TextButton(
+            onPressed: () => context.go('/notes'),
+            child: const Text('Mégse'),
+          ),
+          const SizedBox(width: 12),
           Padding(
             padding: const EdgeInsets.only(right: 20.0),
             child: ElevatedButton.icon(

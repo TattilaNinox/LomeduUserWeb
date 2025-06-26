@@ -42,7 +42,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _previewViewId = 'note-create-preview-iframe-$hashCode';
+    _previewViewId = 'note-create-preview-iframe-${this.hashCode}';
     
     _previewIframeElement
       ..style.width = '100%'
@@ -235,6 +235,11 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
           onPressed: () => context.go('/notes'),
         ),
         actions: [
+          TextButton(
+            onPressed: () => context.go('/notes'),
+            child: const Text('Mégse'),
+          ),
+          const SizedBox(width: 12),
           Padding(
             padding: const EdgeInsets.only(right: 20.0),
             child: ElevatedButton.icon(

@@ -1,0 +1,70 @@
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
+import '../widgets/sidebar.dart';
+
+class QuestionBankListScreen extends StatelessWidget {
+  const QuestionBankListScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Kérdésbankok'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: ElevatedButton.icon(
+              onPressed: () {
+                final newBankRef = FirebaseFirestore.instance.collection('question_banks').doc();
+                newBankRef.set({
+                  'name': 'Új kérdésbank',
+                  'createdAt': Timestamp.now(),
+                  'questions': [],
+                }).then((_) {
+                  context.go('/question-banks/edit/${newBankRef.id}');
+                });
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Új Kérdésbank'),
+            ),
+          )
+        ],
+      ),
+      body: Row(
+        children: [
+          const Sidebar(selectedMenu: 'question_banks'),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('question_banks')
+                  .orderBy('createdAt', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                final docs = snapshot.data!.docs;
+                return ListView.builder(
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final doc = docs[index];
+                    final data = doc.data() as Map<String, dynamic>;
+                    final questions = data['questions'] as List<dynamic>? ?? [];
+                    return ListTile(
+                      leading: const Icon(Icons.quiz),
+                      title: Text(data['name'] ?? 'Névtelen kérdésbank'),
+                      subtitle: Text('${questions.length} kérdés'),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () => context.go('/question-banks/edit/${doc.id}'),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+} 
