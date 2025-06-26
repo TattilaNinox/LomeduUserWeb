@@ -18,11 +18,26 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
   final _nameController = TextEditingController();
   List<Map<String, dynamic>> _questions = [];
   bool _isLoading = true;
+  String? _selectedCategory;
+  List<String> _categories = [];
 
   @override
   void initState() {
     super.initState();
-    _loadBank();
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    await _loadCategories();
+    await _loadBank();
+    setState(() => _isLoading = false);
+  }
+  
+  Future<void> _loadCategories() async {
+    final snapshot = await FirebaseFirestore.instance.collection('categories').get();
+    if(mounted) {
+      _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+    }
   }
 
   Future<void> _loadBank() async {
@@ -30,6 +45,7 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
     if (doc.exists) {
       final data = doc.data()!;
       _nameController.text = data['name'] ?? '';
+      _selectedCategory = data['category'];
       _questions = List<Map<String, dynamic>>.from(data['questions'] ?? []);
     }
     setState(() => _isLoading = false);
@@ -38,6 +54,7 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
   Future<void> _saveBank() async {
     await FirebaseFirestore.instance.collection('question_banks').doc(widget.bankId).update({
       'name': _nameController.text.trim(),
+      'category': _selectedCategory,
       'questions': _questions,
     });
     if (mounted) {
@@ -205,9 +222,35 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  TextField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(labelText: 'Kérdésbank neve'),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(labelText: 'Kérdésbank neve'),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: _selectedCategory,
+                          items: _categories.map((String category) {
+                            return DropdownMenuItem<String>(
+                              value: category,
+                              child: Text(category),
+                            );
+                          }).toList(),
+                          onChanged: (newValue) {
+                            setState(() {
+                              _selectedCategory = newValue;
+                            });
+                          },
+                          decoration: const InputDecoration(
+                            labelText: 'Kategória',
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   Expanded(

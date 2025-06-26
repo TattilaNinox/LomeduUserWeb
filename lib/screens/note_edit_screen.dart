@@ -33,6 +33,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
   String? _selectedCategory;
   List<String> _tags = [];
   final _tagController = TextEditingController();
+  String _selectedType = 'text';
   String? _noteType;
 
   Map<String, dynamic>? _selectedMp3File;
@@ -116,6 +117,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
       _selectedCategory = data['category'];
       _tags = List<String>.from(data['tags'] ?? []);
       _noteType = data['type'];
+      _selectedType = data['type'] ?? 'text';
 
       if (data.containsKey('audioUrl')) {
         _selectedMp3File = {'name': 'Meglévő hangfájl', 'url': data['audioUrl']};
@@ -159,7 +161,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
         'tags': _tags,
         'pages': [_htmlContentController.text],
         'modified': Timestamp.now(),
-        'type': _noteType,
+        'type': _selectedType,
       };
 
       if (isFileValid(_selectedMp3File) && _selectedMp3File!['bytes'] != null) {
@@ -270,6 +272,11 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                               flex: 1,
                               child: _buildCategoryDropdown(),
                             ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              flex: 1,
+                              child: _buildTypeDropdown(),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 24),
@@ -338,6 +345,28 @@ class _NoteEditScreenState extends State<NoteEditScreen>
       },
       decoration: const InputDecoration(
         labelText: 'Kategória',
+        border: OutlineInputBorder(),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+    );
+  }
+
+  Widget _buildTypeDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedType,
+      items: const [
+        DropdownMenuItem(value: 'text', child: Text('Szöveges')),
+        DropdownMenuItem(value: 'interactive', child: Text('Interaktív')),
+        DropdownMenuItem(value: 'dynamic_quiz', child: Text('Dinamikus Kvíz')),
+      ],
+      onChanged: (newValue) {
+        setState(() {
+          _selectedType = newValue!;
+        });
+      },
+      decoration: const InputDecoration(
+        labelText: 'Jegyzet Típusa',
         border: OutlineInputBorder(),
         filled: true,
         fillColor: Colors.white,

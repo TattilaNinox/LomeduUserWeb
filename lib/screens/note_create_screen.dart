@@ -24,6 +24,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
   final _titleController = TextEditingController();
   final _htmlContentController = TextEditingController();
   String? _selectedCategory;
+  String _selectedType = 'text';
   Map<String, dynamic>? _selectedMp3File;
   Map<String, dynamic>? _selectedVideoFile;
   bool _isUploading = false;
@@ -186,7 +187,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
         'status': 'Draft',
         'modified': Timestamp.now(),
         'pages': [_htmlContentController.text],
-        'type': 'text', 
+        'type': _selectedType,
         'tags': _tags,
       };
       if (mp3Url != null) noteData['audioUrl'] = mp3Url;
@@ -282,6 +283,11 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
                               flex: 1,
                               child: _buildCategoryDropdown(),
                             ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              flex: 1,
+                              child: _buildTypeDropdown(),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 24),
@@ -327,6 +333,28 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+    );
+  }
+
+  Widget _buildTypeDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedType,
+      items: const [
+        DropdownMenuItem(value: 'text', child: Text('Szöveges')),
+        DropdownMenuItem(value: 'interactive', child: Text('Interaktív')),
+        DropdownMenuItem(value: 'dynamic_quiz', child: Text('Dinamikus Kvíz')),
+      ],
+      onChanged: (newValue) {
+        setState(() {
+          _selectedType = newValue!;
+        });
+      },
+      decoration: const InputDecoration(
+        labelText: 'Jegyzet Típusa',
+        border: OutlineInputBorder(),
         filled: true,
         fillColor: Colors.white,
       ),

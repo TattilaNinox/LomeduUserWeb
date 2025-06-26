@@ -26,6 +26,7 @@ class _InteractiveNoteCreateScreenState
   final _titleController = TextEditingController();
   final _htmlContentController = TextEditingController();
   String? _selectedCategory;
+  String _selectedType = 'interactive'; // Alapértelmezett típus
   Map<String, dynamic>? _selectedMp3File;
   Map<String, dynamic>? _selectedVideoFile;
   bool _isUploading = false;
@@ -200,7 +201,7 @@ class _InteractiveNoteCreateScreenState
         'status': 'Draft',
         'modified': Timestamp.now(),
         'pages': [htmlContent],
-        'type': 'interactive', // Típus beállítása
+        'type': _selectedType, // Típus mentése
         'tags': _tags,
       };
       if (mp3Url != null) noteData['audioUrl'] = mp3Url;
@@ -297,6 +298,11 @@ class _InteractiveNoteCreateScreenState
                               flex: 1,
                               child: _buildCategoryDropdown(),
                             ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              flex: 1,
+                              child: _buildTypeDropdown(),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 24),
@@ -365,6 +371,28 @@ class _InteractiveNoteCreateScreenState
       },
       decoration: const InputDecoration(
         labelText: 'Kategória',
+        border: OutlineInputBorder(),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+    );
+  }
+
+  Widget _buildTypeDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedType,
+      items: const [
+        DropdownMenuItem(value: 'text', child: Text('Szöveges')),
+        DropdownMenuItem(value: 'interactive', child: Text('Interaktív')),
+        DropdownMenuItem(value: 'dynamic_quiz', child: Text('Dinamikus Kvíz')),
+      ],
+      onChanged: (newValue) {
+        setState(() {
+          _selectedType = newValue!;
+        });
+      },
+      decoration: const InputDecoration(
+        labelText: 'Jegyzet Típusa',
         border: OutlineInputBorder(),
         filled: true,
         fillColor: Colors.white,
