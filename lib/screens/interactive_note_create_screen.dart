@@ -26,7 +26,6 @@ class _InteractiveNoteCreateScreenState
   final _titleController = TextEditingController();
   final _htmlContentController = TextEditingController();
   String? _selectedCategory;
-  String _selectedType = 'interactive'; // Alapértelmezett típus
   Map<String, dynamic>? _selectedMp3File;
   Map<String, dynamic>? _selectedVideoFile;
   bool _isUploading = false;
@@ -199,7 +198,7 @@ class _InteractiveNoteCreateScreenState
         'status': 'Draft',
         'modified': Timestamp.now(),
         'pages': [htmlContent],
-        'type': _selectedType, // Típus mentése
+        'type': 'interactive',
         'tags': _tags,
       };
       if (mp3Url != null) noteData['audioUrl'] = mp3Url;
@@ -271,7 +270,7 @@ class _InteractiveNoteCreateScreenState
       ),
       body: Row(
         children: [
-          const Sidebar(selectedMenu: 'interactive_notes'),
+          const Sidebar(selectedMenu: 'interactive_note_create'),
            Expanded(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
@@ -295,11 +294,6 @@ class _InteractiveNoteCreateScreenState
                             Expanded(
                               flex: 1,
                               child: _buildCategoryDropdown(),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              flex: 1,
-                              child: _buildTypeDropdown(),
                             ),
                           ],
                         ),
@@ -376,29 +370,7 @@ class _InteractiveNoteCreateScreenState
     );
   }
 
-  Widget _buildTypeDropdown() {
-    return DropdownButtonFormField<String>(
-      value: _selectedType,
-      items: const [
-        DropdownMenuItem(value: 'text', child: Text('Szöveges')),
-        DropdownMenuItem(value: 'interactive', child: Text('Interaktív')),
-        DropdownMenuItem(value: 'dynamic_quiz', child: Text('Dinamikus Kvíz')),
-      ],
-      onChanged: (newValue) {
-        setState(() {
-          _selectedType = newValue!;
-        });
-      },
-      decoration: const InputDecoration(
-        labelText: 'Jegyzet Típusa',
-        border: OutlineInputBorder(),
-        filled: true,
-        fillColor: Colors.white,
-      ),
-    );
-  }
-
-    Widget _buildEditorAndPreview() {
+  Widget _buildEditorAndPreview() {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

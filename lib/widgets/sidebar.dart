@@ -60,8 +60,24 @@ class Sidebar extends StatelessWidget {
           // Az egyes menüpontok létrehozása a `_buildMenuItem` segédmetódussal.
           // Az utolsó paraméter (`isSelected`) dönti el, hogy a menüpont
           // kiemelt állapotban jelenjen-e meg.
-          _buildMenuItem(context, 'notes', 'Jegyzetek', selectedMenu == 'notes'),
-          _buildMenuItem(context, 'interactive_notes', 'Interaktív Jegyzetek', selectedMenu == 'interactive_notes'),
+          _buildMenuItem(context, 'notes', 'Jegyzetek Listája', selectedMenu == 'notes'),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Container(
+              height: 1,
+              color: const Color(0xFF1E3A8A).withOpacity(0.3),
+            ),
+          ),
+          _buildMenuItem(context, 'note_create', 'Új Szöveges Jegyzet', selectedMenu == 'note_create'),
+          _buildMenuItem(context, 'interactive_note_create', 'Új Interaktív Jegyzet', selectedMenu == 'interactive_note_create'),
+          _buildMenuItem(context, 'dynamic_quiz_create', 'Új Dinamikus Kvíz', selectedMenu == 'dynamic_quiz_create'),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Container(
+              height: 1,
+              color: const Color(0xFF1E3A8A).withOpacity(0.3),
+            ),
+          ),
           _buildMenuItem(context, 'bundles', 'Kötegek', selectedMenu == 'bundles'),
           _buildMenuItem(context, 'question_banks', 'Kérdésbankok', selectedMenu == 'question_banks'),
           _buildMenuItem(context, 'categories', 'Kategóriák', selectedMenu == 'categories'),
@@ -97,10 +113,16 @@ class Sidebar extends StatelessWidget {
     final IconData iconData;
     switch (routeName) {
       case 'notes':
-        iconData = Icons.note;
+        iconData = Icons.list_alt;
         break;
-      case 'interactive_notes':
-        iconData = Icons.dynamic_feed;
+      case 'note_create':
+        iconData = Icons.note_add;
+        break;
+      case 'interactive_note_create':
+        iconData = Icons.web;
+        break;
+      case 'dynamic_quiz_create':
+        iconData = Icons.quiz;
         break;
       case 'bundles':
         iconData = Icons.collections_bookmark;
@@ -135,8 +157,12 @@ class Sidebar extends StatelessWidget {
       onTap: () {
         if (routeName == 'notes') {
           context.go('/notes');
-        } else if (routeName == 'interactive_notes') {
+        } else if (routeName == 'note_create') {
+          context.go('/notes/create');
+        } else if (routeName == 'interactive_note_create') {
           context.go('/interactive-notes/create');
+        } else if (routeName == 'dynamic_quiz_create') {
+          context.go('/dynamic-quiz/create');
         } else if (routeName == 'bundles') {
           context.go('/bundles');
         } else if (routeName == 'question_banks') {

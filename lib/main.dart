@@ -18,6 +18,8 @@ import 'theme/app_theme.dart'; // <-- AppTheme importálása
 import 'screens/flashcard_card_edit_screen.dart';
 import 'screens/question_bank_list_screen.dart';
 import 'screens/question_bank_edit_screen.dart';
+import 'screens/quiz_create_screen.dart';
+import 'screens/quiz_edit_screen.dart';
 
 /// Az alkalmazás fő belépési pontja.
 void main() async {
@@ -60,15 +62,26 @@ final _router = GoRouter(
       path: '/notes',
       builder: (context, state) => const NoteListScreen(),
     ),
-    // Új szöveges jegyzet létrehozása képernyő
+    // Új útvonalak a létrehozó képernyőkhöz
     GoRoute(
       path: '/notes/create',
       builder: (context, state) => const NoteCreateScreen(),
     ),
-    // Új interaktív jegyzet létrehozása képernyő.
     GoRoute(
       path: '/interactive-notes/create',
       builder: (context, state) => const InteractiveNoteCreateScreen(),
+    ),
+    GoRoute(
+      path: '/dynamic-quiz/create',
+      builder: (context, state) => const QuizCreateScreen(),
+    ),
+    // Új útvonal a kvíz szerkesztéséhez
+    GoRoute(
+      path: '/quiz/edit/:noteId',
+      builder: (context, state) {
+        final noteId = state.pathParameters['noteId']!;
+        return QuizEditScreen(noteId: noteId);
+      },
     ),
     // Kategóriakezelő képernyő.
     GoRoute(

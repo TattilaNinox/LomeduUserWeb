@@ -12,6 +12,7 @@ import 'package:web/web.dart' as web;
 import 'dart:ui_web' as ui_web;
 
 import '../widgets/sidebar.dart';
+import '../widgets/quiz_viewer.dart';
 
 class NoteEditScreen extends StatefulWidget {
   final String noteId;
@@ -34,7 +35,6 @@ class _NoteEditScreenState extends State<NoteEditScreen>
   List<String> _tags = [];
   final _tagController = TextEditingController();
   String _selectedType = 'text';
-  String? _noteType;
 
   Map<String, dynamic>? _selectedMp3File;
   Map<String, dynamic>? _selectedVideoFile;
@@ -106,29 +106,28 @@ class _NoteEditScreenState extends State<NoteEditScreen>
   Future<void> _loadNoteData() async {
     final doc = await FirebaseFirestore.instance.collection('notes').doc(widget.noteId).get();
     
-    if (!doc.exists) {
+    if (doc.exists) {
+      if (mounted) {
+        final data = doc.data()!;
+        _titleController.text = data['title'] ?? '';
+        _selectedCategory = data['category'];
+        _tags = List<String>.from(data['tags'] ?? []);
+        _selectedType = data['type'] ?? 'text';
+
+        if (data.containsKey('audioUrl')) {
+          _selectedMp3File = {'name': 'Meglévő hangfájl', 'url': data['audioUrl']};
+        }
+        if (data.containsKey('videoUrl')) {
+          _selectedVideoFile = {'name': 'Meglévő videófájl', 'url': data['videoUrl']};
+        }
+
+        final pages = data['pages'] as List<dynamic>? ?? [];
+        final content = pages.isNotEmpty ? pages.first as String : '';
+        
+        _htmlContentController.text = content;
+      }
+    } else {
       throw Exception('A jegyzet nem található.');
-    }
-
-    if (mounted) {
-      final data = doc.data()!;
-      _titleController.text = data['title'] ?? '';
-      _selectedCategory = data['category'];
-      _tags = List<String>.from(data['tags'] ?? []);
-      _noteType = data['type'];
-      _selectedType = data['type'] ?? 'text';
-
-      if (data.containsKey('audioUrl')) {
-        _selectedMp3File = {'name': 'Meglévő hangfájl', 'url': data['audioUrl']};
-      }
-      if (data.containsKey('videoUrl')) {
-        _selectedVideoFile = {'name': 'Meglévő videófájl', 'url': data['videoUrl']};
-      }
-
-      final pages = data['pages'] as List<dynamic>? ?? [];
-      final content = pages.isNotEmpty ? pages.first as String : '';
-      
-      _htmlContentController.text = content;
     }
   }
   
@@ -160,7 +159,6 @@ class _NoteEditScreenState extends State<NoteEditScreen>
         'tags': _tags,
         'pages': [_htmlContentController.text],
         'modified': Timestamp.now(),
-        'type': _selectedType,
       };
 
       if (isFileValid(_selectedMp3File) && _selectedMp3File!['bytes'] != null) {
@@ -246,7 +244,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
       ),
       body: Row(
         children: [
-          Sidebar(selectedMenu: _noteType == 'interactive' ? 'interactive_notes' : 'notes'),
+          Sidebar(selectedMenu: 'notes'),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
@@ -270,11 +268,6 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                             Expanded(
                               flex: 1,
                               child: _buildCategoryDropdown(),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              flex: 1,
-                              child: _buildTypeDropdown(),
                             ),
                           ],
                         ),
@@ -344,28 +337,6 @@ class _NoteEditScreenState extends State<NoteEditScreen>
       },
       decoration: const InputDecoration(
         labelText: 'Kategória',
-        border: OutlineInputBorder(),
-        filled: true,
-        fillColor: Colors.white,
-      ),
-    );
-  }
-
-  Widget _buildTypeDropdown() {
-    return DropdownButtonFormField<String>(
-      value: _selectedType,
-      items: const [
-        DropdownMenuItem(value: 'text', child: Text('Szöveges')),
-        DropdownMenuItem(value: 'interactive', child: Text('Interaktív')),
-        DropdownMenuItem(value: 'dynamic_quiz', child: Text('Dinamikus Kvíz')),
-      ],
-      onChanged: (newValue) {
-        setState(() {
-          _selectedType = newValue!;
-        });
-      },
-      decoration: const InputDecoration(
-        labelText: 'Jegyzet Típusa',
         border: OutlineInputBorder(),
         filled: true,
         fillColor: Colors.white,
@@ -488,19 +459,26 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                   ),
                 ),
                 // Preview
-                _showPreview
-                    ? Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey[300]!)
-                          ),
-                          child: HtmlElementView(viewType: _previewViewId)
-                        ),
-                      )
-                    : const Center(
-                        child: Text(
-                            'Az előnézethez írj be HTML tartalmat és válts fület.')),
+                if (_selectedType == 'dynamic_quiz')
+                  FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _getQuizQuestions(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Center(child: Text('Hiba a kvíz kérdések betöltésekor, vagy nincs kérdés a bankban.'));
+                      }
+                      return QuizViewer(questions: snapshot.data!);
+                    },
+                  )
+                else
+                  _showPreview
+                      ? Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: HtmlElementView(viewType: _previewViewId),
+                        )
+                      : const Center(child: Text('Az előnézethez válts fület.')),
               ],
             ),
           )
@@ -660,5 +638,23 @@ class _NoteEditScreenState extends State<NoteEditScreen>
         }
       });
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _getQuizQuestions() async {
+    if (_selectedCategory != null) {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('question_banks')
+          .where('category', isEqualTo: _selectedCategory)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        final bank = querySnapshot.docs.first.data();
+        final questions = List<Map<String, dynamic>>.from(bank['questions'] ?? []);
+        questions.shuffle();
+        return questions.take(10).toList();
+      }
+    }
+    return [];
   }
 } 

@@ -6,6 +6,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import '../theme/app_theme.dart';
 import 'video_preview_player.dart';
 import 'mini_audio_player.dart';
+import 'quiz_viewer.dart';
 
 /// A jegyzeteket táblázatos formában megjelenítő, szűrhető és kereshető widget.
 ///
@@ -207,18 +208,30 @@ class NoteTable extends StatelessWidget {
                             Icons.visibility,
                             AppTheme.primaryColor,
                             () {
-                              if (noteType == 'interactive') {
+                              if (noteType == 'dynamic_quiz') {
+                                final questionBankId = data['questionBankId'] as String?;
+                                if (questionBankId != null) {
+                                  // Ideiglenesen egy dialógusban jelenítjük meg a kvízt
+                                  _showQuizPreviewDialog(context, questionBankId);
+                                }
+                              } else if (noteType == 'interactive') {
                                 context.go('/interactive-note/${doc.id}');
                               } else {
                                 context.go('/note/${doc.id}');
                               }
                             }),
                         // Szerkesztés gomb.
-                      _buildIconButton(
-                          context,
-                          Icons.edit,
-                          AppTheme.primaryColor,
-                            () => context.go('/note/edit/${doc.id}')),
+                        _buildIconButton(
+                            context,
+                            Icons.edit,
+                            AppTheme.primaryColor,
+                            () {
+                              if (noteType == 'dynamic_quiz') {
+                                context.go('/quiz/edit/${doc.id}');
+                              } else {
+                                context.go('/note/edit/${doc.id}');
+                              }
+                            }),
                         // Státuszváltó menü
                         _buildStatusMenu(context, doc.id, status),
                         // Törlés gomb.
@@ -390,5 +403,43 @@ class NoteTable extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _showQuizPreviewDialog(BuildContext context, String bankId) async {
+    // Itt újra le kell kérdezni a kérdéseket, mivel ez egy stateless widget
+    final bankDoc = await FirebaseFirestore.instance.collection('question_banks').doc(bankId).get();
+    if (!bankDoc.exists) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hiba: A kérdésbank nem található.')));
+      return;
+    }
+    final bank = bankDoc.data()!;
+    final questions = List<Map<String, dynamic>>.from(bank['questions'] ?? []);
+    questions.shuffle();
+    final selectedQuestions = questions.take(10).toList();
+
+    if (selectedQuestions.isEmpty) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ez a kérdésbank nem tartalmaz kérdéseket.')));
+      return;
+    }
+
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          contentPadding: const EdgeInsets.all(8),
+          content: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.8,
+            height: MediaQuery.of(context).size.height * 0.8,
+            child: QuizViewer(questions: selectedQuestions),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Bezárás'),
+            )
+          ],
+        ),
+      );
+    }
   }
 }

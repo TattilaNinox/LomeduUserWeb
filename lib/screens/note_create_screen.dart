@@ -259,7 +259,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
       ),
       body: Row(
         children: [
-          const Sidebar(selectedMenu: 'notes'),
+          const Sidebar(selectedMenu: 'note_create'),
            Expanded(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
