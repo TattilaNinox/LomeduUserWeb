@@ -20,6 +20,8 @@ import 'screens/question_bank_list_screen.dart';
 import 'screens/question_bank_edit_screen.dart';
 import 'screens/quiz_create_screen.dart';
 import 'screens/quiz_edit_screen.dart';
+import 'screens/deck_list_screen.dart';
+import 'screens/deck_edit_screen.dart';
 
 /// Az alkalmazás fő belépési pontja.
 void main() async {
@@ -162,6 +164,19 @@ final _router = GoRouter(
       builder: (context, state) {
         final bankId = state.pathParameters['bankId']!;
         return QuestionBankEditScreen(bankId: bankId);
+      },
+    ),
+    // Decks List
+    GoRoute(
+      path: '/decks',
+      builder: (context, state) => const DeckListScreen(),
+    ),
+    // Deck Edit
+    GoRoute(
+      path: '/decks/edit/:deckId',
+      builder: (context, state) {
+        final deckId = state.pathParameters['deckId']!;
+        return DeckEditScreen(deckId: deckId);
       },
     ),
   ],

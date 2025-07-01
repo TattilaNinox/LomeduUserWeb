@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/sidebar.dart';
-import 'dart:async';
+import 'package:excel/excel.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
+import 'package:file_selector/file_selector.dart';
 
 class DeckEditScreen extends StatefulWidget {
   final String deckId;
@@ -13,70 +16,178 @@ class DeckEditScreen extends StatefulWidget {
 }
 
 class _DeckEditScreenState extends State<DeckEditScreen> {
-  final _titleCtrl = TextEditingController();
-  Timer? _debounce;
+  final _titleController = TextEditingController();
+  String? _selectedCategory;
+  List<Map<String, dynamic>> _flashcards = [];
+  bool _isLoading = true;
+  Map<String, String> _categories = {};
 
   @override
   void initState() {
     super.initState();
-    _loadDeckDetails();
-    _titleCtrl.addListener(_onDeckDetailsChanged);
+    _loadInitialData();
   }
 
   @override
   void dispose() {
-    _titleCtrl.removeListener(_onDeckDetailsChanged);
-    _titleCtrl.dispose();
-    _debounce?.cancel();
+    _titleController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadInitialData() async {
+    await _loadCategories();
+    await _loadDeckDetails();
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _loadDeckDetails() async {
     final doc = await FirebaseFirestore.instance.collection('notes').doc(widget.deckId).get();
     if (doc.exists && mounted) {
       final data = doc.data()!;
-      _titleCtrl.text = data['title'];
-    }
-  }
-
-  void _onDeckDetailsChanged() {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
-      FirebaseFirestore.instance.collection('notes').doc(widget.deckId).update({
-        'title': _titleCtrl.text,
-        'modified': Timestamp.now(),
-      });
-    });
-  }
-
-  void _showNotePicker() async {
-    final selectedNoteIds = await showDialog<List<String>>(
-      context: context,
-      builder: (context) => const NotePickerDialog(),
-    );
-
-    if (selectedNoteIds != null && selectedNoteIds.isNotEmpty) {
-      await FirebaseFirestore.instance.collection('notes').doc(widget.deckId).update({
-        'card_ids': FieldValue.arrayUnion(selectedNoteIds),
+      _titleController.text = data['title'];
+      _flashcards = List<Map<String, dynamic>>.from(data['flashcards'] ?? []);
+      setState(() {
+        _selectedCategory = data['category_id'];
       });
     }
   }
   
-  void _removeCard(String cardId) {
-    FirebaseFirestore.instance.collection('notes').doc(widget.deckId).update({
-      'card_ids': FieldValue.arrayRemove([cardId]),
+  Future<void> _saveDeck() async {
+    final router = GoRouter.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await FirebaseFirestore.instance.collection('notes').doc(widget.deckId).update({
+        'title': _titleController.text.trim(),
+        'category_id': _selectedCategory,
+        'flashcards': _flashcards,
+        'modified': Timestamp.now(),
+      });
+
+      if (!mounted) return;
+
+      messenger.showSnackBar(const SnackBar(content: Text('Pakli mentve!')));
+      await Future.delayed(const Duration(milliseconds: 1500));
+      
+      if (!mounted) return;
+      router.go('/decks');
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(
+        content: Text('Hiba a mentés során: $e'),
+        backgroundColor: Colors.red,
+      ));
+    }
+  }
+
+  Future<void> _exportToExcel() async {
+    final excel = Excel.createExcel();
+    final Sheet sheetObject = excel['Tanulókártyák'];
+    final header = ['Előlap', 'Hátlap'];
+    sheetObject.appendRow(header);
+
+    for (final card in _flashcards) {
+      final row = [
+        card['front'] as String? ?? '',
+        card['back'] as String? ?? '',
+      ];
+      sheetObject.appendRow(row);
+    }
+    final bytes = excel.save();
+    if (bytes != null) {
+      final blob = html.Blob([bytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      html.AnchorElement(href: url)
+        ..setAttribute('download', '${_titleController.text.trim()}.xlsx')
+        ..click();
+      html.Url.revokeObjectUrl(url);
+    }
+  }
+
+  Future<void> _importFromExcel() async {
+    const typeGroup = XTypeGroup(label: 'Excel', extensions: ['xlsx']);
+    final file = await openFile(acceptedTypeGroups: [typeGroup]);
+    if (file == null) return;
+    final bytes = await file.readAsBytes();
+    final excel = Excel.decodeBytes(bytes);
+    final sheet = excel.tables[excel.tables.keys.first];
+    if (sheet == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hiba: Nem található munkalap.')));
+      return;
+    }
+    final newFlashcards = <Map<String, dynamic>>[];
+    for (var i = 1; i < sheet.rows.length; i++) {
+      final row = sheet.rows[i];
+      if (row.every((cell) => cell == null || cell.value.toString().trim().isEmpty)) continue;
+      try {
+        final frontText = row[0]?.value.toString().trim() ?? '';
+        final backText = row[1]?.value.toString().trim() ?? '';
+        if (frontText.isEmpty && backText.isEmpty) continue;
+        
+        newFlashcards.add({'front': frontText, 'back': backText});
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Hiba a(z) ${i+1}. sor feldolgozásakor: $e')));
+        return;
+      }
+    }
+    if (!mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Importálás megerősítése'),
+        content: Text('Biztosan felülírja a jelenlegi ${_flashcards.length} kártyát a fájlban található ${newFlashcards.length} kártyával?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Mégse')),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), style: TextButton.styleFrom(foregroundColor: Colors.orange), child: const Text('Felülírás')),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      setState(() => _flashcards = newFlashcards);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Importálás sikeres! Ne felejts el menteni.')));
+    }
+  }
+
+  void _addFlashcard() {
+    setState(() {
+      _flashcards.add({
+        'front': 'Új kártya - Előlap',
+        'back': 'Új kártya - Hátlap',
+      });
     });
+  }
+
+  Future<void> _loadCategories() async {
+    final snapshot = await FirebaseFirestore.instance.collection('categories').get();
+    if(mounted) {
+      setState(() {
+        _categories = {for (var doc in snapshot.docs) doc.id: doc['name'] as String};
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(appBar: AppBar(title: const Text('Betöltés...')), body: const Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Köteg szerkesztése'),
+        title: const Text('Tanulókártya pakli szerkesztése'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/decks'),
         ),
+        actions: [
+          IconButton(icon: const Icon(Icons.file_download), onPressed: _exportToExcel, tooltip: 'Exportálás Excelbe'),
+          IconButton(icon: const Icon(Icons.file_upload), onPressed: _importFromExcel, tooltip: 'Importálás Excelből'),
+          IconButton(icon: const Icon(Icons.save), onPressed: _saveDeck, tooltip: 'Mentés'),
+          const SizedBox(width: 12),
+        ],
       ),
       body: Row(
         children: [
@@ -88,59 +199,31 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextField(
-                    controller: _titleCtrl,
-                    decoration: const InputDecoration(labelText: 'Köteg címe'),
+                    controller: _titleController,
+                    decoration: const InputDecoration(labelText: 'Pakli címe'),
                   ),
                   const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Kártyák a kötegben', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      ElevatedButton.icon(
-                        onPressed: _showNotePicker,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Jegyzet hozzáadása'),
-                      )
-                    ],
+                  DropdownButtonFormField<String>(
+                    value: _selectedCategory,
+                    items: _categories.entries.map((entry) {
+                      return DropdownMenuItem<String>(
+                        value: entry.key,
+                        child: Text(entry.value),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      setState(() => _selectedCategory = val);
+                    },
+                    decoration: const InputDecoration(labelText: 'Kategória'),
                   ),
+                  const SizedBox(height: 24),
+                  const Text('Tanulókártyák', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const Divider(height: 24),
                   Expanded(
-                    child: StreamBuilder<DocumentSnapshot>(
-                      stream: FirebaseFirestore.instance.collection('notes').doc(widget.deckId).snapshots(),
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-                        final data = snapshot.data!.data() as Map<String, dynamic>;
-                        final cardIds = List<String>.from(data['card_ids'] ?? []);
-
-                        if (cardIds.isEmpty) return const Center(child: Text('Nincsenek kártyák a kötegben.'));
-
-                        return ReorderableListView.builder(
-                          itemCount: cardIds.length,
-                          itemBuilder: (context, index) {
-                            return FutureBuilder<DocumentSnapshot>(
-                              key: ValueKey(cardIds[index]),
-                              future: FirebaseFirestore.instance.collection('notes').doc(cardIds[index]).get(),
-                              builder: (context, cardSnapshot) {
-                                if (!cardSnapshot.hasData) return const ListTile(title: Text('Betöltés...'));
-                                final cardData = cardSnapshot.data!.data() as Map<String, dynamic>;
-                                return ListTile(
-                                  leading: ReorderableDragStartListener(index: index, child: const Icon(Icons.drag_handle)),
-                                  title: Text(cardData['title'] ?? 'Névtelen jegyzet'),
-                                  trailing: IconButton(
-                                    icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-                                    onPressed: () => _removeCard(cardIds[index]),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                          onReorder: (oldIndex, newIndex) {
-                            if (oldIndex < newIndex) newIndex -= 1;
-                            final item = cardIds.removeAt(oldIndex);
-                            cardIds.insert(newIndex, item);
-                            FirebaseFirestore.instance.collection('notes').doc(widget.deckId).update({'card_ids': cardIds});
-                          },
-                        );
+                    child: ListView.builder(
+                      itemCount: _flashcards.length,
+                      itemBuilder: (context, index) {
+                        return _buildFlashcardEditor(_flashcards[index], index);
                       },
                     ),
                   ),
@@ -150,58 +233,56 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addFlashcard,
+        tooltip: 'Új kártya hozzáadása',
+        child: const Icon(Icons.add),
+      ),
     );
   }
-}
 
-class NotePickerDialog extends StatefulWidget {
-  const NotePickerDialog({super.key});
+  Widget _buildFlashcardEditor(Map<String, dynamic> card, int index) {
+    final frontController = TextEditingController(text: card['front'] as String? ?? '');
+    frontController.addListener(() => _flashcards[index]['front'] = frontController.text);
 
-  @override
-  State<NotePickerDialog> createState() => _NotePickerDialogState();
-}
+    final backController = TextEditingController(text: card['back'] as String? ?? '');
+    backController.addListener(() => _flashcards[index]['back'] = backController.text);
 
-class _NotePickerDialogState extends State<NotePickerDialog> {
-  final Set<String> _selectedIds = {};
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Jegyzetek kiválasztása'),
-      content: SizedBox(
-        width: 500,
-        child: StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('notes')
-              .where('type', isEqualTo: 'interactive')
-              .snapshots(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-            return ListView(
-              children: snapshot.data!.docs.map((doc) {
-                final isSelected = _selectedIds.contains(doc.id);
-                return CheckboxListTile(
-                  title: Text(doc['title']),
-                  value: isSelected,
-                  onChanged: (bool? value) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Kártya ${index + 1}', style: Theme.of(context).textTheme.titleMedium),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () {
                     setState(() {
-                      if (value == true) {
-                        _selectedIds.add(doc.id);
-                      } else {
-                        _selectedIds.remove(doc.id);
-                      }
+                      _flashcards.removeAt(index);
                     });
                   },
-                );
-              }).toList(),
-            );
-          },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: frontController,
+              decoration: const InputDecoration(labelText: 'Előlap'),
+              maxLines: null,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: backController,
+              decoration: const InputDecoration(labelText: 'Hátlap'),
+              maxLines: null,
+            ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Mégse')),
-        TextButton(onPressed: () => Navigator.of(context).pop(_selectedIds.toList()), child: const Text('Hozzáadás')),
-      ],
     );
   }
 } 
