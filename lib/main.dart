@@ -22,6 +22,7 @@ import 'screens/quiz_create_screen.dart';
 import 'screens/quiz_edit_screen.dart';
 import 'screens/deck_list_screen.dart';
 import 'screens/deck_edit_screen.dart';
+import 'screens/flashcard_deck_view_screen.dart';
 
 /// Az alkalmazás fő belépési pontja.
 void main() async {
@@ -177,6 +178,14 @@ final _router = GoRouter(
       builder: (context, state) {
         final deckId = state.pathParameters['deckId']!;
         return DeckEditScreen(deckId: deckId);
+      },
+    ),
+    // Deck View (flashcard flip)
+    GoRoute(
+      path: '/deck/:deckId/view',
+      builder: (context, state) {
+        final deckId = state.pathParameters['deckId']!;
+        return FlashcardDeckViewScreen(deckId: deckId);
       },
     ),
   ],

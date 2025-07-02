@@ -65,7 +65,7 @@ class Sidebar extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Container(
               height: 1,
-              color: const Color(0xFF1E3A8A).withOpacity(0.3),
+              color: const Color(0xFF1E3A8A).withValues(alpha: 0.3),
             ),
           ),
           _buildMenuItem(context, 'note_create', 'Új Szöveges Jegyzet', selectedMenu == 'note_create'),
@@ -75,7 +75,7 @@ class Sidebar extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Container(
               height: 1,
-              color: const Color(0xFF1E3A8A).withOpacity(0.3),
+              color: const Color(0xFF1E3A8A).withValues(alpha: 0.3),
             ),
           ),
           _buildMenuItem(context, 'bundles', 'Kötegek', selectedMenu == 'bundles'),

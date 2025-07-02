@@ -62,6 +62,7 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
       await FirebaseFirestore.instance.collection('notes').doc(widget.deckId).update({
         'title': _titleController.text.trim(),
         'category_id': _selectedCategory,
+        'category': _categories[_selectedCategory] ?? '',
         'flashcards': _flashcards,
         'modified': Timestamp.now(),
       });
