@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import '../theme/app_theme.dart';
 import 'video_preview_player.dart';
 import 'mini_audio_player.dart';
@@ -56,13 +55,13 @@ class NoteTable extends StatelessWidget {
             return const Center(child: Text('Nincsenek jegyzetek.'));
           }
           final notes = snapshot.data!.docs
-              .where((d) => !(d.data()!['deletedAt'] != null))
+              .where((d) => !(d.data()['deletedAt'] != null))
               .toList();
           if (notes.isEmpty) {
             return const Center(child: Text('Nincsenek találatok.'));
           }
           final filteredNotes = notes.where((doc) {
-            final data = doc.data();
+            final data = doc.data()  ;
             final title = (data['title'] ?? '');
             return title.toLowerCase().contains(searchText.toLowerCase());
           }).toList();
@@ -84,7 +83,7 @@ class NoteTable extends StatelessWidget {
                             physics: const ClampingScrollPhysics(),
                             itemBuilder: (context, index) {
                               final doc = filteredNotes[index];
-                              final data = doc.data()!;
+                              final data = doc.data();
                               final noteType = data['type'] as String? ?? 'standard';
                               if (noteType == 'deck') {
                                 return _buildDeckCard(context, doc);
@@ -98,7 +97,7 @@ class NoteTable extends StatelessWidget {
                               itemCount: filteredNotes.length,
                               itemBuilder: (context, index) {
                                 final doc = filteredNotes[index];
-                                final data = doc.data()!;
+                                final data = doc.data();
                                 final noteType = data['type'] as String? ?? 'standard';
                                 if (noteType == 'deck') {
                                   return _buildDeckCard(context, doc);
@@ -156,7 +155,7 @@ class NoteTable extends StatelessWidget {
   }
 
   Widget _buildNoteRow(BuildContext context, DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data()!;
+    final data = doc.data() ?? <String, dynamic>{};
     final title = (data['title'] ?? '');
     final category = (data['category'] ?? '');
     final status = (data['status'] ?? '');
@@ -315,7 +314,7 @@ class NoteTable extends StatelessWidget {
   }
 
   Widget _buildDeckCard(BuildContext context, DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data()!;
+    final data = doc.data() ?? <String, dynamic>{};
     final title = data['title'] as String? ?? 'Névtelen pakli';
     final flashcards = data['flashcards'] as List<dynamic>? ?? [];
     final category = (data['category'] ?? '');
@@ -330,7 +329,6 @@ class NoteTable extends StatelessWidget {
         data['audioUrl'] != null && data['audioUrl'].toString().isNotEmpty;
     final hasVideo =
         data['videoUrl'] != null && data['videoUrl'].toString().isNotEmpty;
-    final noteType = data['type'] as String? ?? 'standard';
     final tags = (data['tags'] as List<dynamic>? ?? []).cast<String>();
     const TextStyle cellStyle = TextStyle(fontSize: 12);
 
