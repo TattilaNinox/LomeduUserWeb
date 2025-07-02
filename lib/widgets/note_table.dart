@@ -73,38 +73,58 @@ class NoteTable extends StatelessWidget {
 
           return LayoutBuilder(
             builder: (context, constraints) {
-              // A teljes táblázat: fejléc + sorok
-              final table = Column(
-                children: [
-                  _buildHeader(),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: filteredNotes.length,
-                      itemBuilder: (context, index) {
-                        final doc = filteredNotes[index];
-                        final data = doc.data()!;
-                        final noteType = data['type'] as String? ?? 'standard';
-
-                        if (noteType == 'deck') {
-                          return _buildDeckCard(context, doc);
-                        } else {
-                          return _buildNoteRow(context, doc);
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              );
-
-              // Ha keskeny a viewport, csomagoljuk vízszintes scrollba.
-              if (constraints.maxWidth < 1000) {
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SizedBox(width: 1000, child: table),
+              Widget buildTable({required bool shrink}) {
+                return Column(
+                  children: [
+                    _buildHeader(),
+                    shrink
+                        ? ListView.builder(
+                            itemCount: filteredNotes.length,
+                            shrinkWrap: true,
+                            physics: const ClampingScrollPhysics(),
+                            itemBuilder: (context, index) {
+                              final doc = filteredNotes[index];
+                              final data = doc.data()!;
+                              final noteType = data['type'] as String? ?? 'standard';
+                              if (noteType == 'deck') {
+                                return _buildDeckCard(context, doc);
+                              } else {
+                                return _buildNoteRow(context, doc);
+                              }
+                            },
+                          )
+                        : Expanded(
+                            child: ListView.builder(
+                              itemCount: filteredNotes.length,
+                              itemBuilder: (context, index) {
+                                final doc = filteredNotes[index];
+                                final data = doc.data()!;
+                                final noteType = data['type'] as String? ?? 'standard';
+                                if (noteType == 'deck') {
+                                  return _buildDeckCard(context, doc);
+                                } else {
+                                  return _buildNoteRow(context, doc);
+                                }
+                              },
+                            ),
+                          ),
+                  ],
                 );
               }
 
-              return table;
+              final tableWide = buildTable(shrink: false);
+              final tableNarrow = buildTable(shrink: true);
+
+              // Ha keskeny a viewport, csomagoljuk vízszintes scrollba.
+              const minW = 800.0;
+              if (constraints.maxWidth < minW) {
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(width: minW, child: tableNarrow),
+                );
+              }
+
+              return tableWide;
             },
           );
         },
@@ -180,11 +200,28 @@ class NoteTable extends StatelessWidget {
               children: [
                 Icon(getIconForNoteType(noteType), color: AppTheme.primaryColor),
                 const SizedBox(width: 16),
-                Expanded(child: Text(title, style: cellStyle, overflow: TextOverflow.ellipsis)),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: cellStyle,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    softWrap: false,
+                  ),
+                ),
               ],
             ),
           ),
-          Expanded(flex: 2, child: Text(category, style: cellStyle)),
+          Expanded(
+            flex: 2,
+            child: Text(
+              category,
+              style: cellStyle,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              softWrap: false,
+            ),
+          ),
           Expanded(
             flex: 2,
             child: Row(
@@ -239,34 +276,37 @@ class NoteTable extends StatelessWidget {
           ),
           Expanded(
             flex: 2,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildIconButton(context, Icons.visibility,
-                    AppTheme.primaryColor, () {
-                  if (noteType == 'dynamic_quiz') {
-                    final questionBankId = data['questionBankId'] as String?;
-                    if (questionBankId != null) {
-                      _showQuizPreviewDialog(context, questionBankId);
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildIconButton(context, Icons.visibility,
+                      AppTheme.primaryColor, () {
+                    if (noteType == 'dynamic_quiz') {
+                      final questionBankId = data['questionBankId'] as String?;
+                      if (questionBankId != null) {
+                        _showQuizPreviewDialog(context, questionBankId);
+                      }
+                    } else if (noteType == 'interactive') {
+                      context.go('/interactive-note/${doc.id}');
+                    } else {
+                      context.go('/note/${doc.id}');
                     }
-                  } else if (noteType == 'interactive') {
-                    context.go('/interactive-note/${doc.id}');
-                  } else {
-                    context.go('/note/${doc.id}');
-                  }
-                }),
-                _buildIconButton(context, Icons.edit, AppTheme.primaryColor,
-                    () {
-                  if (noteType == 'dynamic_quiz') {
-                    context.go('/quiz/edit/${doc.id}');
-                  } else {
-                    context.go('/note/edit/${doc.id}');
-                  }
-                }),
-                _buildStatusMenu(context, doc.id, status),
-                _buildIconButton(context, Icons.delete_forever, Colors.black,
-                    () => _showDeleteAllDialog(context, doc.id)),
-              ],
+                  }),
+                  _buildIconButton(context, Icons.edit, AppTheme.primaryColor,
+                      () {
+                    if (noteType == 'dynamic_quiz') {
+                      context.go('/quiz/edit/${doc.id}');
+                    } else {
+                      context.go('/note/edit/${doc.id}');
+                    }
+                  }),
+                  _buildStatusMenu(context, doc.id, status),
+                  _buildIconButton(context, Icons.delete_forever, Colors.black,
+                      () => _showDeleteAllDialog(context, doc.id)),
+                ],
+              ),
             ),
           ),
         ],
@@ -314,7 +354,10 @@ class NoteTable extends StatelessWidget {
                   children: [
                     Text(title,
                         style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 12)),
+                            fontWeight: FontWeight.bold, fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        softWrap: false),
                     if (flashcards.isNotEmpty)
                       Text('${flashcards.length} kártya',
                           style:
@@ -324,7 +367,16 @@ class NoteTable extends StatelessWidget {
               ],
             ),
           ),
-          Expanded(flex: 2, child: Text(category, style: cellStyle)),
+          Expanded(
+            flex: 2,
+            child: Text(
+              category,
+              style: cellStyle,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              softWrap: false,
+            ),
+          ),
           Expanded(
             flex: 2,
             child: Row(
@@ -380,20 +432,23 @@ class NoteTable extends StatelessWidget {
           ),
           Expanded(
             flex: 2,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildIconButton(context, Icons.visibility, AppTheme.primaryColor,
-                    () {
-                  context.go('/deck/${doc.id}/view');
-                }),
-                _buildIconButton(context, Icons.edit, AppTheme.primaryColor, () {
-                  context.go('/decks/edit/${doc.id}');
-                }),
-                _buildStatusMenu(context, doc.id, status),
-                _buildIconButton(context, Icons.delete_forever, Colors.black,
-                    () => _showDeleteAllDialog(context, doc.id)),
-              ],
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildIconButton(context, Icons.visibility, AppTheme.primaryColor,
+                      () {
+                    context.go('/deck/${doc.id}/view');
+                  }),
+                  _buildIconButton(context, Icons.edit, AppTheme.primaryColor, () {
+                    context.go('/decks/edit/${doc.id}');
+                  }),
+                  _buildStatusMenu(context, doc.id, status),
+                  _buildIconButton(context, Icons.delete_forever, Colors.black,
+                      () => _showDeleteAllDialog(context, doc.id)),
+                ],
+              ),
             ),
           ),
         ],
