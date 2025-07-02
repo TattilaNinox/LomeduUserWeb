@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/sidebar.dart';
-import 'package:excel/excel.dart';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
 import 'package:file_selector/file_selector.dart';
+import 'package:excel/excel.dart';
+import '../widgets/flippable_card.dart';
 
 class DeckEditScreen extends StatefulWidget {
   final String deckId;
@@ -171,6 +172,26 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
     }
   }
 
+  void _showCardPreview(Map<String, dynamic> card) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        contentPadding: EdgeInsets.zero,
+        content: SizedBox(
+          width: 350,
+          height: 220,
+          child: FlippableCard(
+            frontText: card['front'] ?? '',
+            backText: card['back'] ?? '',
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Bezárás')),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -221,10 +242,17 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
                   const Text('Tanulókártyák', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const Divider(height: 24),
                   Expanded(
-                    child: ListView.builder(
+                    child: ReorderableListView.builder(
                       itemCount: _flashcards.length,
+                      onReorder: (oldIndex, newIndex) {
+                        setState(() {
+                          if (newIndex > oldIndex) newIndex -= 1;
+                          final item = _flashcards.removeAt(oldIndex);
+                          _flashcards.insert(newIndex, item);
+                        });
+                      },
                       itemBuilder: (context, index) {
-                        return _buildFlashcardEditor(_flashcards[index], index);
+                        return _buildFlashcardEditor(_flashcards[index], index, key: ValueKey(index));
                       },
                     ),
                   ),
@@ -242,7 +270,7 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
     );
   }
 
-  Widget _buildFlashcardEditor(Map<String, dynamic> card, int index) {
+  Widget _buildFlashcardEditor(Map<String, dynamic> card, int index, {Key? key}) {
     final frontController = TextEditingController(text: card['front'] as String? ?? '');
     frontController.addListener(() => _flashcards[index]['front'] = frontController.text);
 
@@ -251,6 +279,7 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+      key: key,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -267,19 +296,29 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
                     });
                   },
                 ),
+                IconButton(
+                  icon: const Icon(Icons.visibility, color: Colors.blue),
+                  onPressed: () => _showCardPreview(card),
+                ),
               ],
             ),
             const SizedBox(height: 8),
-            TextField(
-              controller: frontController,
-              decoration: const InputDecoration(labelText: 'Előlap'),
-              maxLines: null,
+            Padding(
+              padding: const EdgeInsets.only(right: 32.0),
+              child: TextField(
+                controller: frontController,
+                decoration: const InputDecoration(labelText: 'Előlap'),
+                maxLines: null,
+              ),
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: backController,
-              decoration: const InputDecoration(labelText: 'Hátlap'),
-              maxLines: null,
+            Padding(
+              padding: const EdgeInsets.only(right: 32.0),
+              child: TextField(
+                controller: backController,
+                decoration: const InputDecoration(labelText: 'Hátlap'),
+                maxLines: null,
+              ),
             ),
           ],
         ),

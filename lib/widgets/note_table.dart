@@ -55,7 +55,9 @@ class NoteTable extends StatelessWidget {
           if (!snapshot.hasData) {
             return const Center(child: Text('Nincsenek jegyzetek.'));
           }
-          final notes = snapshot.data!.docs;
+          final notes = snapshot.data!.docs
+              .where((d) => !(d.data()!['deletedAt'] != null))
+              .toList();
           if (notes.isEmpty) {
             return const Center(child: Text('Nincsenek találatok.'));
           }
@@ -483,34 +485,31 @@ class NoteTable extends StatelessWidget {
             style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF1E3A8A)),
             onPressed: () async {
-              final folderRef = FirebaseStorage.instance.ref('notes/$docId');
-              try {
-                final listResult = await folderRef.listAll();
-                for (final item in listResult.items) {
-                  try {
-                    await item.delete();
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    _showSnackBar(context, 'Hiba a fájl törlésekor: ${item.name}');
-                  }
-                }
-              } catch (e) {
-                if (!context.mounted) return;
-                 _showSnackBar(context, 'Hiba a fájlok listázásakor: $e');
-              }
+              Navigator.of(context).pop();
 
-              try {
-                await FirebaseFirestore.instance.collection('notes').doc(docId).delete();
-                if (!context.mounted) return;
-                _showSnackBar(context, 'Jegyzet sikeresen törölve.');
-              } catch (e) {
-                if (!context.mounted) return;
-                 _showSnackBar(context, 'Hiba a jegyzet törlésekor: $e');
-              }
+              // Soft delete: csak deletedAt-et állítunk.
+              await FirebaseFirestore.instance
+                  .collection('notes')
+                  .doc(docId)
+                  .update({'deletedAt': Timestamp.now()});
 
-              if (context.mounted) {
-                Navigator.of(context).pop();
-              }
+              if (!context.mounted) return;
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Jegyzet törölve'),
+                  action: SnackBarAction(
+                    label: 'VISSZAVONÁS',
+                    onPressed: () async {
+                      await FirebaseFirestore.instance
+                          .collection('notes')
+                          .doc(docId)
+                          .update({'deletedAt': FieldValue.delete()});
+                    },
+                  ),
+                  duration: const Duration(seconds: 8),
+                ),
+              );
             },
             child: const Text('Igen, törlés', style: TextStyle(fontFamily: 'Inter')),
           ),
