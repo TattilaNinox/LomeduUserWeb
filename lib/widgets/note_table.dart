@@ -6,8 +6,11 @@ import '../theme/app_theme.dart';
 import 'video_preview_player.dart';
 import 'mini_audio_player.dart';
 import 'quiz_viewer.dart';
+import 'quiz_viewer_dual.dart';
 
-class NoteTable extends StatelessWidget {
+enum SortColumn { title, category, tags, status, modified }
+
+class NoteTable extends StatefulWidget {
   final String searchText;
   final String? selectedStatus;
   final String? selectedCategory;
@@ -21,6 +24,59 @@ class NoteTable extends StatelessWidget {
     required this.selectedTag,
   });
 
+  @override
+  State<NoteTable> createState() => _NoteTableState();
+}
+
+class _NoteTableState extends State<NoteTable> {
+  SortColumn _sortColumn = SortColumn.modified;
+  bool _ascending = false;
+
+  void _toggleSort(SortColumn column) {
+    setState(() {
+      if (_sortColumn == column) {
+        _ascending = !_ascending;
+      } else {
+        _sortColumn = column;
+        // Alapértelmezett irány: szövegesnél növekvő, dátumnál csökkenő
+        _ascending = column == SortColumn.modified ? false : true;
+      }
+    });
+  }
+
+  int _compareDocs(DocumentSnapshot a, DocumentSnapshot b) {
+    final ad = a.data() as Map<String, dynamic>;
+    final bd = b.data() as Map<String, dynamic>;
+    int cmp;
+    switch (_sortColumn) {
+      case SortColumn.title:
+        cmp = _str(ad['title']).compareTo(_str(bd['title']));
+        break;
+      case SortColumn.category:
+        cmp = _str(ad['category']).compareTo(_str(bd['category']));
+        break;
+      case SortColumn.tags:
+        cmp = _str((ad['tags'] ?? []).join(','))
+            .compareTo(_str((bd['tags'] ?? []).join(',')));
+        break;
+      case SortColumn.status:
+        cmp = _str(ad['status']).compareTo(_str(bd['status']));
+        break;
+      case SortColumn.modified:
+        cmp = _date(ad['modified']).compareTo(_date(bd['modified']));
+        break;
+    }
+    return _ascending ? cmp : -cmp;
+  }
+
+  String _str(Object? v) => (v ?? '').toString().toLowerCase();
+
+  DateTime _date(Object? v) {
+    if (v is Timestamp) return v.toDate();
+    if (v is DateTime) return v;
+    return DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
   void _showSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
@@ -32,19 +88,19 @@ class NoteTable extends StatelessWidget {
     Query<Map<String, dynamic>> query =
         FirebaseFirestore.instance.collection('notes');
 
-    if (selectedStatus != null && selectedStatus!.isNotEmpty) {
-      query = query.where('status', isEqualTo: selectedStatus);
+    if (widget.selectedStatus != null && widget.selectedStatus!.isNotEmpty) {
+      query = query.where('status', isEqualTo: widget.selectedStatus);
     }
-    if (selectedCategory != null && selectedCategory!.isNotEmpty) {
-      query = query.where('category', isEqualTo: selectedCategory);
+    if (widget.selectedCategory != null && widget.selectedCategory!.isNotEmpty) {
+      query = query.where('category', isEqualTo: widget.selectedCategory);
     }
-    if (selectedTag != null && selectedTag!.isNotEmpty) {
-      query = query.where('tags', arrayContains: selectedTag);
+    if (widget.selectedTag != null && widget.selectedTag!.isNotEmpty) {
+      query = query.where('tags', arrayContains: widget.selectedTag);
     }
 
     return Expanded(
       child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        key: ValueKey('$selectedStatus|$selectedCategory|$selectedTag|$searchText'),
+        key: ValueKey('$widget.selectedStatus|$widget.selectedCategory|$widget.selectedTag|$widget.searchText'),
         stream: query.snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -63,12 +119,15 @@ class NoteTable extends StatelessWidget {
           final filteredNotes = notes.where((doc) {
             final data = doc.data()  ;
             final title = (data['title'] ?? '');
-            return title.toLowerCase().contains(searchText.toLowerCase());
+            return title.toLowerCase().contains(widget.searchText.toLowerCase());
           }).toList();
 
           if (filteredNotes.isEmpty) {
             return const Center(child: Text('Nincsenek találatok.'));
           }
+
+          // Rendezés a kiválasztott oszlop szerint
+          filteredNotes.sort(_compareDocs);
 
           return LayoutBuilder(
             builder: (context, constraints) {
@@ -132,23 +191,46 @@ class NoteTable extends StatelessWidget {
   }
 
   Widget _buildHeader() {
-    const TextStyle headerStyle =
-        TextStyle(fontSize: 14, fontWeight: FontWeight.bold);
+    const TextStyle headerStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.bold);
+
+    Widget buildCell(String label, SortColumn column, int flex) {
+      final bool isActive = _sortColumn == column;
+      final icon = isActive
+          ? (_ascending ? Icons.arrow_upward : Icons.arrow_downward)
+          : null;
+      return Expanded(
+        flex: flex,
+        child: InkWell(
+          onTap: () => _toggleSort(column),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(label, style: headerStyle),
+              if (icon != null) ...[
+                const SizedBox(width: 4),
+                Icon(icon, size: 14, color: Colors.black54),
+              ]
+            ],
+          ),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: Colors.grey)),
         color: Color.fromARGB(255, 244, 245, 247),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Expanded(flex: 3, child: Text('Cím', style: headerStyle)),
-          Expanded(flex: 2, child: Text('Kategória', style: headerStyle)),
-          Expanded(flex: 2, child: Text('Címkék', style: headerStyle)),
-          Expanded(flex: 1, child: Text('Státusz', style: headerStyle)),
-          Expanded(flex: 1, child: Text('Módosítva', style: headerStyle)),
-          Expanded(flex: 2, child: Text('Fájlok', style: headerStyle)),
-          Expanded(flex: 2, child: Text('Műveletek', style: headerStyle)),
+          buildCell('Cím', SortColumn.title, 3),
+          buildCell('Kategória', SortColumn.category, 2),
+          buildCell('Címkék', SortColumn.tags, 2),
+          buildCell('Státusz', SortColumn.status, 1),
+          buildCell('Módosítva', SortColumn.modified, 1),
+          const Expanded(flex: 2, child: Text('Fájlok', style: headerStyle)),
+          const Expanded(flex: 2, child: Text('Műveletek', style: headerStyle)),
         ],
       ),
     );
@@ -181,6 +263,8 @@ class NoteTable extends StatelessWidget {
           return Icons.touch_app;
         case 'dynamic_quiz':
           return Icons.quiz;
+        case 'dynamic_quiz_dual':
+          return Icons.quiz_outlined;
         default:
           return Icons.notes;
       }
@@ -282,10 +366,10 @@ class NoteTable extends StatelessWidget {
                 children: [
                   _buildIconButton(context, Icons.visibility,
                       AppTheme.primaryColor, () {
-                    if (noteType == 'dynamic_quiz') {
+                    if (noteType == 'dynamic_quiz' || noteType == 'dynamic_quiz_dual') {
                       final questionBankId = data['questionBankId'] as String?;
                       if (questionBankId != null) {
-                        _showQuizPreviewDialog(context, questionBankId);
+                        _showQuizPreviewDialog(context, questionBankId, dualMode: noteType == 'dynamic_quiz_dual');
                       }
                     } else if (noteType == 'interactive') {
                       context.go('/interactive-note/${doc.id}');
@@ -295,8 +379,8 @@ class NoteTable extends StatelessWidget {
                   }),
                   _buildIconButton(context, Icons.edit, AppTheme.primaryColor,
                       () {
-                    if (noteType == 'dynamic_quiz') {
-                      context.go('/quiz/edit/${doc.id}');
+                    if (noteType == 'dynamic_quiz' || noteType == 'dynamic_quiz_dual') {
+                      context.go(noteType == 'dynamic_quiz' ? '/quiz/edit/${doc.id}' : '/quiz-dual/edit/${doc.id}');
                     } else {
                       context.go('/note/edit/${doc.id}');
                     }
@@ -540,29 +624,24 @@ class NoteTable extends StatelessWidget {
             onPressed: () async {
               Navigator.of(context).pop();
 
-              // Soft delete: csak deletedAt-et állítunk.
-              await FirebaseFirestore.instance
-                  .collection('notes')
-                  .doc(docId)
-                  .update({'deletedAt': Timestamp.now()});
+              try {
+                // Hard delete: teljes dokumentum törlése.
+                await FirebaseFirestore.instance
+                    .collection('notes')
+                    .doc(docId)
+                    .delete();
 
-              if (!context.mounted) return;
+                if (!context.mounted) return;
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Jegyzet törölve'),
-                  action: SnackBarAction(
-                    label: 'VISSZAVONÁS',
-                    onPressed: () async {
-                      await FirebaseFirestore.instance
-                          .collection('notes')
-                          .doc(docId)
-                          .update({'deletedAt': FieldValue.delete()});
-                    },
-                  ),
-                  duration: const Duration(seconds: 8),
-                ),
-              );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Jegyzet véglegesen törölve')),
+                );
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Hiba a törlés során: $e')),
+                );
+              }
             },
             child: const Text('Igen, törlés', style: TextStyle(fontFamily: 'Inter')),
           ),
@@ -591,7 +670,7 @@ class NoteTable extends StatelessWidget {
     );
   }
 
-  void _showQuizPreviewDialog(BuildContext context, String bankId) async {
+  void _showQuizPreviewDialog(BuildContext context, String bankId, {bool dualMode = false}) async {
     final bankDoc = await FirebaseFirestore.instance.collection('question_banks').doc(bankId).get();
     if (!bankDoc.exists) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hiba: A kérdésbank nem található.')));
@@ -615,7 +694,7 @@ class NoteTable extends StatelessWidget {
           content: SizedBox(
             width: MediaQuery.of(context).size.width * 0.8,
             height: MediaQuery.of(context).size.height * 0.8,
-            child: QuizViewer(questions: selectedQuestions),
+            child: dualMode ? QuizViewerDual(questions: selectedQuestions) : QuizViewer(questions: selectedQuestions),
           ),
           actions: [
             TextButton(

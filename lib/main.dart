@@ -23,6 +23,8 @@ import 'screens/quiz_edit_screen.dart';
 import 'screens/deck_list_screen.dart';
 import 'screens/deck_edit_screen.dart';
 import 'screens/flashcard_deck_view_screen.dart';
+import 'screens/quiz_dual_create_screen.dart';
+import 'screens/quiz_dual_edit_screen.dart';
 
 /// Az alkalmazás fő belépési pontja.
 void main() async {
@@ -78,12 +80,24 @@ final _router = GoRouter(
       path: '/dynamic-quiz/create',
       builder: (context, state) => const QuizCreateScreen(),
     ),
+    GoRoute(
+      path: '/dynamic-quiz-dual/create',
+      builder: (context, state) => const QuizDualCreateScreen(),
+    ),
     // Új útvonal a kvíz szerkesztéséhez
     GoRoute(
       path: '/quiz/edit/:noteId',
       builder: (context, state) {
         final noteId = state.pathParameters['noteId']!;
         return QuizEditScreen(noteId: noteId);
+      },
+    ),
+    // Új útvonal a kvíz szerkesztéséhez
+    GoRoute(
+      path: '/quiz-dual/edit/:noteId',
+      builder: (context, state) {
+        final noteId = state.pathParameters['noteId']!;
+        return QuizDualEditScreen(noteId: noteId);
       },
     ),
     // Kategóriakezelő képernyő.

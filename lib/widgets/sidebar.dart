@@ -71,6 +71,7 @@ class Sidebar extends StatelessWidget {
           _buildMenuItem(context, 'note_create', 'Új Szöveges Jegyzet', selectedMenu == 'note_create'),
           _buildMenuItem(context, 'interactive_note_create', 'Új Interaktív Jegyzet', selectedMenu == 'interactive_note_create'),
           _buildMenuItem(context, 'dynamic_quiz_create', 'Új Dinamikus Kvíz', selectedMenu == 'dynamic_quiz_create'),
+          _buildMenuItem(context, 'dynamic_quiz_dual_create', 'Új 2-válaszos Dinamikus Kvíz', selectedMenu == 'dynamic_quiz_dual_create'),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Container(
@@ -125,6 +126,9 @@ class Sidebar extends StatelessWidget {
       case 'dynamic_quiz_create':
         iconData = Icons.quiz;
         break;
+      case 'dynamic_quiz_dual_create':
+        iconData = Icons.quiz_outlined;
+        break;
       case 'bundles':
         iconData = Icons.collections_bookmark;
         break;
@@ -167,6 +171,8 @@ class Sidebar extends StatelessWidget {
           context.go('/interactive-notes/create');
         } else if (routeName == 'dynamic_quiz_create') {
           context.go('/dynamic-quiz/create');
+        } else if (routeName == 'dynamic_quiz_dual_create') {
+          context.go('/dynamic-quiz-dual/create');
         } else if (routeName == 'bundles') {
           context.go('/bundles');
         } else if (routeName == 'question_banks') {

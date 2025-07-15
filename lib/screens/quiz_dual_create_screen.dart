@@ -1,17 +1,17 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/sidebar.dart';
-import '../widgets/quiz_viewer.dart';
+import '../widgets/quiz_viewer_dual.dart';
 
-class QuizCreateScreen extends StatefulWidget {
-  const QuizCreateScreen({super.key});
+class QuizDualCreateScreen extends StatefulWidget {
+  const QuizDualCreateScreen({super.key});
 
   @override
-  State<QuizCreateScreen> createState() => _QuizCreateScreenState();
+  State<QuizDualCreateScreen> createState() => _QuizDualCreateScreenState();
 }
 
-class _QuizCreateScreenState extends State<QuizCreateScreen> {
+class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
   final _titleController = TextEditingController();
   String? _selectedCategory;
   String? _selectedQuestionBankId;
@@ -30,15 +30,27 @@ class _QuizCreateScreenState extends State<QuizCreateScreen> {
     await _loadQuestionBanks();
     if (mounted) setState(() {});
   }
-  
+
   Future<void> _loadCategories() async {
     final snapshot = await FirebaseFirestore.instance.collection('categories').get();
-    if(mounted) _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+    if (mounted) _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
   }
 
   Future<void> _loadQuestionBanks() async {
     final snapshot = await FirebaseFirestore.instance.collection('question_banks').get();
-    if(mounted) _questionBanks = snapshot.docs;
+    final compatibleBanks = <DocumentSnapshot>[];
+    for (final doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final questions = List<Map<String, dynamic>>.from(data['questions'] ?? []);
+      if (questions.isEmpty) continue;
+      final allValid = questions.every((q) {
+        final options = (q['options'] as List).cast<Map<String, dynamic>>();
+        final correctCnt = options.where((o) => o['isCorrect'] == true).length;
+        return correctCnt == 2;
+      });
+      if (allValid) compatibleBanks.add(doc);
+    }
+    if (mounted) _questionBanks = compatibleBanks;
   }
 
   Future<void> _createQuiz() async {
@@ -53,22 +65,41 @@ class _QuizCreateScreenState extends State<QuizCreateScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Már létezik ilyen című jegyzet!')));
       return;
     }
+
+    final bankDoc = await FirebaseFirestore.instance.collection('question_banks').doc(_selectedQuestionBankId).get();
+    if (!bankDoc.exists) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hiba: A kérdésbank nem található.')));
+      return;
+    }
+    final bankData = bankDoc.data()!;
+    final questions = List<Map<String, dynamic>>.from(bankData['questions'] ?? []);
+    final invalidQuestions = questions.where((q) {
+      final options = (q['options'] as List).cast<Map<String, dynamic>>();
+      final correctCount = options.where((o) => o['isCorrect'] == true).length;
+      return correctCount != 2;
+    }).toList();
+
+    if (invalidQuestions.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A kiválasztott kérdésbank minden kérdésének pontosan 2 helyes válasszal kell rendelkeznie.')));
+      return;
+    }
+
     setState(() => _isSaving = true);
     try {
       await FirebaseFirestore.instance.collection('notes').add({
         'title': _titleController.text,
         'category': _selectedCategory,
         'questionBankId': _selectedQuestionBankId,
-        'type': 'dynamic_quiz',
+        'type': 'dynamic_quiz_dual',
         'status': 'Draft',
         'createdAt': Timestamp.now(),
         'modified': Timestamp.now(),
       });
       if (mounted) context.go('/notes');
     } catch (e) {
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Hiba: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Hiba: $e')));
     } finally {
-      if(mounted) setState(() => _isSaving = false);
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -77,10 +108,10 @@ class _QuizCreateScreenState extends State<QuizCreateScreen> {
     final filteredBanks = _selectedCategory == null
         ? _questionBanks
         : _questionBanks.where((bank) => bank['category'] == _selectedCategory).toList();
-        
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Új Dinamikus Kvíz'),
+        title: const Text('Új 2-válaszos Dinamikus Kvíz'),
         actions: [
           ElevatedButton.icon(
             onPressed: _isSaving ? null : _createQuiz,
@@ -91,7 +122,7 @@ class _QuizCreateScreenState extends State<QuizCreateScreen> {
       ),
       body: Row(
         children: [
-          const Sidebar(selectedMenu: 'dynamic_quiz_create'),
+          const Sidebar(selectedMenu: 'dynamic_quiz_dual_create'),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
@@ -104,7 +135,7 @@ class _QuizCreateScreenState extends State<QuizCreateScreen> {
                     items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                     onChanged: (val) => setState(() {
                       _selectedCategory = val;
-                      _selectedQuestionBankId = null; // Reset bank on category change
+                      _selectedQuestionBankId = null;
                     }),
                     decoration: const InputDecoration(labelText: 'Kategória'),
                   ),
@@ -158,7 +189,7 @@ class _QuizCreateScreenState extends State<QuizCreateScreen> {
           content: SizedBox(
             width: MediaQuery.of(context).size.width * 0.8,
             height: MediaQuery.of(context).size.height * 0.8,
-            child: QuizViewer(questions: selectedQuestions),
+            child: QuizViewerDual(questions: selectedQuestions),
           ),
           actions: [
             TextButton(

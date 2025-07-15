@@ -150,6 +150,14 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
       return;
     }
 
+    // Egyediség ellenőrzése cím alapján
+    final trimmedTitle = _titleController.text.trim();
+    final dupSnap = await FirebaseFirestore.instance.collection('notes').where('title', isEqualTo: trimmedTitle).limit(1).get();
+    if (dupSnap.docs.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Már létezik ilyen című jegyzet!')));
+      return;
+    }
+
     setState(() => _isUploading = true);
 
     try {

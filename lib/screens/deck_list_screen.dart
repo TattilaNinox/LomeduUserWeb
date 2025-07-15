@@ -15,18 +15,18 @@ class DeckListScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: ElevatedButton.icon(
-              onPressed: () async {
+              onPressed: () {
                 final newDeckRef = FirebaseFirestore.instance.collection('notes').doc();
-                await newDeckRef.set({
+                newDeckRef.set({
                   'title': 'Új pakli',
                   'type': 'deck',
                   'status': 'Draft',
                   'flashcards': [],
                   'createdAt': Timestamp.now(),
                   'modified': Timestamp.now(),
+                }).then((_) {
+                  context.go('/decks/edit/${newDeckRef.id}');
                 });
-                if (!context.mounted) return;
-                context.go('/decks/edit/${newDeckRef.id}');
               },
               icon: const Icon(Icons.add),
               label: const Text('Új Pakli'),

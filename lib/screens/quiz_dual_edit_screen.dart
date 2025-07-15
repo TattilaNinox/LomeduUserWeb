@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/sidebar.dart';
-import '../widgets/quiz_viewer.dart';
+import '../widgets/quiz_viewer_dual.dart';
 
-class QuizEditScreen extends StatefulWidget {
+class QuizDualEditScreen extends StatefulWidget {
   final String noteId;
-  const QuizEditScreen({super.key, required this.noteId});
+  const QuizDualEditScreen({super.key, required this.noteId});
 
   @override
-  State<QuizEditScreen> createState() => _QuizEditScreenState();
+  State<QuizDualEditScreen> createState() => _QuizDualEditScreenState();
 }
 
-class _QuizEditScreenState extends State<QuizEditScreen> {
+class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
   final _titleController = TextEditingController();
   String? _selectedCategory;
   String? _selectedQuestionBankId;
@@ -36,14 +36,26 @@ class _QuizEditScreenState extends State<QuizEditScreen> {
 
   Future<void> _loadCategories() async {
     final snapshot = await FirebaseFirestore.instance.collection('categories').get();
-    if(mounted) _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+    if (mounted) _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
   }
 
   Future<void> _loadQuestionBanks() async {
     final snapshot = await FirebaseFirestore.instance.collection('question_banks').get();
-    if(mounted) _questionBanks = snapshot.docs;
+    final compatibleBanks = <DocumentSnapshot>[];
+    for (final doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final questions = List<Map<String, dynamic>>.from(data['questions'] ?? []);
+      if (questions.isEmpty) continue;
+      final allValid = questions.every((q) {
+        final options = (q['options'] as List).cast<Map<String, dynamic>>();
+        final correctCnt = options.where((o) => o['isCorrect'] == true).length;
+        return correctCnt == 2;
+      });
+      if (allValid) compatibleBanks.add(doc);
+    }
+    if (mounted) _questionBanks = compatibleBanks;
   }
-  
+
   Future<void> _loadQuizData() async {
     final doc = await FirebaseFirestore.instance.collection('notes').doc(widget.noteId).get();
     if (doc.exists) {
@@ -59,6 +71,26 @@ class _QuizEditScreenState extends State<QuizEditScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Minden mező kitöltése kötelező!')));
       return;
     }
+
+    // Validáció: a kiválasztott kérdésbank minden kérdésének pontosan 2 helyes válasza legyen.
+    final bankDoc = await FirebaseFirestore.instance.collection('question_banks').doc(_selectedQuestionBankId).get();
+    if (!bankDoc.exists) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hiba: A kérdésbank nem található.')));
+      return;
+    }
+    final bankData = bankDoc.data()!;
+    final questions = List<Map<String, dynamic>>.from(bankData['questions'] ?? []);
+    final invalidQuestions = questions.where((q) {
+      final options = (q['options'] as List).cast<Map<String, dynamic>>();
+      final correctCount = options.where((o) => o['isCorrect'] == true).length;
+      return correctCount != 2;
+    }).toList();
+
+    if (invalidQuestions.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A kiválasztott kérdésbank minden kérdésének pontosan 2 helyes válasszal kell rendelkeznie.')));
+      return;
+    }
+
     setState(() => _isSaving = true);
     try {
       await FirebaseFirestore.instance.collection('notes').doc(widget.noteId).update({
@@ -69,9 +101,9 @@ class _QuizEditScreenState extends State<QuizEditScreen> {
       });
       if (mounted) context.go('/notes');
     } catch (e) {
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Hiba: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Hiba: $e')));
     } finally {
-      if(mounted) setState(() => _isSaving = false);
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -80,14 +112,14 @@ class _QuizEditScreenState extends State<QuizEditScreen> {
     if (_isLoading) {
       return Scaffold(appBar: AppBar(title: const Text('Betöltés...')));
     }
-        
+
     final filteredBanks = _selectedCategory == null
         ? _questionBanks
         : _questionBanks.where((bank) => bank['category'] == _selectedCategory).toList();
-        
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kvíz Szerkesztése'),
+        title: const Text('2-válaszos Kvíz Szerkesztése'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/notes'),
