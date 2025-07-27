@@ -184,9 +184,8 @@ class _NoteEditScreenState extends State<NoteEditScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Jegyzet sikeresen frissítve!')),
+          const SnackBar(content: Text('Jegyzet sikeresen frissítve!')), // maradunk a képernyőn
         );
-        context.go('/notes');
       }
 
     } catch (e) {
