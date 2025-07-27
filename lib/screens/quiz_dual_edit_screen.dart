@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/sidebar.dart';
-import '../widgets/quiz_viewer_dual.dart';
 
 class QuizDualEditScreen extends StatefulWidget {
   final String noteId;
@@ -43,7 +42,7 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
     final snapshot = await FirebaseFirestore.instance.collection('question_banks').get();
     final compatibleBanks = <DocumentSnapshot>[];
     for (final doc in snapshot.docs) {
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data();
       final questions = List<Map<String, dynamic>>.from(data['questions'] ?? []);
       if (questions.isEmpty) continue;
       final allValid = questions.every((q) {
@@ -74,6 +73,7 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
 
     // Validáció: a kiválasztott kérdésbank minden kérdésének pontosan 2 helyes válasza legyen.
     final bankDoc = await FirebaseFirestore.instance.collection('question_banks').doc(_selectedQuestionBankId).get();
+    if (!mounted) return;
     if (!bankDoc.exists) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hiba: A kérdésbank nem található.')));
       return;
@@ -86,6 +86,7 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
       return correctCount != 2;
     }).toList();
 
+    if (!mounted) return;
     if (invalidQuestions.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A kiválasztott kérdésbank minden kérdésének pontosan 2 helyes válasszal kell rendelkeznie.')));
       return;

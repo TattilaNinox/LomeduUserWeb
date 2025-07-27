@@ -40,7 +40,7 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
     final snapshot = await FirebaseFirestore.instance.collection('question_banks').get();
     final compatibleBanks = <DocumentSnapshot>[];
     for (final doc in snapshot.docs) {
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data();
       final questions = List<Map<String, dynamic>>.from(data['questions'] ?? []);
       if (questions.isEmpty) continue;
       final allValid = questions.every((q) {
@@ -61,12 +61,14 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
 
     final trimmedTitle = _titleController.text.trim();
     final dupSnap = await FirebaseFirestore.instance.collection('notes').where('title', isEqualTo: trimmedTitle).limit(1).get();
+    if (!mounted) return; // ensure widget still active
     if (dupSnap.docs.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Már létezik ilyen című jegyzet!')));
       return;
     }
 
     final bankDoc = await FirebaseFirestore.instance.collection('question_banks').doc(_selectedQuestionBankId).get();
+    if (!mounted) return;
     if (!bankDoc.exists) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hiba: A kérdésbank nem található.')));
       return;
@@ -79,6 +81,7 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
       return correctCount != 2;
     }).toList();
 
+    if (!mounted) return;
     if (invalidQuestions.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A kiválasztott kérdésbank minden kérdésének pontosan 2 helyes válasszal kell rendelkeznie.')));
       return;
