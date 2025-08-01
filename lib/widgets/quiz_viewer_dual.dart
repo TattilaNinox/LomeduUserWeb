@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 
 class QuizViewerDual extends StatefulWidget {
   final List<Map<String, dynamic>> questions;
@@ -13,12 +12,11 @@ class QuizViewerDual extends StatefulWidget {
 class _QuizViewerDualState extends State<QuizViewerDual> with TickerProviderStateMixin {
   int _currentIndex = 0;
   int _score = 0;
-  Set<int> _selectedOptionIndices = {};
+  final Set<int> _selectedOptionIndices = {};
   bool _answerChecked = false;
 
   late PageController _pageController;
   late AnimationController _cardFlipController;
-  late Animation<double> _cardFlipAnimation;
 
   @override
   void initState() {
@@ -27,9 +25,6 @@ class _QuizViewerDualState extends State<QuizViewerDual> with TickerProviderStat
     _cardFlipController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
-    );
-    _cardFlipAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _cardFlipController, curve: Curves.easeInOut),
     );
   }
 
@@ -194,12 +189,12 @@ class _QuizViewerDualState extends State<QuizViewerDual> with TickerProviderStat
     Color tileColor = Colors.white;
     if (_answerChecked) {
       if (isCorrectOption) {
-        tileColor = Colors.green.withOpacity(0.2);
+        tileColor = Colors.green.withValues(alpha: 0.2);
       } else if (isSelected && !isCorrectOption) {
-        tileColor = Colors.red.withOpacity(0.2);
+        tileColor = Colors.red.withValues(alpha: 0.2);
       }
     } else if (isSelected) {
-      tileColor = Colors.blue.withOpacity(0.1);
+      tileColor = Colors.blue.withValues(alpha: 0.1);
     }
 
     return GestureDetector(
@@ -262,4 +257,4 @@ class _QuizViewerDualState extends State<QuizViewerDual> with TickerProviderStat
       ),
     );
   }
-} 
+}
