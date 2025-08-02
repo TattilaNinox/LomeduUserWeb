@@ -151,14 +151,16 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
       return;
     }
 
-    // Egyediség ellenőrzése cím alapján
-    final trimmedTitle = _titleController.text.trim();
-    final dupSnap = await FirebaseFirestore.instance.collection('notes').where('title', isEqualTo: trimmedTitle).limit(1).get();
-    if (dupSnap.docs.isNotEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Már létezik ilyen című jegyzet!')));
+    // Egyediség ellenőrzése csak akkor, ha nem forrás típus
+    if (_selectedType != 'source') {
+      final trimmedTitle = _titleController.text.trim();
+      final dupSnap = await FirebaseFirestore.instance.collection('notes').where('title', isEqualTo: trimmedTitle).limit(1).get();
+      if (dupSnap.docs.isNotEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Már létezik ilyen című jegyzet!')));
+        }
+        return;
       }
-      return;
     }
 
     setState(() => _isUploading = true);
@@ -360,6 +362,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
         DropdownMenuItem(value: 'text', child: Text('Szöveges')),
         DropdownMenuItem(value: 'interactive', child: Text('Interaktív')),
         DropdownMenuItem(value: 'dynamic_quiz', child: Text('Dinamikus Kvíz')),
+        DropdownMenuItem(value: 'source', child: Text('Forrás')),
       ],
       onChanged: (newValue) {
         setState(() {
