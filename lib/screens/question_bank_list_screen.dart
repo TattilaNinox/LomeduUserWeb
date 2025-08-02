@@ -20,17 +20,17 @@ class _QuestionBankListScreenState extends State<QuestionBankListScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: ElevatedButton.icon(
-              onPressed: () {
+              onPressed: () async {
+                final router = GoRouter.of(context);
                 final newBankRef = FirebaseFirestore.instance.collection('question_banks').doc();
-                newBankRef.set({
+                await newBankRef.set({
                   'name': 'Új kérdésbank',
                   'createdAt': Timestamp.now(),
                   'questions': [],
-                }).then((_) {
-                  if (mounted) {
-                    context.go('/question-banks/edit/${newBankRef.id}');
-                  }
                 });
+                if (mounted) {
+                  router.go('/question-banks/edit/${newBankRef.id}');
+                }
               },
               icon: const Icon(Icons.add),
               label: const Text('Új Kérdésbank'),
@@ -74,4 +74,4 @@ class _QuestionBankListScreenState extends State<QuestionBankListScreen> {
       ),
     );
   }
-} 
+}

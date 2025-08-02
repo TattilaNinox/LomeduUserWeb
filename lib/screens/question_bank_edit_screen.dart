@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/sidebar.dart';
 import 'package:excel/excel.dart';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import 'package:web/web.dart' as web;
 import 'package:file_selector/file_selector.dart';
+import 'dart:convert';
 
 class QuestionBankEditScreen extends StatefulWidget {
   final String bankId;
@@ -34,7 +34,7 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
       setState(() => _isLoading = false);
     }
   }
-  
+
   Future<void> _loadCategories() async {
     final snapshot = await FirebaseFirestore.instance.collection('categories').get();
     if(mounted) {
@@ -62,7 +62,7 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kérdésbank mentve!')));
     }
   }
-  
+
   void _addQuestion() {
     setState(() {
       _questions.add({
@@ -101,12 +101,12 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
     }
     final bytes = excel.save();
     if (bytes != null) {
-      final blob = html.Blob([bytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      html.AnchorElement(href: url)
+      // Egyszerűbb megközelítés a fájl letöltéshez
+      final dataUrl = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64Encode(bytes)}';
+      web.HTMLAnchorElement()
+        ..href = dataUrl
         ..setAttribute('download', '${_nameController.text.trim()}.xlsx')
         ..click();
-      html.Url.revokeObjectUrl(url);
     }
   }
 
@@ -265,4 +265,4 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
       ),
     );
   }
-} 
+}

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/sidebar.dart';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import 'package:web/web.dart' as web;
 import 'package:file_selector/file_selector.dart';
 import 'package:excel/excel.dart';
 import '../widgets/flippable_card.dart';
+import 'dart:convert';
 
 class DeckEditScreen extends StatefulWidget {
   final String deckId;
@@ -54,7 +54,7 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
       });
     }
   }
-  
+
   Future<void> _saveDeck() async {
     final router = GoRouter.of(context);
     final messenger = ScaffoldMessenger.of(context);
@@ -72,7 +72,7 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
 
       messenger.showSnackBar(const SnackBar(content: Text('Pakli mentve!')));
       await Future.delayed(const Duration(milliseconds: 1500));
-      
+
       if (!mounted) return;
       router.go('/decks');
     } catch (e) {
@@ -99,12 +99,12 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
     }
     final bytes = excel.save();
     if (bytes != null) {
-      final blob = html.Blob([bytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      html.AnchorElement(href: url)
+      // Egyszerűbb megközelítés a fájl letöltéshez
+      final dataUrl = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64Encode(bytes)}';
+      web.HTMLAnchorElement()
+        ..href = dataUrl
         ..setAttribute('download', '${_titleController.text.trim()}.xlsx')
         ..click();
-      html.Url.revokeObjectUrl(url);
     }
   }
 
@@ -128,7 +128,7 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
         final frontText = row[0]?.value.toString().trim() ?? '';
         final backText = row[1]?.value.toString().trim() ?? '';
         if (frontText.isEmpty && backText.isEmpty) continue;
-        
+
         newFlashcards.add({'front': frontText, 'back': backText});
       } catch (e) {
         if (!mounted) return;
@@ -325,4 +325,4 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
       ),
     );
   }
-} 
+}

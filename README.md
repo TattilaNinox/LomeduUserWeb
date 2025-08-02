@@ -56,3 +56,7 @@ A `question_banks` kollekcióban tárolt kérdésobjektumoknak az alábbi strukt
 ---
 
 > A fejlesztéssel kapcsolatos részletes műszaki leírás a kódban található kommenteknél, valamint a `DYNAMIC_QUIZ_AI_PROMPT.md` dokumentumban olvasható.
+
+## Verification
+
+This line was added to verify repository access and lint functionality.
