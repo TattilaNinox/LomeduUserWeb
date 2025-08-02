@@ -26,7 +26,6 @@ import 'screens/flashcard_deck_view_screen.dart';
 import 'screens/quiz_dual_create_screen.dart';
 import 'screens/quiz_dual_edit_screen.dart';
 import 'screens/user_list_screen.dart';
-import 'screens/references_screen.dart';
 import 'screens/source_admin_screen.dart';
 
 /// Az alkalmazás fő belépési pontja.
@@ -208,10 +207,6 @@ final _router = GoRouter(
     GoRoute(
       path: '/users',
       builder: (context, state) => const UserListScreen(),
-    ),
-    GoRoute(
-      path: '/references',
-      builder: (context, state) => const ReferencesScreen(),
     ),
     GoRoute(
       path: '/sources-admin',

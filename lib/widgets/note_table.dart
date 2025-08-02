@@ -386,7 +386,10 @@ class _NoteTableState extends State<NoteTable> {
                     } else if (noteType == 'interactive') {
                       context.go('/interactive-note/${doc.id}');
                     } else if (noteType == 'source') {
-                      context.go('/references');
+                      final url = data['url'] as String? ?? '';
+                      if (url.isNotEmpty) {
+                        launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                      }
                     } else {
                       context.go('/note/${doc.id}');
                     }
