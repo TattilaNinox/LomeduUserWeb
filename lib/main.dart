@@ -26,6 +26,7 @@ import 'screens/flashcard_deck_view_screen.dart';
 import 'screens/quiz_dual_create_screen.dart';
 import 'screens/quiz_dual_edit_screen.dart';
 import 'screens/user_list_screen.dart';
+import 'screens/science_manager_screen.dart';
 
 /// Az alkalmazás fő belépési pontja.
 void main() async {
@@ -202,6 +203,10 @@ final _router = GoRouter(
         final deckId = state.pathParameters['deckId']!;
         return FlashcardDeckViewScreen(deckId: deckId);
       },
+    ),
+    GoRoute(
+      path: '/sciences',
+      builder: (context, state) => const ScienceManagerScreen(),
     ),
     GoRoute(
       path: '/users',

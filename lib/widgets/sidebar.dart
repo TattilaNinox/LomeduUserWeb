@@ -82,6 +82,7 @@ class Sidebar extends StatelessWidget {
           _buildMenuItem(context, 'bundles', 'Kötegek', selectedMenu == 'bundles'),
           _buildMenuItem(context, 'question_banks', 'Kérdésbankok', selectedMenu == 'question_banks'),
           _buildMenuItem(context, 'categories', 'Kategóriák', selectedMenu == 'categories'),
+          _buildMenuItem(context, 'sciences', 'Tudományok', selectedMenu == 'sciences'),
           _buildMenuItem(context, 'decks', 'Tanulókártya Paklik', selectedMenu == 'decks'),
                     _buildMenuItem(context, 'users', 'Felhasználók', selectedMenu == 'users'),
           // A `Spacer` kitölti a rendelkezésre álló függőleges teret,
@@ -136,6 +137,12 @@ class Sidebar extends StatelessWidget {
       case 'question_banks':
         iconData = Icons.quiz;
         break;
+      case 'subjects':
+        iconData = Icons.school;
+        break;
+      case 'sciences':
+        iconData = Icons.science;
+        break;
       case 'categories':
         iconData = Icons.category;
         break;
@@ -183,6 +190,8 @@ class Sidebar extends StatelessWidget {
           context.go('/question-banks');
         } else if (routeName == 'categories') {
           context.go('/categories');
+        } else if (routeName == 'sciences') {
+          context.go('/sciences');
         } else if (routeName == 'decks') {
           context.go('/decks');
         } else if (routeName == 'users') {
