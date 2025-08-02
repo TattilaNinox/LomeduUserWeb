@@ -97,7 +97,7 @@ class LoginScreenState extends State<LoginScreen> {
             children: [
               // Cím
               const Text(
-                'Lomed Admin',
+                'Lomedu Admin',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 24,
