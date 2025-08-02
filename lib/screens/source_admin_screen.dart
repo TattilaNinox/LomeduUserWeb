@@ -100,8 +100,8 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
       'category': _selectedCategory,
       'tags': _tags,
       'type': 'source',              // ← Új jegyzettípus
-      'status': 'Public',            // mindig publikus
-      'isFree': true,               // zárolás ikon ne legyen releváns
+      'status': 'Draft',             // induláskor még nem publikus
+      'isFree': false,              // zárolt, amíg publikálva nincs
       'modified': FieldValue.serverTimestamp(),
       'pages': <String>[],          // a jelenlegi struktúra miatt üres lista
     };

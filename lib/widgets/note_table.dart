@@ -266,7 +266,7 @@ class _NoteTableState extends State<NoteTable> {
         case 'dynamic_quiz_dual':
           return Icons.quiz_outlined;
         default:
-          return Icons.notes;
+          return Icons.menu_book;
       }
     }
 
@@ -298,7 +298,7 @@ class _NoteTableState extends State<NoteTable> {
                 Expanded(
                   child: Text(
                     title,
-                    style: cellStyle,
+                    style: cellStyle.copyWith(color: noteType == 'source' ? const Color(0xFF009B77) : null),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
                     softWrap: false,
