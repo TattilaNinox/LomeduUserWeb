@@ -282,6 +282,18 @@ class _NoteTableState extends State<NoteTable> {
             child: Row(
               children: [
                 Icon(getIconForNoteType(noteType), color: AppTheme.primaryColor),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: Icon(
+                    data['isFree'] == true ? Icons.lock_open : Icons.lock,
+                    color: data['isFree'] == true ? Colors.green : Colors.grey,
+                    size: 16,
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: data['isFree'] == true ? 'Ingyenes jegyzet' : 'Fizetős jegyzet',
+                  onPressed: () => _toggleFreeStatus(context, doc.id, data['isFree'] == true),
+                ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(
@@ -429,6 +441,18 @@ class _NoteTableState extends State<NoteTable> {
             child: Row(
               children: [
                 const Icon(Icons.style, color: AppTheme.primaryColor),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: Icon(
+                    data['isFree'] == true ? Icons.lock_open : Icons.lock,
+                    color: data['isFree'] == true ? Colors.green : Colors.grey,
+                    size: 16,
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: data['isFree'] == true ? 'Ingyenes jegyzet' : 'Fizetős jegyzet',
+                  onPressed: () => _toggleFreeStatus(context, doc.id, data['isFree'] == true),
+                ),
                 const SizedBox(width: 16),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -597,6 +621,19 @@ class _NoteTableState extends State<NoteTable> {
       });
       if (!context.mounted) return;
       _showSnackBar(context, 'Státusz sikeresen frissítve!');
+    } catch (e) {
+      _showSnackBar(context, 'Hiba a státusz frissítésekor: $e');
+    }
+  }
+
+  Future<void> _toggleFreeStatus(BuildContext context, String noteId, bool currentFree) async {
+    try {
+      await FirebaseFirestore.instance.collection('notes').doc(noteId).update({
+        'isFree': !currentFree,
+        'modified': Timestamp.now(),
+      });
+      if (!context.mounted) return;
+      _showSnackBar(context, !currentFree ? 'A jegyzet mostantól ingyenes!' : 'Ingyenes státusz kikapcsolva');
     } catch (e) {
       _showSnackBar(context, 'Hiba a státusz frissítésekor: $e');
     }

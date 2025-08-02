@@ -83,6 +83,8 @@ class Sidebar extends StatelessWidget {
           _buildMenuItem(context, 'question_banks', 'Kérdésbankok', selectedMenu == 'question_banks'),
           _buildMenuItem(context, 'categories', 'Kategóriák', selectedMenu == 'categories'),
           _buildMenuItem(context, 'decks', 'Tanulókártya Paklik', selectedMenu == 'decks'),
+          _buildMenuItem(context, 'references', 'Források', selectedMenu == 'references'),
+          _buildMenuItem(context, 'sources_admin', 'Források kezelése', selectedMenu == 'sources_admin'),
           _buildMenuItem(context, 'users', 'Felhasználók', selectedMenu == 'users'),
           // A `Spacer` kitölti a rendelkezésre álló függőleges teret,
           // így a kijelentkezés gombot az aljára tolja.
@@ -142,6 +144,12 @@ class Sidebar extends StatelessWidget {
       case 'decks':
         iconData = Icons.style;
         break;
+      case 'references':
+        iconData = Icons.menu_book;
+        break;
+      case 'sources_admin':
+        iconData = Icons.edit_note;
+        break;
       case 'users':
         iconData = Icons.people;
         break;
@@ -185,6 +193,10 @@ class Sidebar extends StatelessWidget {
           context.go('/categories');
         } else if (routeName == 'decks') {
           context.go('/decks');
+        } else if (routeName == 'references') {
+          context.go('/references');
+        } else if (routeName == 'sources_admin') {
+          context.go('/sources-admin');
         } else if (routeName == 'users') {
           context.go('/users');
         }

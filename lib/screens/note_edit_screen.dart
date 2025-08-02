@@ -28,6 +28,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
   bool _isLoading = true;
   String? _error;
   bool _isSaving = false;
+  bool _isFree = false; // új mező
 
   final _titleController = TextEditingController();
   final _htmlContentController = TextEditingController();
@@ -113,6 +114,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
         _selectedCategory = data['category'];
         _tags = List<String>.from(data['tags'] ?? []);
         _selectedType = data['type'] ?? 'text';
+        _isFree = data['isFree'] == true;
 
         if (data.containsKey('audioUrl')) {
           _selectedMp3File = {'name': 'Meglévő hangfájl', 'url': data['audioUrl']};
@@ -158,6 +160,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
         'category': _selectedCategory,
         'tags': _tags,
         'pages': [_htmlContentController.text],
+        'isFree': _isFree,
         'modified': Timestamp.now(),
       };
 
@@ -291,6 +294,8 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            _buildFreeAccessToggle(),
+                            const SizedBox(height: 16),
                             _buildTagsSection(),
                             const SizedBox(height: 24),
                             _buildFileUploadSection(),
@@ -483,6 +488,15 @@ class _NoteEditScreenState extends State<NoteEditScreen>
           )
         ],
       ),
+    );
+  }
+
+  Widget _buildFreeAccessToggle() {
+    return CheckboxListTile(
+      value: _isFree,
+      onChanged: (val) => setState(() => _isFree = val ?? false),
+      controlAffinity: ListTileControlAffinity.leading,
+      title: const Text('Ingyenes hozzáférés'),
     );
   }
 

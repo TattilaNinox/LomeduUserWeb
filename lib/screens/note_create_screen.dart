@@ -28,6 +28,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
   Map<String, dynamic>? _selectedMp3File;
   Map<String, dynamic>? _selectedVideoFile;
   bool _isUploading = false;
+  bool _isFree = false; // Új mező: ingyenesen megtekinthető-e
   List<String> _categories = [];
   VideoPlayerController? _videoController;
   final List<String> _tags = [];
@@ -197,6 +198,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
         'status': 'Draft',
         'modified': Timestamp.now(),
         'pages': [_htmlContentController.text],
+        'isFree': _isFree,
         'type': _selectedType,
         'tags': _tags,
       };
@@ -320,6 +322,8 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            _buildFreeAccessToggle(),
+                            const SizedBox(height: 16),
                             _buildTagsSection(),
                             const SizedBox(height: 24),
                             _buildFileUploadSection(),
@@ -506,6 +510,15 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
           )
         ],
       ),
+    );
+  }
+
+  Widget _buildFreeAccessToggle() {
+    return CheckboxListTile(
+      value: _isFree,
+      onChanged: (val) => setState(() => _isFree = val ?? false),
+      controlAffinity: ListTileControlAffinity.leading,
+      title: const Text('Ingyenes hozzáférés'),
     );
   }
 
