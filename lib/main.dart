@@ -26,7 +26,6 @@ import 'screens/flashcard_deck_view_screen.dart';
 import 'screens/quiz_dual_create_screen.dart';
 import 'screens/quiz_dual_edit_screen.dart';
 import 'screens/user_list_screen.dart';
-import 'screens/source_admin_screen.dart';
 
 /// Az alkalmazás fő belépési pontja.
 void main() async {
@@ -208,10 +207,6 @@ final _router = GoRouter(
       path: '/users',
       builder: (context, state) => const UserListScreen(),
     ),
-    GoRoute(
-      path: '/sources-admin',
-      builder: (context, state) => const SourceAdminScreen(),
-    ),
   ],
 );
 
@@ -228,7 +223,7 @@ class MyApp extends StatelessWidget {
     // A `MaterialApp.router` a `go_router` használatához szükséges.
     // Ez köti össze a router konfigurációt az alkalmazás vizuális rétegével.
     return MaterialApp.router(
-      title: 'Lomed Admin',
+      title: 'Lomedu Admin',
       // Az alkalmazás központi vizuális témájának beállítása.
       theme: AppTheme.lightTheme,
       // A "debug" szalag eltávolítása a jobb felső sarokból.
