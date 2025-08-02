@@ -94,7 +94,7 @@ class Sidebar extends StatelessWidget {
             leading: const Icon(Icons.logout, color: Color(0xFF6B7280)),
             title: const Text(
               'Kijelentkezés',
-              style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w500, color: Color(0xFF6B7280)),
+              style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w500, color: Color(0xFF6B7280)),
             ),
             // A `onTap` esemény a `_signOut` metódust hívja meg.
             onTap: () => _signOut(context),
@@ -166,7 +166,7 @@ class Sidebar extends StatelessWidget {
         // A stílus (szín, vastagság) a `isSelected` állapottól függően változik.
         style: TextStyle(
           fontFamily: 'Inter',
-          fontSize: 16,
+          fontSize: 10,
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
           color: isSelected ? const Color(0xFF1E3A8A) : const Color(0xFF6B7280),
         ),
