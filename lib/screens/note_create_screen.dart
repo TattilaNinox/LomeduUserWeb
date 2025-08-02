@@ -362,6 +362,8 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
         DropdownMenuItem(value: 'text', child: Text('Szöveges')),
         DropdownMenuItem(value: 'interactive', child: Text('Interaktív')),
         DropdownMenuItem(value: 'dynamic_quiz', child: Text('Dinamikus Kvíz')),
+        DropdownMenuItem(value: 'dynamic_quiz_dual', child: Text('2-válaszos Dinamikus Kvíz')),
+        DropdownMenuItem(value: 'deck', child: Text('Pakli')),
         DropdownMenuItem(value: 'source', child: Text('Forrás')),
       ],
       onChanged: (newValue) {

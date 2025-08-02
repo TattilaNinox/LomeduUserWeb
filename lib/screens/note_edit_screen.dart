@@ -271,6 +271,11 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                               flex: 1,
                               child: _buildCategoryDropdown(),
                             ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              flex: 1,
+                              child: _buildTypeDropdown(),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 24),
@@ -319,6 +324,27 @@ class _NoteEditScreenState extends State<NoteEditScreen>
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+    );
+  }
+
+  Widget _buildTypeDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedType,
+      items: const [
+        DropdownMenuItem(value: 'text', child: Text('Szöveges')),
+        DropdownMenuItem(value: 'interactive', child: Text('Interaktív')),
+        DropdownMenuItem(value: 'dynamic_quiz', child: Text('Dinamikus Kvíz')),
+        DropdownMenuItem(value: 'dynamic_quiz_dual', child: Text('2-válaszos Dinamikus Kvíz')),
+        DropdownMenuItem(value: 'deck', child: Text('Pakli')),
+        DropdownMenuItem(value: 'source', child: Text('Forrás')),
+      ],
+      onChanged: (newValue) => setState(() => _selectedType = newValue!),
+      decoration: const InputDecoration(
+        labelText: 'Típus',
+        border: OutlineInputBorder(),
         filled: true,
         fillColor: Colors.white,
       ),

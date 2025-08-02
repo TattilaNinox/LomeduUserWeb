@@ -26,6 +26,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
   String? _selectedStatus;
   String? _selectedCategory;
   String? _selectedTag;
+  String? _selectedType;
 
   // Listák a Firestore-ból betöltött kategóriák és címkék tárolására.
   // Ezeket a `Filters` widget kapja meg, hogy fel tudja tölteni a legördülő menüket.
@@ -100,10 +101,14 @@ class _NoteListScreenState extends State<NoteListScreen> {
 
   /// Frissíti a kiválasztott címkét a `Filters` widgetből.
   void _onTagChanged(String? value) {
-    setState(() {
-      _selectedTag = value;
-    });
+    setState(() => _selectedTag = value);
   }
+
+  /// Frissíti a kiválasztott típust.
+  void _onTypeChanged(String? value) {
+    setState(() => _selectedType = value);
+  }
+
 
   /// Törli az összes aktív szűrőt.
   void _onClearFilters() {
@@ -111,6 +116,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
       _selectedStatus = null;
       _selectedCategory = null;
       _selectedTag = null;
+      _selectedType = null;
     });
   }
 
@@ -147,9 +153,11 @@ class _NoteListScreenState extends State<NoteListScreen> {
                   selectedStatus: _selectedStatus,
                   selectedCategory: _selectedCategory,
                   selectedTag: _selectedTag,
+                  selectedType: _selectedType,
                   onStatusChanged: _onStatusChanged,
                   onCategoryChanged: _onCategoryChanged,
                   onTagChanged: _onTagChanged,
+                  onTypeChanged: _onTypeChanged,
                   onClearFilters: _onClearFilters,
                 ),
                 // A jegyzeteket megjelenítő táblázat.
@@ -161,7 +169,8 @@ class _NoteListScreenState extends State<NoteListScreen> {
                   selectedStatus: _selectedStatus,
                   selectedCategory: _selectedCategory,
                   selectedTag: _selectedTag,
-                ),
+                  selectedType: _selectedType,
+                                  ),
               ],
             ),
           ),

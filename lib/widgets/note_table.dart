@@ -15,6 +15,7 @@ class NoteTable extends StatefulWidget {
   final String? selectedStatus;
   final String? selectedCategory;
   final String? selectedTag;
+  final String? selectedType;
 
   const NoteTable({
     super.key,
@@ -22,6 +23,7 @@ class NoteTable extends StatefulWidget {
     required this.selectedStatus,
     required this.selectedCategory,
     required this.selectedTag,
+    required this.selectedType,
   });
 
   @override
@@ -97,10 +99,13 @@ class _NoteTableState extends State<NoteTable> {
     if (widget.selectedTag != null && widget.selectedTag!.isNotEmpty) {
       query = query.where('tags', arrayContains: widget.selectedTag);
     }
+    if (widget.selectedType != null && widget.selectedType!.isNotEmpty) {
+      query = query.where('type', isEqualTo: widget.selectedType);
+    }
 
     return Expanded(
       child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        key: ValueKey('$widget.selectedStatus|$widget.selectedCategory|$widget.selectedTag|$widget.searchText'),
+        key: ValueKey('${widget.selectedStatus}|${widget.selectedCategory}|${widget.selectedTag}|${widget.selectedType}|${widget.searchText}'),
         stream: query.snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -240,7 +245,6 @@ class _NoteTableState extends State<NoteTable> {
     final data = doc.data() ?? <String, dynamic>{};
     final title = (data['title'] ?? '');
     final category = (data['category'] ?? '');
-    final description = (data['description'] ?? '');
     final status = (data['status'] ?? '');
     final displayStatus = status == 'Public' ? 'Published' : status;
     final modified = (data['modified'] is Timestamp)
@@ -386,22 +390,6 @@ class _NoteTableState extends State<NoteTable> {
                       }
                     } else if (noteType == 'interactive') {
                       context.go('/interactive-note/${doc.id}');
-                    } else if (noteType == 'source') {
-                      final url = data['url'] as String? ?? '';
-                      if (url.isNotEmpty) {
-                        launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                      } else {
-                        showDialog(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            title: Text(title),
-                            content: Text(description.isNotEmpty ? description : 'Nincs megadott URL vagy leírás.'),
-                            actions: [
-                              TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
-                            ],
-                          ),
-                        );
-                      }
                     } else {
                       context.go('/note/${doc.id}');
                     }
@@ -410,8 +398,6 @@ class _NoteTableState extends State<NoteTable> {
                       () {
                     if (noteType == 'dynamic_quiz' || noteType == 'dynamic_quiz_dual') {
                       context.go(noteType == 'dynamic_quiz' ? '/quiz/edit/${doc.id}' : '/quiz-dual/edit/${doc.id}');
-                    } else if (noteType == 'source') {
-                      context.go('/sources-admin?edit=${doc.id}');
                     } else {
                       context.go('/note/edit/${doc.id}');
                     }
