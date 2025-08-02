@@ -385,6 +385,8 @@ class _NoteTableState extends State<NoteTable> {
                       }
                     } else if (noteType == 'interactive') {
                       context.go('/interactive-note/${doc.id}');
+                    } else if (noteType == 'source') {
+                      context.go('/references');
                     } else {
                       context.go('/note/${doc.id}');
                     }
@@ -393,6 +395,8 @@ class _NoteTableState extends State<NoteTable> {
                       () {
                     if (noteType == 'dynamic_quiz' || noteType == 'dynamic_quiz_dual') {
                       context.go(noteType == 'dynamic_quiz' ? '/quiz/edit/${doc.id}' : '/quiz-dual/edit/${doc.id}');
+                    } else if (noteType == 'source') {
+                      context.go('/sources-admin?edit=${doc.id}');
                     } else {
                       context.go('/note/edit/${doc.id}');
                     }

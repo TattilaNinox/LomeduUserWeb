@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../widgets/header.dart';
 import '../widgets/sidebar.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
 
 /// Admin felület a források / irodalmi hivatkozások kezeléséhez.
@@ -38,11 +39,30 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
   String _searchText = '';
 
   // ───────────────────────── Lifecycle ───────────────────────────────
+  bool _initializedFromQuery = false;
+
   @override
   void initState() {
     super.initState();
     _loadCategories();
   }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initializedFromQuery) return;
+    final uri = GoRouterState.of(context).uri;
+    final editId = uri.queryParameters['edit'];
+    if (editId != null && editId.isNotEmpty) {
+      FirebaseFirestore.instance.collection('notes').doc(editId).get().then((doc) {
+        if (doc.exists && mounted) {
+          _startEdit(doc);
+        }
+      });
+    }
+    _initializedFromQuery = true;
+  }
+
 
   Future<void> _loadCategories() async {
     final snap = await FirebaseFirestore.instance.collection('categories').get();
