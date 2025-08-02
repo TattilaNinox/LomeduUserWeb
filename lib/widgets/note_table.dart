@@ -240,6 +240,7 @@ class _NoteTableState extends State<NoteTable> {
     final data = doc.data() ?? <String, dynamic>{};
     final title = (data['title'] ?? '');
     final category = (data['category'] ?? '');
+    final description = (data['description'] ?? '');
     final status = (data['status'] ?? '');
     final displayStatus = status == 'Public' ? 'Published' : status;
     final modified = (data['modified'] is Timestamp)
@@ -389,6 +390,17 @@ class _NoteTableState extends State<NoteTable> {
                       final url = data['url'] as String? ?? '';
                       if (url.isNotEmpty) {
                         launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                      } else {
+                        showDialog(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: Text(title),
+                            content: Text(description.isNotEmpty ? description : 'Nincs megadott URL vagy leírás.'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
+                            ],
+                          ),
+                        );
                       }
                     } else {
                       context.go('/note/${doc.id}');
