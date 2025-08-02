@@ -6,7 +6,10 @@ import '../widgets/sidebar.dart';
 import '../theme/app_theme.dart';
 
 /// Admin felület a források / irodalmi hivatkozások kezeléséhez.
-/// A képernyő elrendezése a többi admin oldalhoz igazodik.
+/// A forrásokat mostantól ugyanabban a `notes` gyűjteményben tároljuk
+/// mint a többi jegyzetet, de egy új `type = "source"` mezővel.
+/// Így a mobil-/webalkalmazás jegyzetlistájában automatikusan
+/// megjelennek, a címeknél pedig engedjük a duplikációt.
 class SourceAdminScreen extends StatefulWidget {
   const SourceAdminScreen({super.key});
 
@@ -64,7 +67,7 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Címkék globális gyűjteménybe mentése (akárcsak a jegyzeteknél)
+    // Mentse el globális címke-listába is, hogy autocomplete-nél elérhető legyen.
     for (final tag in _tags) {
       FirebaseFirestore.instance.collection('tags').doc(tag).set({'name': tag});
     }
@@ -76,14 +79,20 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
       'order': int.tryParse(_orderCtrl.text.trim()) ?? 0,
       'category': _selectedCategory,
       'tags': _tags,
-      'createdAt': FieldValue.serverTimestamp(),
+      'type': 'source',              // ← Új jegyzettípus
+      'status': 'Public',            // mindig publikus
+      'isFree': true,               // zárolás ikon ne legyen releváns
+      'modified': FieldValue.serverTimestamp(),
+      'pages': <String>[],          // a jelenlegi struktúra miatt üres lista
     };
 
-    final coll = FirebaseFirestore.instance.collection('sources');
+    final notesColl = FirebaseFirestore.instance.collection('notes');
+    final docId = _editingDocId ?? notesColl.doc().id;
+
     if (_editingDocId == null) {
-      await coll.add(data);
+      await notesColl.doc(docId).set(data);
     } else {
-      await coll.doc(_editingDocId).update(data);
+      await notesColl.doc(docId).update(data);
     }
 
     _clearForm();
@@ -106,7 +115,7 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
   }
 
   Future<void> _delete(String docId) async {
-    await FirebaseFirestore.instance.collection('sources').doc(docId).delete();
+    await FirebaseFirestore.instance.collection('notes').doc(docId).delete();
     if (_editingDocId == docId) _clearForm();
   }
 
@@ -187,7 +196,11 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
   // ───────────────────────── List & Table ────────────────────────────
   Widget _buildSourceList() {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance.collection('sources').orderBy('order').snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('notes')
+          .where('type', isEqualTo: 'source')
+          .orderBy('order')
+          .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Center(child: Text('Hiba: ${snapshot.error}'));
@@ -379,10 +392,7 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
           spacing: 8,
           runSpacing: 4,
           children: _tags
-              .map((tag) => Chip(
-                    label: Text(tag),
-                    onDeleted: () => setState(() => _tags.remove(tag)),
-                  ))
+              .map((tag) => Chip(label: Text(tag), onDeleted: () => setState(() => _tags.remove(tag))))
               .toList(),
         ),
         const SizedBox(height: 8),
