@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'dart:ui_web' as ui_web; // ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html; // ignore: avoid_web_libraries_in_flutter
+import 'package:web/web.dart' as web;
 
 class FlippableCard extends StatefulWidget {
   final String frontText;
   final String backText;
   final Axis flipAxis; // Axis.horizontal (Y) or Axis.vertical (X)
   final bool interactive;
-  const FlippableCard({Key? key, required this.frontText, required this.backText, this.flipAxis = Axis.horizontal, this.interactive = true}) : super(key: key);
+  const FlippableCard({super.key, required this.frontText, required this.backText, this.flipAxis = Axis.horizontal, this.interactive = true});
 
   @override
   State<FlippableCard> createState() => _FlippableCardState();
@@ -103,7 +103,7 @@ class _FlippableCardState extends State<FlippableCard> with SingleTickerProvider
 
 class CssHyphenatedText extends StatelessWidget {
   final String text;
-  const CssHyphenatedText({Key? key, required this.text}) : super(key: key);
+  const CssHyphenatedText({super.key, required this.text});
 
   @override
   Widget build(BuildContext context) {
@@ -111,12 +111,12 @@ class CssHyphenatedText extends StatelessWidget {
 
     ui_web.platformViewRegistry.registerViewFactory(
       viewType,
-      (int viewId) => html.DivElement()
+      (int viewId) => web.HTMLDivElement()
         ..style.width = '100%'
         ..style.height = '100%'
         ..style.display = 'flex'
         ..style.alignItems = 'center'
-        ..append(html.ParagraphElement()
+        ..append(web.HTMLParagraphElement()
           ..text = text
           ..style.textAlign = 'justify'
           ..style.setProperty('hyphens', 'auto')
@@ -127,4 +127,4 @@ class CssHyphenatedText extends StatelessWidget {
 
     return IgnorePointer(child: HtmlElementView(viewType: viewType));
   }
-} 
+}

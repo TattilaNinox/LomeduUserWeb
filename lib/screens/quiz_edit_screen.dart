@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/sidebar.dart';
-import '../widgets/quiz_viewer.dart';
 
 class QuizEditScreen extends StatefulWidget {
   final String noteId;

@@ -25,7 +25,9 @@ class DeckListScreen extends StatelessWidget {
                   'createdAt': Timestamp.now(),
                   'modified': Timestamp.now(),
                 }).then((_) {
-                  context.go('/decks/edit/${newDeckRef.id}');
+                  if (context.mounted) {
+                    context.go('/decks/edit/${newDeckRef.id}');
+                  }
                 });
               },
               icon: const Icon(Icons.add),

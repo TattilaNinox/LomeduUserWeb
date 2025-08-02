@@ -243,7 +243,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
       ),
       body: Row(
         children: [
-          Sidebar(selectedMenu: 'notes'),
+          const Sidebar(selectedMenu: 'notes'),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
