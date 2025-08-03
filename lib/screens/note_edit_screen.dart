@@ -36,12 +36,15 @@ class _NoteEditScreenState extends State<NoteEditScreen>
   List<String> _tags = [];
   final _tagController = TextEditingController();
   String _selectedType = 'text';
+  String? _bundleId;
 
   Map<String, dynamic>? _selectedMp3File;
   Map<String, dynamic>? _selectedVideoFile;
   VideoPlayerController? _videoController;
 
   List<String> _categories = [];
+  List<String> _sciences = [];
+  String? _selectedScience;
   late TabController _tabController;
   final ValueNotifier<double> _editorFontSize = ValueNotifier<double>(9.0);
 
@@ -81,6 +84,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
   Future<void> _loadInitialData() async {
     try {
       await _loadCategories();
+      await _loadSciences();
       await _loadNoteData();
     } catch (e) {
       if (mounted) {
@@ -104,6 +108,13 @@ class _NoteEditScreenState extends State<NoteEditScreen>
     }
   }
 
+  Future<void> _loadSciences() async {
+    final snapshot = await FirebaseFirestore.instance.collection('sciences').get();
+    if (mounted) {
+      _sciences = snapshot.docs.map((doc) => doc['name'] as String).toList();
+    }
+  }
+
   Future<void> _loadNoteData() async {
     final doc = await FirebaseFirestore.instance.collection('notes').doc(widget.noteId).get();
     
@@ -112,6 +123,8 @@ class _NoteEditScreenState extends State<NoteEditScreen>
         final data = doc.data()!;
         _titleController.text = data['title'] ?? '';
         _selectedCategory = data['category'];
+        _selectedScience = data['science'];
+        _bundleId = data['bundleId'];
         _tags = List<String>.from(data['tags'] ?? []);
         _selectedType = data['type'] ?? 'text';
         _isFree = data['isFree'] == true;
@@ -134,7 +147,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
   }
   
   Future<void> _updateNote() async {
-    if (_titleController.text.isEmpty || _selectedCategory == null) {
+    if (_titleController.text.isEmpty || _selectedCategory == null || _selectedScience == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('A cím és a kategória megadása kötelező!')),
       );
@@ -158,6 +171,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
       final Map<String, dynamic> noteData = {
         'title': _titleController.text,
         'category': _selectedCategory,
+        'science': _selectedScience,
         'tags': _tags,
         'pages': [_htmlContentController.text],
         'isFree': _isFree,
@@ -223,6 +237,14 @@ class _NoteEditScreenState extends State<NoteEditScreen>
           onPressed: () => context.go('/notes'),
         ),
         actions: [
+          if (_bundleId != null)
+            IconButton(
+              icon: const Icon(Icons.all_inbox),
+              tooltip: 'Ugrás a köteghez',
+              onPressed: () {
+                context.go('/bundles/edit/$_bundleId');
+              },
+            ),
           TextButton(
             onPressed: () => context.go('/notes'),
             child: const Text('Mégse'),
@@ -271,6 +293,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                               flex: 1,
                               child: _buildCategoryDropdown(),
                             ),
+
                             const SizedBox(width: 16),
                             Expanded(
                               flex: 1,
@@ -299,6 +322,8 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            _buildScienceDropdown(),
+                            const SizedBox(height: 16),
                             _buildFreeAccessToggle(),
                             const SizedBox(height: 16),
                             _buildTagsSection(),
@@ -367,6 +392,29 @@ class _NoteEditScreenState extends State<NoteEditScreen>
       },
       decoration: const InputDecoration(
         labelText: 'Kategória',
+        border: OutlineInputBorder(),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+    );
+  }
+
+  Widget _buildScienceDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedScience,
+      items: _sciences.map((String sc) {
+        return DropdownMenuItem<String>(
+          value: sc,
+          child: Text(sc),
+        );
+      }).toList(),
+      onChanged: (newValue) {
+        setState(() {
+          _selectedScience = newValue;
+        });
+      },
+      decoration: const InputDecoration(
+        labelText: 'Tudomány',
         border: OutlineInputBorder(),
         filled: true,
         fillColor: Colors.white,

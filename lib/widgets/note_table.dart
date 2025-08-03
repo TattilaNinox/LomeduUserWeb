@@ -14,6 +14,7 @@ class NoteTable extends StatefulWidget {
   final String searchText;
   final String? selectedStatus;
   final String? selectedCategory;
+  final String? selectedScience;
   final String? selectedTag;
   final String? selectedType;
 
@@ -22,6 +23,7 @@ class NoteTable extends StatefulWidget {
     required this.searchText,
     required this.selectedStatus,
     required this.selectedCategory,
+    required this.selectedScience,
     required this.selectedTag,
     required this.selectedType,
   });
@@ -96,6 +98,9 @@ class _NoteTableState extends State<NoteTable> {
     if (widget.selectedCategory != null && widget.selectedCategory!.isNotEmpty) {
       query = query.where('category', isEqualTo: widget.selectedCategory);
     }
+    if (widget.selectedScience != null && widget.selectedScience!.isNotEmpty) {
+      query = query.where('science', isEqualTo: widget.selectedScience);
+    }
     if (widget.selectedTag != null && widget.selectedTag!.isNotEmpty) {
       query = query.where('tags', arrayContains: widget.selectedTag);
     }
@@ -105,7 +110,7 @@ class _NoteTableState extends State<NoteTable> {
 
     return Expanded(
       child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        key: ValueKey('${widget.selectedStatus}|${widget.selectedCategory}|${widget.selectedTag}|${widget.selectedType}|${widget.searchText}'),
+        key: ValueKey('${widget.selectedStatus}|${widget.selectedCategory}|${widget.selectedScience}|${widget.selectedTag}|${widget.selectedType}|${widget.searchText}'),
         stream: query.snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {

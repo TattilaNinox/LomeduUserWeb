@@ -25,12 +25,13 @@ class _NoteListScreenState extends State<NoteListScreen> {
   String _searchText = '';
   String? _selectedStatus;
   String? _selectedCategory;
+  String? _selectedScience;
   String? _selectedTag;
   String? _selectedType;
 
-  // Listák a Firestore-ból betöltött kategóriák és címkék tárolására.
-  // Ezeket a `Filters` widget kapja meg, hogy fel tudja tölteni a legördülő menüket.
+  // Listák a Firestore-ból betöltött kategóriák, tudományok és címkék tárolására.
   List<String> _categories = [];
+  List<String> _sciences = [];
   List<String> _tags = [];
 
   /// A widget életciklusának `initState` metódusa.
@@ -41,6 +42,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
   void initState() {
     super.initState();
     _loadCategories();
+    _loadSciences();
     _loadTags();
   }
 
@@ -55,6 +57,13 @@ class _NoteListScreenState extends State<NoteListScreen> {
   }
 
   /// Betölti a címkéket a Firestore `tags` kollekciójából.
+  Future<void> _loadSciences() async {
+    final snapshot = await FirebaseFirestore.instance.collection('sciences').get();
+    setState(() {
+      _sciences = snapshot.docs.map((doc) => doc['name'] as String).toList();
+    });
+  }
+
   Future<void> _loadTags() async {
     final notesSnapshot = await FirebaseFirestore.instance.collection('notes').get();
     final allTags = <String>{}; // Set-et használunk a duplikátumok automatikus kezelésére
@@ -99,6 +108,13 @@ class _NoteListScreenState extends State<NoteListScreen> {
     });
   }
 
+  /// Frissíti a kiválasztott tudományt.
+  void _onScienceChanged(String? value) {
+    setState(() {
+      _selectedScience = value;
+    });
+  }
+
   /// Frissíti a kiválasztott címkét a `Filters` widgetből.
   void _onTagChanged(String? value) {
     setState(() => _selectedTag = value);
@@ -115,6 +131,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
     setState(() {
       _selectedStatus = null;
       _selectedCategory = null;
+      _selectedScience = null;
       _selectedTag = null;
       _selectedType = null;
     });
@@ -149,13 +166,16 @@ class _NoteListScreenState extends State<NoteListScreen> {
                 // a callback függvényeket a szűrők állapotának módosításához.
                 Filters(
                   categories: _categories,
+                  sciences: _sciences,
                   tags: _tags,
                   selectedStatus: _selectedStatus,
                   selectedCategory: _selectedCategory,
+                  selectedScience: _selectedScience,
                   selectedTag: _selectedTag,
                   selectedType: _selectedType,
                   onStatusChanged: _onStatusChanged,
                   onCategoryChanged: _onCategoryChanged,
+                  onScienceChanged: _onScienceChanged,
                   onTagChanged: _onTagChanged,
                   onTypeChanged: _onTypeChanged,
                   onClearFilters: _onClearFilters,
@@ -168,6 +188,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
                   searchText: _searchText,
                   selectedStatus: _selectedStatus,
                   selectedCategory: _selectedCategory,
+                  selectedScience: _selectedScience,
                   selectedTag: _selectedTag,
                   selectedType: _selectedType,
                                   ),

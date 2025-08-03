@@ -30,6 +30,8 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
   bool _isUploading = false;
   bool _isFree = false; // Új mező: ingyenesen megtekinthető-e
   List<String> _categories = [];
+  List<String> _sciences = [];
+  String? _selectedScience;
   VideoPlayerController? _videoController;
   final List<String> _tags = [];
   final _tagController = TextEditingController();
@@ -56,6 +58,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
         _previewViewId, (int viewId) => _previewIframeElement);
 
     _loadCategories();
+    _loadSciences();
   }
 
   @override
@@ -75,6 +78,15 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
     if(mounted) {
       setState(() {
         _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+      });
+    }
+  }
+
+  Future<void> _loadSciences() async {
+    final snapshot = await FirebaseFirestore.instance.collection('sciences').get();
+    if (mounted) {
+      setState(() {
+        _sciences = snapshot.docs.map((doc) => doc['name'] as String).toList();
       });
     }
   }
@@ -141,6 +153,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
   Future<void> _uploadNote() async {
     if (_titleController.text.isEmpty ||
         _selectedCategory == null ||
+        _selectedScience == null ||
         _htmlContentController.text.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -197,6 +210,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
       final noteData = {
         'title': _titleController.text,
         'category': _selectedCategory,
+        'science': _selectedScience,
         'status': 'Draft',
         'modified': Timestamp.now(),
         'pages': [_htmlContentController.text],
@@ -218,6 +232,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
           _titleController.clear();
           _htmlContentController.clear();
           _selectedCategory = null;
+          _selectedScience = null;
           _selectedMp3File = null;
           _selectedVideoFile = null;
           _videoController?.dispose();
@@ -297,6 +312,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
                               flex: 1,
                               child: _buildCategoryDropdown(),
                             ),
+
                             const SizedBox(width: 16),
                             Expanded(
                               flex: 1,
@@ -324,6 +340,8 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            _buildScienceDropdown(),
+                            const SizedBox(height: 16),
                             _buildFreeAccessToggle(),
                             const SizedBox(height: 16),
                             _buildTagsSection(),
@@ -401,9 +419,32 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
         fillColor: Colors.white,
       ),
     );
+    }
+
+  Widget _buildScienceDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedScience,
+      items: _sciences.map((String sc) {
+        return DropdownMenuItem<String>(
+          value: sc,
+          child: Text(sc),
+        );
+      }).toList(),
+      onChanged: (newValue) {
+        setState(() {
+          _selectedScience = newValue;
+        });
+      },
+      decoration: const InputDecoration(
+        labelText: 'Tudomány',
+        border: OutlineInputBorder(),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+    );
   }
 
-    Widget _buildEditorAndPreview() {
+  Widget _buildEditorAndPreview() {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

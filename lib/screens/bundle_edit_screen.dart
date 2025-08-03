@@ -177,7 +177,7 @@ class _BundleEditScreenState extends State<BundleEditScreen> {
 
     if (confirmed == true) {
       // Frissítjük a jegyzet státuszát 'Draft'-ra
-      await FirebaseFirestore.instance.collection('notes').doc(noteId).update({'status': 'Draft'});
+      await FirebaseFirestore.instance.collection('notes').doc(noteId).update({'status': 'Draft', 'bundleId': FieldValue.delete()});
 
       setState(() {
         _selectedNoteIds.remove(noteId);
@@ -217,17 +217,28 @@ class _BundleEditScreenState extends State<BundleEditScreen> {
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
+      String bundleId;
       if (widget.bundleId == null) {
         // Új köteg létrehozása
         bundleData['createdAt'] = FieldValue.serverTimestamp();
-        await FirebaseFirestore.instance.collection('bundles').add(bundleData);
+        final docRef = await FirebaseFirestore.instance.collection('bundles').add(bundleData);
+        bundleId = docRef.id;
       } else {
         // Meglévő köteg frissítése
+        bundleId = widget.bundleId!;
         await FirebaseFirestore.instance
             .collection('bundles')
-            .doc(widget.bundleId)
+            .doc(bundleId)
             .update(bundleData);
       }
+
+      // Jegyzetek bundleId mezőjének frissítése
+      final batch = FirebaseFirestore.instance.batch();
+      for (final noteId in _selectedNoteIds) {
+        final noteRef = FirebaseFirestore.instance.collection('notes').doc(noteId);
+        batch.update(noteRef, {'bundleId': bundleId});
+      }
+      await batch.commit();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -588,12 +599,11 @@ class _BundleEditScreenState extends State<BundleEditScreen> {
                                         // Előnézet gomb
                                         IconButton(
                                           icon: const Icon(Icons.visibility),
-                                          iconSize: 22.0, // Ikon méret csökkentése
+                                          iconSize: 22.0,
                                           tooltip: 'Előnézet',
                                           onPressed: () {
                                             final noteType = noteData?['type'] as String? ?? 'standard';
-                                            // A 'from' paraméter hozzáadása a visszanavigáláshoz
-                                            final returnPath = '/bundles/edit/${widget.bundleId}'; 
+                                            final returnPath = '/bundles/edit/${widget.bundleId}';
                                             if (noteType == 'interactive') {
                                               context.go('/interactive-note/$noteId?from=${Uri.encodeComponent(returnPath)}');
                                             } else {
@@ -601,7 +611,25 @@ class _BundleEditScreenState extends State<BundleEditScreen> {
                                             }
                                           },
                                         ),
-                                        const SizedBox(width: 24), // Hely a drag handle-nek
+                                        IconButton(
+                                          icon: const Icon(Icons.edit),
+                                          iconSize: 22.0,
+                                          tooltip: 'Szerkesztés',
+                                          onPressed: () {
+                                            final noteType = noteData?['type'] as String? ?? 'standard';
+                                            String editPath;
+                                            if (noteType == 'dynamic_quiz') {
+                                              editPath = '/quiz/edit/$noteId';
+                                            } else if (noteType == 'dynamic_quiz_dual') {
+                                              editPath = '/quiz-dual/edit/$noteId';
+                                            } else {
+                                              editPath = '/note/edit/$noteId';
+                                            }
+                                            final returnPath = widget.bundleId == null ? '/bundles/create' : '/bundles/edit/${widget.bundleId}';
+                                            context.go('$editPath?from=${Uri.encodeComponent(returnPath)}');
+                                          },
+                                        ),
+                                        const SizedBox(width: 24),
                                       ],
                                     ),
                                   ),

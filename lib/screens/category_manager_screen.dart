@@ -13,13 +13,23 @@ class CategoryManagerScreen extends StatefulWidget {
 class _CategoryManagerScreenState extends State<CategoryManagerScreen> {
   final _categoryController = TextEditingController();
   final _searchController = TextEditingController();
+  List<String> _sciences = [];
+  String? _selectedScience;
   Map<String, int> _noteUsageCount = {};
   Map<String, int> _bankUsageCount = {};
 
   @override
   void initState() {
     super.initState();
+    _loadSciences();
     _loadUsageCounts();
+  }
+
+  Future<void> _loadSciences() async {
+    final snap = await FirebaseFirestore.instance.collection('sciences').get();
+    setState(() {
+      _sciences = snap.docs.map((d) => d['name'] as String).toList();
+    });
   }
 
   Future<void> _loadUsageCounts() async {
@@ -62,11 +72,12 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> {
 
   Future<void> _addCategory() async {
     final name = _categoryController.text.trim();
-    if (name.isEmpty) return;
+    if (name.isEmpty || _selectedScience == null) return;
 
     final existing = await FirebaseFirestore.instance
         .collection('categories')
         .where('name', isEqualTo: name)
+        .where('science', isEqualTo: _selectedScience)
         .get();
 
     if (existing.docs.isNotEmpty) {
@@ -74,7 +85,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> {
       return;
     }
 
-    await FirebaseFirestore.instance.collection('categories').add({'name': name});
+    await FirebaseFirestore.instance.collection('categories').add({'name': name, 'science': _selectedScience});
     _categoryController.clear();
     _showSnackBar('Kategória sikeresen hozzáadva.');
   }
