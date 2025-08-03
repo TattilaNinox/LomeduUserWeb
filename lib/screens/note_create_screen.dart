@@ -321,12 +321,6 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
                             const SizedBox(width: 16),
                             Expanded(
                               flex: 1,
-                              child: _buildCategoryDropdown(),
-                            ),
-
-                            const SizedBox(width: 16),
-                            Expanded(
-                              flex: 1,
                               child: _buildTypeDropdown(),
                             ),
                           ],
