@@ -145,10 +145,13 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
       appBar: AppBar(
         title: const Text('Új 2-válaszos Dinamikus Kvíz'),
         actions: [
-          ElevatedButton.icon(
-            onPressed: _isSaving ? null : _createQuiz,
-            icon: _isSaving ? const CircularProgressIndicator() : const Icon(Icons.save),
-            label: const Text('Mentés'),
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: ElevatedButton.icon(
+              onPressed: _isSaving ? null : _createQuiz,
+              icon: _isSaving ? const CircularProgressIndicator() : const Icon(Icons.save),
+              label: const Text('Mentés'),
+            ),
           )
         ],
       ),

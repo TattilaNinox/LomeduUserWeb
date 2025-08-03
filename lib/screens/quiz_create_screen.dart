@@ -113,10 +113,13 @@ class _QuizCreateScreenState extends State<QuizCreateScreen> {
       appBar: AppBar(
         title: const Text('Új Dinamikus Kvíz'),
         actions: [
-          ElevatedButton.icon(
-            onPressed: _isSaving ? null : _createQuiz,
-            icon: _isSaving ? const CircularProgressIndicator() : const Icon(Icons.save),
-            label: const Text('Mentés'),
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: ElevatedButton.icon(
+              onPressed: _isSaving ? null : _createQuiz,
+              icon: _isSaving ? const CircularProgressIndicator() : const Icon(Icons.save),
+              label: const Text('Mentés'),
+            ),
           )
         ],
       ),
