@@ -30,6 +30,8 @@ class _InteractiveNoteCreateScreenState
   Map<String, dynamic>? _selectedVideoFile;
   bool _isUploading = false;
   List<String> _categories = [];
+  List<String> _sciences = [];
+  String? _selectedScience;
   VideoPlayerController? _videoController;
   final List<String> _tags = [];
   final _tagController = TextEditingController();
@@ -55,6 +57,7 @@ class _InteractiveNoteCreateScreenState
         _previewViewId, (int viewId) => _previewIframeElement);
         
     _loadCategories();
+    _loadSciences();
   }
 
   @override
@@ -69,12 +72,31 @@ class _InteractiveNoteCreateScreenState
   }
 
   Future<void> _loadCategories() async {
-    final snapshot =
-        await FirebaseFirestore.instance.collection('categories').get();
+    if (_selectedScience == null) {
+      if (mounted) {
+        setState(() {
+          _categories = [];
+        });
+      }
+      return;
+    }
+    
+    final snapshot = await FirebaseFirestore.instance
+        .collection('categories')
+        .where('science', isEqualTo: _selectedScience)
+        .get();
     if (mounted) {
       setState(() {
-        _categories =
-            snapshot.docs.map((doc) => doc['name'] as String).toList();
+        _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+      });
+    }
+  }
+
+  Future<void> _loadSciences() async {
+    final snapshot = await FirebaseFirestore.instance.collection('sciences').get();
+    if (mounted) {
+      setState(() {
+        _sciences = snapshot.docs.map((doc) => doc['name'] as String).toList();
       });
     }
   }
@@ -204,6 +226,7 @@ class _InteractiveNoteCreateScreenState
       final noteData = {
         'title': _titleController.text,
         'category': _selectedCategory,
+        'science': _selectedScience,
         'status': 'Draft',
         'modified': Timestamp.now(),
         'pages': [htmlContent],
@@ -225,6 +248,7 @@ class _InteractiveNoteCreateScreenState
           _titleController.clear();
           _htmlContentController.clear();
           _selectedCategory = null;
+          _selectedScience = null;
           _selectedMp3File = null;
           _selectedVideoFile = null;
           _videoController?.dispose();
@@ -302,10 +326,12 @@ class _InteractiveNoteCreateScreenState
                             const SizedBox(width: 16),
                             Expanded(
                               flex: 1,
-                              child: _buildCategoryDropdown(),
+                              child: _buildScienceDropdown(),
                             ),
                           ],
                         ),
+                        const SizedBox(height: 16),
+                        _buildCategoryDropdown(),
                         const SizedBox(height: 24),
                         _buildEditorAndPreview(),
                       ],
@@ -365,13 +391,38 @@ class _InteractiveNoteCreateScreenState
           child: Text(category),
         );
       }).toList(),
-      onChanged: (newValue) {
+      onChanged: _selectedScience == null ? null : (newValue) {
         setState(() {
           _selectedCategory = newValue;
         });
       },
-      decoration: const InputDecoration(
+      decoration: InputDecoration(
         labelText: 'Kategória',
+        border: const OutlineInputBorder(),
+        filled: true,
+        fillColor: _selectedScience == null ? Colors.grey[100] : Colors.white,
+      ),
+    );
+  }
+
+  Widget _buildScienceDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedScience,
+      items: _sciences.map((String sc) {
+        return DropdownMenuItem<String>(
+          value: sc,
+          child: Text(sc),
+        );
+      }).toList(),
+      onChanged: (newValue) {
+        setState(() {
+          _selectedScience = newValue;
+          _selectedCategory = null;
+        });
+        _loadCategories();
+      },
+      decoration: const InputDecoration(
+        labelText: 'Tudomány',
         border: OutlineInputBorder(),
         filled: true,
         fillColor: Colors.white,
@@ -612,4 +663,4 @@ class _InteractiveNoteCreateScreenState
       ],
     );
   }
-} 
+}        

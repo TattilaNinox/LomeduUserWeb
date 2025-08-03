@@ -17,6 +17,8 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
   String? _selectedQuestionBankId;
   bool _isSaving = false;
   List<String> _categories = [];
+  List<String> _sciences = [];
+  String? _selectedScience;
   List<DocumentSnapshot> _questionBanks = [];
 
   @override
@@ -26,14 +28,40 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
   }
 
   Future<void> _loadInitialData() async {
+    await _loadSciences();
     await _loadCategories();
     await _loadQuestionBanks();
     if (mounted) setState(() {});
   }
 
   Future<void> _loadCategories() async {
-    final snapshot = await FirebaseFirestore.instance.collection('categories').get();
-    if (mounted) _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+    if (_selectedScience == null) {
+      if (mounted) {
+        setState(() {
+          _categories = [];
+        });
+      }
+      return;
+    }
+    
+    final snapshot = await FirebaseFirestore.instance
+        .collection('categories')
+        .where('science', isEqualTo: _selectedScience)
+        .get();
+    if (mounted) {
+      setState(() {
+        _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+      });
+    }
+  }
+
+  Future<void> _loadSciences() async {
+    final snapshot = await FirebaseFirestore.instance.collection('sciences').get();
+    if (mounted) {
+      setState(() {
+        _sciences = snapshot.docs.map((doc) => doc['name'] as String).toList();
+      });
+    }
   }
 
   Future<void> _loadQuestionBanks() async {
@@ -54,7 +82,7 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
   }
 
   Future<void> _createQuiz() async {
-    if (_titleController.text.isEmpty || _selectedCategory == null || _selectedQuestionBankId == null) {
+    if (_titleController.text.isEmpty || _selectedScience == null || _selectedCategory == null || _selectedQuestionBankId == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Minden mező kitöltése kötelező!')));
       return;
     }
@@ -92,6 +120,7 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
       await FirebaseFirestore.instance.collection('notes').add({
         'title': _titleController.text,
         'category': _selectedCategory,
+        'science': _selectedScience,
         'questionBankId': _selectedQuestionBankId,
         'type': 'dynamic_quiz_dual',
         'status': 'Draft',
@@ -134,13 +163,28 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
                   TextField(controller: _titleController, decoration: const InputDecoration(labelText: 'Kvíz címe')),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
+                    value: _selectedScience,
+                    items: _sciences.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                    onChanged: (val) => setState(() {
+                      _selectedScience = val;
+                      _selectedCategory = null;
+                      _selectedQuestionBankId = null;
+                      _loadCategories();
+                    }),
+                    decoration: const InputDecoration(labelText: 'Tudomány'),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
                     value: _selectedCategory,
                     items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                    onChanged: (val) => setState(() {
+                    onChanged: _selectedScience == null ? null : (val) => setState(() {
                       _selectedCategory = val;
                       _selectedQuestionBankId = null;
                     }),
-                    decoration: const InputDecoration(labelText: 'Kategória'),
+                    decoration: InputDecoration(
+                      labelText: 'Kategória',
+                      fillColor: _selectedScience == null ? Colors.grey[100] : null,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   if (_selectedCategory != null)
@@ -204,4 +248,4 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
       );
     }
   }
-} 
+}  

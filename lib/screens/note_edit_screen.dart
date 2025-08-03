@@ -102,9 +102,23 @@ class _NoteEditScreenState extends State<NoteEditScreen>
   }
 
   Future<void> _loadCategories() async {
-    final snapshot = await FirebaseFirestore.instance.collection('categories').get();
+    if (_selectedScience == null) {
+      if (mounted) {
+        setState(() {
+          _categories = [];
+        });
+      }
+      return;
+    }
+    
+    final snapshot = await FirebaseFirestore.instance
+        .collection('categories')
+        .where('science', isEqualTo: _selectedScience)
+        .get();
     if (mounted) {
-      _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+      setState(() {
+        _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+      });
     }
   }
 
@@ -324,6 +338,8 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                           children: [
                             _buildScienceDropdown(),
                             const SizedBox(height: 16),
+                            _buildCategoryDropdown(),
+                            const SizedBox(height: 16),
                             _buildFreeAccessToggle(),
                             const SizedBox(height: 16),
                             _buildTagsSection(),
@@ -385,16 +401,16 @@ class _NoteEditScreenState extends State<NoteEditScreen>
           child: Text(category),
         );
       }).toList(),
-      onChanged: (newValue) {
+      onChanged: _selectedScience == null ? null : (newValue) {
         setState(() {
           _selectedCategory = newValue;
         });
       },
-      decoration: const InputDecoration(
+      decoration: InputDecoration(
         labelText: 'Kategória',
-        border: OutlineInputBorder(),
+        border: const OutlineInputBorder(),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: _selectedScience == null ? Colors.grey[100] : Colors.white,
       ),
     );
   }
@@ -411,7 +427,9 @@ class _NoteEditScreenState extends State<NoteEditScreen>
       onChanged: (newValue) {
         setState(() {
           _selectedScience = newValue;
+          _selectedCategory = null;
         });
+        _loadCategories();
       },
       decoration: const InputDecoration(
         labelText: 'Tudomány',
@@ -744,4 +762,4 @@ class _NoteEditScreenState extends State<NoteEditScreen>
     }
     return [];
   }
-} 
+}    

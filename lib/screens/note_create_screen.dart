@@ -73,8 +73,19 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
   }
 
   Future<void> _loadCategories() async {
-    final snapshot =
-        await FirebaseFirestore.instance.collection('categories').get();
+    if (_selectedScience == null) {
+      if (mounted) {
+        setState(() {
+          _categories = [];
+        });
+      }
+      return;
+    }
+    
+    final snapshot = await FirebaseFirestore.instance
+        .collection('categories')
+        .where('science', isEqualTo: _selectedScience)
+        .get();
     if(mounted) {
       setState(() {
         _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
@@ -152,8 +163,8 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
 
   Future<void> _uploadNote() async {
     if (_titleController.text.isEmpty ||
-        _selectedCategory == null ||
         _selectedScience == null ||
+        _selectedCategory == null ||
         _htmlContentController.text.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -342,6 +353,8 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
                           children: [
                             _buildScienceDropdown(),
                             const SizedBox(height: 16),
+                            _buildCategoryDropdown(),
+                            const SizedBox(height: 16),
                             _buildFreeAccessToggle(),
                             const SizedBox(height: 16),
                             _buildTagsSection(),
@@ -407,16 +420,16 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
           child: Text(category),
         );
       }).toList(),
-      onChanged: (newValue) {
+      onChanged: _selectedScience == null ? null : (newValue) {
         setState(() {
           _selectedCategory = newValue;
         });
       },
-      decoration: const InputDecoration(
+      decoration: InputDecoration(
         labelText: 'Kategória',
-        border: OutlineInputBorder(),
+        border: const OutlineInputBorder(),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: _selectedScience == null ? Colors.grey[100] : Colors.white,
       ),
     );
     }
@@ -433,7 +446,9 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
       onChanged: (newValue) {
         setState(() {
           _selectedScience = newValue;
+          _selectedCategory = null;
         });
+        _loadCategories();
       },
       decoration: const InputDecoration(
         labelText: 'Tudomány',
