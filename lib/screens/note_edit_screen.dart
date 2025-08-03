@@ -305,12 +305,6 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                             const SizedBox(width: 16),
                             Expanded(
                               flex: 1,
-                              child: _buildCategoryDropdown(),
-                            ),
-
-                            const SizedBox(width: 16),
-                            Expanded(
-                              flex: 1,
                               child: _buildTypeDropdown(),
                             ),
                           ],
@@ -762,4 +756,4 @@ class _NoteEditScreenState extends State<NoteEditScreen>
     }
     return [];
   }
-}    
+}      
