@@ -12,7 +12,9 @@ class CategoryManagerScreen extends StatefulWidget {
 
 class _CategoryManagerScreenState extends State<CategoryManagerScreen> {
   final _categoryController = TextEditingController();
-  final _searchController = TextEditingController();
+  // Szűréshez
+  String? _filterScience;
+
   List<String> _sciences = [];
   String? _selectedScience;
   Map<String, int> _noteUsageCount = {};
@@ -126,16 +128,28 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> {
     );
   }
 
-  void _showEditCategoryDialog(String docId, String currentName) {
+  void _showEditCategoryDialog(String docId, String currentName, String currentScience) {
     final editController = TextEditingController(text: currentName);
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Kategória átnevezése'),
-        content: TextField(
-          controller: editController,
-          decoration: const InputDecoration(labelText: 'Új név'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButtonFormField<String>(
+              value: currentScience,
+              items: _sciences.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+              onChanged: (v) => currentScience = v ?? currentScience,
+              decoration: const InputDecoration(labelText: 'Tudomány'),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: editController,
+              decoration: const InputDecoration(labelText: 'Új név'),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -150,6 +164,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> {
               final existing = await FirebaseFirestore.instance
                   .collection('categories')
                   .where('name', isEqualTo: newName)
+                  .where('science', isEqualTo: currentScience)
                   .get();
 
               if (existing.docs.isNotEmpty && existing.docs.first.id != docId) {
@@ -157,7 +172,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> {
                 return;
               }
 
-              await FirebaseFirestore.instance.collection('categories').doc(docId).update({'name': newName});
+              await FirebaseFirestore.instance.collection('categories').doc(docId).update({'name': newName, 'science': currentScience});
               if (!context.mounted) return;
               Navigator.of(context).pop();
               _showSnackBar('Kategória sikeresen átnevezve.');
@@ -191,6 +206,17 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> {
                         Row(
                           children: [
                             Expanded(
+                              flex: 1,
+                              child: DropdownButtonFormField<String>(
+                                value: _selectedScience,
+                                items: _sciences.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                                onChanged: (v) => setState(() => _selectedScience = v),
+                                decoration: const InputDecoration(labelText: 'Tudomány'),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              flex: 1,
                               child: TextField(
                                 controller: _categoryController,
                                 decoration: const InputDecoration(labelText: 'Új kategória neve'),
@@ -206,13 +232,13 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> {
                         const SizedBox(height: 24),
                         const Text('Kategóriák:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),
-                        TextField(
-                          controller: _searchController,
-                          decoration: const InputDecoration(
-                            labelText: 'Keresés kategóriák között',
-                            prefixIcon: Icon(Icons.search),
-                          ),
-                          onChanged: (_) => setState(() {}),
+                        DropdownButton<String?>(
+                          value: _filterScience,
+                          hint: const Text('Tudomány szűrő (Összes)'),
+                          items: [null, ..._sciences]
+                              .map((s) => DropdownMenuItem(value: s, child: Text(s ?? 'Összes')))
+                              .toList(),
+                          onChanged: (v) => setState(() => _filterScience = v),
                         ),
                         const SizedBox(height: 16),
                         Expanded(
@@ -232,9 +258,11 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> {
                               final allCategories = snapshot.data!.docs;
 
                               final filteredCategories = allCategories.where((doc) {
-                                final name = doc['name'] as String;
-                                return name.toLowerCase().contains(_searchController.text.toLowerCase());
-                              }).toList();
+                                  if (_filterScience != null) {
+                                    return doc['science'] == _filterScience;
+                                  }
+                                  return true;
+                                }).toList();
 
                               if (filteredCategories.isEmpty) {
                                 return const Text('Nincs találat a keresésre.');
@@ -245,13 +273,14 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> {
                                 itemBuilder: (context, index) {
                                   final doc = filteredCategories[index];
                                   final name = doc['name'] as String;
+                                  final science = doc['science'] as String? ?? '';
                                   final noteCount = _noteUsageCount[name] ?? 0;
                                   final bankCount = _bankUsageCount[name] ?? 0;
                                   final isUsed = noteCount > 0 || bankCount > 0;
 
                                   return ListTile(
                                     title: Text(name),
-                                    subtitle: Text('Jegyzetek: $noteCount, Kérdésbankok: $bankCount'),
+                                    subtitle: Text('$science  •  Jegyzetek: $noteCount, Kérdésbankok: $bankCount'),
                                     trailing: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -259,7 +288,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> {
                                           icon: const Icon(Icons.edit),
                                           color: isUsed ? Colors.grey : Colors.blue,
                                           tooltip: isUsed ? 'Használatban lévő kategória nem szerkeszthető' : 'Szerkesztés',
-                                          onPressed: isUsed ? null : () => _showEditCategoryDialog(doc.id, name),
+                                          onPressed: isUsed ? null : () => _showEditCategoryDialog(doc.id, name, science),
                                         ),
                                         IconButton(
                                           icon: const Icon(Icons.delete),
