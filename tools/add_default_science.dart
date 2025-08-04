@@ -1,7 +1,7 @@
+// ignore_for_file: avoid_print, unused_import
 // One-off script: add 'science': 'Alap' to notes missing the field
-import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../lib/core/firebase_config.dart';
+import 'package:orlomed_admin_web/core/firebase_config.dart';
 
 Future<void> main() async {
   print('Initializing Firebase...');
@@ -10,7 +10,8 @@ Future<void> main() async {
   final fb = FirebaseFirestore.instance;
   const defaultScience = 'Alap';
 
-  final snap = await fb.collection('notes').where('science', isNull: true).get();
+  final snap =
+      await fb.collection('notes').where('science', isNull: true).get();
   print('Documents to update: ${snap.docs.length}');
 
   for (final doc in snap.docs) {
