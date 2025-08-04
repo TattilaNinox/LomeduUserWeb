@@ -22,6 +22,8 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
   List<String> _categories = [];
   List<String> _sciences = [];
   String? _selectedScience;
+  final List<String> _modes = ['single', 'dual'];
+  String _selectedMode = 'single';
 
   @override
   void initState() {
@@ -39,7 +41,8 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
   }
 
   Future<void> _loadSciences() async {
-    final snapshot = await FirebaseFirestore.instance.collection('sciences').get();
+    final snapshot =
+        await FirebaseFirestore.instance.collection('sciences').get();
     if (mounted) {
       setState(() {
         _sciences = snapshot.docs.map((doc) => doc['name'] as String).toList();
@@ -56,47 +59,76 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
       }
       return;
     }
-    
+
     final snapshot = await FirebaseFirestore.instance
         .collection('categories')
         .where('science', isEqualTo: _selectedScience)
         .get();
     if (mounted) {
       setState(() {
-        _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+        _categories =
+            snapshot.docs.map((doc) => doc['name'] as String).toList();
       });
     }
   }
 
   Future<void> _loadBank() async {
-    final doc = await FirebaseFirestore.instance.collection('question_banks').doc(widget.bankId).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('question_banks')
+        .doc(widget.bankId)
+        .get();
     if (doc.exists) {
       final data = doc.data()!;
       _nameController.text = data['name'] ?? '';
       _selectedScience = data['science'];
       _selectedCategory = data['category'];
+      _selectedMode = data['mode'] ?? 'single';
       _questions = List<Map<String, dynamic>>.from(data['questions'] ?? []);
     }
   }
 
   Future<void> _saveBank() async {
-    if (_nameController.text.trim().isEmpty || _selectedScience == null || _selectedCategory == null) {
+    if (_nameController.text.trim().isEmpty ||
+        _selectedScience == null ||
+        _selectedCategory == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('A név, tudomány és kategória kitöltése kötelező!')),
+          const SnackBar(
+              content:
+                  Text('A név, tudomány és kategória kitöltése kötelező!')),
         );
       }
       return;
     }
-    
-    await FirebaseFirestore.instance.collection('question_banks').doc(widget.bankId).update({
+
+    // validate questions correct count
+    for (final q in _questions) {
+      final opts = (q['options'] as List<dynamic>).cast<Map<String, dynamic>>();
+      final correctCnt = opts.where((o) => o['isCorrect'] == true).length;
+      if ((_selectedMode == 'single' && correctCnt != 1) ||
+          (_selectedMode == 'dual' && correctCnt != 2)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text(
+                  'Minden kérdésnél a kiválasztott típusnak megfelelő számú helyes választ kell bejelölni.')));
+        }
+        return;
+      }
+    }
+
+    await FirebaseFirestore.instance
+        .collection('question_banks')
+        .doc(widget.bankId)
+        .update({
       'name': _nameController.text.trim(),
       'science': _selectedScience,
       'category': _selectedCategory,
+      'mode': _selectedMode,
       'questions': _questions,
     });
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kérdésbank mentve!')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Kérdésbank mentve!')));
     }
   }
 
@@ -118,17 +150,27 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
     final excel = Excel.createExcel();
     final Sheet sheetObject = excel['Kérdések'];
     final header = [
-      'Kérdés', 'Válasz 1', 'V1 Helyes', 'V1 Indoklás',
-      'Válasz 2', 'V2 Helyes', 'V2 Indoklás',
-      'Válasz 3', 'V3 Helyes', 'V3 Indoklás',
-      'Válasz 4', 'V4 Helyes', 'V4 Indoklás',
+      'Kérdés',
+      'Válasz 1',
+      'V1 Helyes',
+      'V1 Indoklás',
+      'Válasz 2',
+      'V2 Helyes',
+      'V2 Indoklás',
+      'Válasz 3',
+      'V3 Helyes',
+      'V3 Indoklás',
+      'Válasz 4',
+      'V4 Helyes',
+      'V4 Indoklás',
     ];
     sheetObject.appendRow(header);
 
     for (final question in _questions) {
       final List<dynamic> row = [];
       row.add(question['question'] as String? ?? '');
-      final options = (question['options'] as List<dynamic>).cast<Map<String, dynamic>>();
+      final options =
+          (question['options'] as List<dynamic>).cast<Map<String, dynamic>>();
       for (final option in options) {
         row.add(option['text'] as String? ?? '');
         row.add((option['isCorrect'] as bool? ?? false) ? 'IGAZ' : 'HAMIS');
@@ -139,7 +181,8 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
     final bytes = excel.save();
     if (bytes != null) {
       // Egyszerűbb megközelítés a fájl letöltéshez
-      final dataUrl = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64Encode(bytes)}';
+      final dataUrl =
+          'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64Encode(bytes)}';
       web.HTMLAnchorElement()
         ..href = dataUrl
         ..setAttribute('download', '${_nameController.text.trim()}.xlsx')
@@ -156,30 +199,40 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
     final sheet = excel.tables[excel.tables.keys.first];
     if (sheet == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hiba: Nem található munkalap.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Hiba: Nem található munkalap.')));
       return;
     }
     final newQuestions = <Map<String, dynamic>>[];
     for (var i = 1; i < sheet.rows.length; i++) {
       final row = sheet.rows[i];
-      if (row.every((cell) => cell == null || cell.value.toString().trim().isEmpty)) continue;
+      if (row.every(
+          (cell) => cell == null || cell.value.toString().trim().isEmpty))
+        continue;
       try {
         final questionText = row[0]?.value.toString().trim() ?? '';
         if (questionText.isEmpty) continue;
         final options = <Map<String, dynamic>>[];
         for (var j = 0; j < 4; j++) {
           final optionText = row[1 + j * 3]?.value.toString().trim() ?? '';
-          final isCorrectStr = row[2 + j * 3]?.value.toString().trim().toUpperCase() ?? 'HAMIS';
+          final isCorrectStr =
+              row[2 + j * 3]?.value.toString().trim().toUpperCase() ?? 'HAMIS';
           final rationale = row[3 + j * 3]?.value.toString().trim() ?? '';
-          options.add({'text': optionText, 'isCorrect': isCorrectStr == 'IGAZ', 'rationale': rationale});
+          options.add({
+            'text': optionText,
+            'isCorrect': isCorrectStr == 'IGAZ',
+            'rationale': rationale
+          });
         }
         if (options.where((opt) => opt['isCorrect'] == true).length != 1) {
-          throw Exception('Minden kérdéshez pontosan egy helyes választ kell megadni (sor: ${i + 1})');
+          throw Exception(
+              'Minden kérdéshez pontosan egy helyes választ kell megadni (sor: ${i + 1})');
         }
         newQuestions.add({'question': questionText, 'options': options});
       } catch (e) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Hiba a(z) ${i+1}. sor feldolgozásakor: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Hiba a(z) ${i + 1}. sor feldolgozásakor: $e')));
         return;
       }
     }
@@ -188,32 +241,51 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Importálás megerősítése'),
-        content: Text('Biztosan felülírja a jelenlegi ${_questions.length} kérdést a fájlban található ${newQuestions.length} kérdéssel?'),
+        content: Text(
+            'Biztosan felülírja a jelenlegi ${_questions.length} kérdést a fájlban található ${newQuestions.length} kérdéssel?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Mégse')),
-          TextButton(onPressed: () => Navigator.of(context).pop(true), style: TextButton.styleFrom(foregroundColor: Colors.orange), child: const Text('Felülírás')),
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Mégse')),
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(foregroundColor: Colors.orange),
+              child: const Text('Felülírás')),
         ],
       ),
     );
     if (confirmed == true) {
       setState(() => _questions = newQuestions);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Importálás sikeres! Ne felejts el menteni.')));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Importálás sikeres! Ne felejts el menteni.')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Scaffold(appBar: AppBar(title: const Text('Betöltés...')), body: const Center(child: CircularProgressIndicator()));
+      return Scaffold(
+          appBar: AppBar(title: const Text('Betöltés...')),
+          body: const Center(child: CircularProgressIndicator()));
     }
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kérdésbank Szerkesztése'),
         actions: [
-          IconButton(icon: const Icon(Icons.file_download), onPressed: _exportToExcel, tooltip: 'Exportálás Excelbe'),
-          IconButton(icon: const Icon(Icons.file_upload), onPressed: _importFromExcel, tooltip: 'Importálás Excelből'),
+          IconButton(
+              icon: const Icon(Icons.file_download),
+              onPressed: _exportToExcel,
+              tooltip: 'Exportálás Excelbe'),
+          IconButton(
+              icon: const Icon(Icons.file_upload),
+              onPressed: _importFromExcel,
+              tooltip: 'Importálás Excelből'),
           const SizedBox(width: 12),
-          IconButton(icon: const Icon(Icons.save), onPressed: _saveBank, tooltip: 'Mentés'),
+          IconButton(
+              icon: const Icon(Icons.save),
+              onPressed: _saveBank,
+              tooltip: 'Mentés'),
         ],
       ),
       body: Row(
@@ -224,14 +296,40 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
+                  // Mód kiválasztása (1 vagy 2 helyes válasz)
+                  DropdownButtonFormField<String>(
+                    value: _selectedMode,
+                    items: _modes
+                        .map((m) => DropdownMenuItem(
+                              value: m,
+                              child: Text(m == 'single'
+                                  ? '1 helyes válasz/kérdés'
+                                  : '2 helyes válasz/kérdés'),
+                            ))
+                        .toList(),
+                    onChanged: _questions.isEmpty
+                        ? (val) =>
+                            setState(() => _selectedMode = val ?? 'single')
+                        : null,
+                    decoration:
+                        const InputDecoration(labelText: 'Kérdések típusa'),
+                  ),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
-                      Expanded(child: TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Kérdésbank neve'))),
+                      Expanded(
+                          child: TextField(
+                              controller: _nameController,
+                              decoration: const InputDecoration(
+                                  labelText: 'Kérdésbank neve'))),
                       const SizedBox(width: 16),
                       Expanded(
                         child: DropdownButtonFormField<String>(
                           value: _selectedScience,
-                          items: _sciences.map((String science) => DropdownMenuItem<String>(value: science, child: Text(science))).toList(),
+                          items: _sciences
+                              .map((String science) => DropdownMenuItem<String>(
+                                  value: science, child: Text(science)))
+                              .toList(),
                           onChanged: (newValue) {
                             setState(() {
                               _selectedScience = newValue;
@@ -239,18 +337,28 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
                             });
                             _loadCategories();
                           },
-                          decoration: const InputDecoration(labelText: 'Tudomány'),
+                          decoration:
+                              const InputDecoration(labelText: 'Tudomány'),
                         ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
                         child: DropdownButtonFormField<String>(
                           value: _selectedCategory,
-                          items: _categories.map((String category) => DropdownMenuItem<String>(value: category, child: Text(category))).toList(),
-                          onChanged: _selectedScience == null ? null : (newValue) => setState(() => _selectedCategory = newValue),
+                          items: _categories
+                              .map((String category) =>
+                                  DropdownMenuItem<String>(
+                                      value: category, child: Text(category)))
+                              .toList(),
+                          onChanged: _selectedScience == null
+                              ? null
+                              : (newValue) =>
+                                  setState(() => _selectedCategory = newValue),
                           decoration: InputDecoration(
                             labelText: 'Kategória',
-                            fillColor: _selectedScience == null ? Colors.grey[100] : Colors.white,
+                            fillColor: _selectedScience == null
+                                ? Colors.grey[100]
+                                : Colors.white,
                             filled: true,
                           ),
                         ),
@@ -261,7 +369,8 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
                   Expanded(
                     child: ListView.builder(
                       itemCount: _questions.length,
-                      itemBuilder: (context, index) => _buildQuestionEditor(_questions[index], index),
+                      itemBuilder: (context, index) =>
+                          _buildQuestionEditor(_questions[index], index),
                     ),
                   ),
                 ],
@@ -270,14 +379,18 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(onPressed: _addQuestion, child: const Icon(Icons.add)),
+      floatingActionButton: FloatingActionButton(
+          onPressed: _addQuestion, child: const Icon(Icons.add)),
     );
   }
 
   Widget _buildQuestionEditor(Map<String, dynamic> question, int index) {
-    final questionController = TextEditingController(text: question['question'] as String? ?? '');
-    questionController.addListener(() => _questions[index]['question'] = questionController.text);
-    final options = (question['options'] as List<dynamic>).cast<Map<String, dynamic>>();
+    final questionController =
+        TextEditingController(text: question['question'] as String? ?? '');
+    questionController.addListener(
+        () => _questions[index]['question'] = questionController.text);
+    final options =
+        (question['options'] as List<dynamic>).cast<Map<String, dynamic>>();
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       child: Padding(
@@ -287,31 +400,68 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
           children: [
             Row(
               children: [
-                Expanded(child: TextField(controller: questionController, decoration: InputDecoration(labelText: 'Kérdés ${index + 1}'))),
-                IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => setState(() => _questions.removeAt(index)))
+                Expanded(
+                    child: TextField(
+                        controller: questionController,
+                        decoration:
+                            InputDecoration(labelText: 'Kérdés ${index + 1}'))),
+                IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => setState(() => _questions.removeAt(index)))
               ],
             ),
             const SizedBox(height: 16),
             ...List.generate(4, (optionIndex) {
               final option = options[optionIndex];
-              final optionController = TextEditingController(text: option['text'] as String? ?? '');
-              optionController.addListener(() => options[optionIndex]['text'] = optionController.text);
-              final rationaleController = TextEditingController(text: option['rationale'] as String? ?? '');
-              rationaleController.addListener(() => options[optionIndex]['rationale'] = rationaleController.text);
+              final optionController =
+                  TextEditingController(text: option['text'] as String? ?? '');
+              optionController.addListener(
+                  () => options[optionIndex]['text'] = optionController.text);
+              final rationaleController = TextEditingController(
+                  text: option['rationale'] as String? ?? '');
+              rationaleController.addListener(() =>
+                  options[optionIndex]['rationale'] = rationaleController.text);
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8.0),
                 child: Row(
                   children: [
-                    Radio<bool>(
-                      value: true,
-                      groupValue: option['isCorrect'] as bool? ?? false,
-                      onChanged: (value) => setState(() {
-                        for (var opt in options) { opt['isCorrect'] = false; }
-                        option['isCorrect'] = true;
-                      }),
-                    ),
-                    Expanded(child: TextField(controller: optionController, decoration: InputDecoration(labelText: 'Válasz ${optionIndex + 1}'))),
-                    Expanded(child: Padding(padding: const EdgeInsets.only(left: 8.0), child: TextField(controller: rationaleController, decoration: InputDecoration(labelText: 'Indoklás ${optionIndex + 1}')))),
+                    _selectedMode == 'single'
+                        ? Radio<bool>(
+                            value: true,
+                            groupValue: option['isCorrect'] as bool? ?? false,
+                            onChanged: (value) => setState(() {
+                              for (var opt in options) {
+                                opt['isCorrect'] = false;
+                              }
+                              option['isCorrect'] = true;
+                            }),
+                          )
+                        : Checkbox(
+                            value: option['isCorrect'] as bool? ?? false,
+                            onChanged: (val) => setState(() {
+                              if (val == true) {
+                                // ha már 2 helyes van, ne engedjük
+                                final currentCorrect = options
+                                    .where((o) => o['isCorrect'] == true)
+                                    .length;
+                                if (currentCorrect >= 2) return;
+                              }
+                              option['isCorrect'] = val;
+                            }),
+                          ),
+                    Expanded(
+                        child: TextField(
+                            controller: optionController,
+                            decoration: InputDecoration(
+                                labelText: 'Válasz ${optionIndex + 1}'))),
+                    Expanded(
+                        child: Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: TextField(
+                                controller: rationaleController,
+                                decoration: InputDecoration(
+                                    labelText:
+                                        'Indoklás ${optionIndex + 1}')))),
                   ],
                 ),
               );

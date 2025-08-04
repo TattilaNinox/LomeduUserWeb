@@ -15,6 +15,28 @@ class _UserListScreenState extends State<UserListScreen> {
   UserFilter _selectedFilter = UserFilter.all;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  // science filter
+  List<String> _sciences = [];
+  String? _selectedScience;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSciences();
+  }
+
+  Future<void> _loadSciences() async {
+    final snap = await FirebaseFirestore.instance.collection('sciences').get();
+    final sciences =
+        snap.docs.map((d) => (d['name'] as String? ?? '')).toList();
+    sciences.sort();
+    sciences.insert(0, 'Összes');
+    setState(() {
+      _sciences = sciences;
+      // ensure default selection is 'Összes' (null = all)
+      if (_selectedScience == null) _selectedScience = 'Összes';
+    });
+  }
 
   @override
   void dispose() {
@@ -53,26 +75,56 @@ class _UserListScreenState extends State<UserListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Statisztikák',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+          // science dropdown filter
+          Row(
+            children: [
+              const Text('Tudomány:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(width: 8),
+              DropdownButton<String>(
+                value: _selectedScience,
+                hint: const Text('Összes'),
+                items: _sciences
+                    .map((s) =>
+                        DropdownMenuItem<String>(value: s, child: Text(s)))
+                    .toList(),
+                onChanged: (val) => setState(() => _selectedScience = val),
+              ),
+              const Spacer(),
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  decoration:
+                      const InputDecoration(labelText: 'Keresés név/email'),
+                  onChanged: (v) => setState(() => _searchQuery = v),
+                ),
+              )
+            ],
           ),
           const SizedBox(height: 16),
           StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('users')
-                .snapshots(),
+            stream: FirebaseFirestore.instance.collection('users').snapshots(),
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
                 return const CircularProgressIndicator();
               }
 
-              final docs = snapshot.data!.docs;
+              List<DocumentSnapshot<Map<String, dynamic>>> docs = snapshot
+                  .data!.docs
+                  .cast<DocumentSnapshot<Map<String, dynamic>>>();
+              if (_searchQuery.isNotEmpty) {
+                final filtered = docs.where((d) {
+                  final data = (d.data() as Map<String, dynamic>? ?? {});
+                  final email = (data['email'] ?? '').toString().toLowerCase();
+                  final name = (data['name'] ?? '').toString().toLowerCase();
+                  return email.contains(_searchQuery.toLowerCase()) ||
+                      name.contains(_searchQuery.toLowerCase());
+                }).toList();
+                docs = filtered;
+              }
+
               final totalUsers = docs.length;
-              
+
               int premiumUsers = 0;
               int trialUsers = 0;
               int testUsers = 0;
@@ -80,16 +132,20 @@ class _UserListScreenState extends State<UserListScreen> {
 
               for (final doc in docs) {
                 final data = doc.data() as Map<String, dynamic>;
-                final subscriptionStatus = data['subscriptionStatus'] as String? ?? 'free';
+                final subscriptionStatus =
+                    data['subscriptionStatus'] as String? ?? 'free';
                 final userType = data['userType'] as String? ?? 'normal';
                 final trialEndDate = data['trialEndDate'] as Timestamp?;
-                final isSubscriptionActive = data['isSubscriptionActive'] as bool? ?? false;
+                final isSubscriptionActive =
+                    data['isSubscriptionActive'] as bool? ?? false;
 
                 if (userType == 'test') {
                   testUsers++;
-                } else if (isSubscriptionActive && subscriptionStatus == 'premium') {
+                } else if (isSubscriptionActive &&
+                    subscriptionStatus == 'premium') {
                   premiumUsers++;
-                } else if (trialEndDate != null && DateTime.now().isBefore(trialEndDate.toDate())) {
+                } else if (trialEndDate != null &&
+                    DateTime.now().isBefore(trialEndDate.toDate())) {
                   trialUsers++;
                 } else {
                   freeUsers++;
@@ -151,7 +207,8 @@ class _UserListScreenState extends State<UserListScreen> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, Color color, UserFilter filter) {
+  Widget _buildStatCard(
+      String title, String value, Color color, UserFilter filter) {
     final bool selected = _selectedFilter == filter;
 
     return InkWell(
@@ -201,11 +258,14 @@ class _UserListScreenState extends State<UserListScreen> {
   }
 
   Widget _buildUsersList() {
+    Query<Map<String, dynamic>> query =
+        FirebaseFirestore.instance.collection('users');
+    if (_selectedScience != null && _selectedScience != 'Összes') {
+      query = query.where('science', isEqualTo: _selectedScience);
+    }
+
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .orderBy('createdAt', descending: true)
-          .snapshots(),
+      stream: query.orderBy('createdAt', descending: true).snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -227,22 +287,26 @@ class _UserListScreenState extends State<UserListScreen> {
 
         users = users.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          final subscriptionStatus = data['subscriptionStatus'] as String? ?? 'free';
+          final subscriptionStatus =
+              data['subscriptionStatus'] as String? ?? 'free';
           final userType = data['userType'] as String? ?? 'normal';
           final trialEndDate = data['trialEndDate'] as Timestamp?;
-          final isSubscriptionActive = data['isSubscriptionActive'] as bool? ?? false;
+          final isSubscriptionActive =
+              data['isSubscriptionActive'] as bool? ?? false;
 
           switch (_selectedFilter) {
             case UserFilter.premium:
               return isSubscriptionActive && subscriptionStatus == 'premium';
             case UserFilter.trial:
-              return trialEndDate != null && DateTime.now().isBefore(trialEndDate.toDate());
+              return trialEndDate != null &&
+                  DateTime.now().isBefore(trialEndDate.toDate());
             case UserFilter.test:
               return userType == 'test';
             case UserFilter.free:
-              return !isSubscriptionActive && 
-                     (trialEndDate == null || DateTime.now().isAfter(trialEndDate.toDate())) &&
-                     userType != 'test';
+              return !isSubscriptionActive &&
+                  (trialEndDate == null ||
+                      DateTime.now().isAfter(trialEndDate.toDate())) &&
+                  userType != 'test';
             case UserFilter.all:
               return true;
           }
@@ -293,7 +357,8 @@ class _UserListScreenState extends State<UserListScreen> {
                       ),
                       border: const OutlineInputBorder(),
                       isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 8, horizontal: 12),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -323,7 +388,8 @@ class _UserListScreenState extends State<UserListScreen> {
     final data = doc.data() as Map<String, dynamic>;
     final email = data['email'] ?? 'Ismeretlen email';
     final createdAt = data['createdAt'] as Timestamp?;
-    final createdDate = createdAt?.toDate().toString().split(' ')[0] ?? 'Ismeretlen dátum';
+    final createdDate =
+        createdAt?.toDate().toString().split(' ')[0] ?? 'Ismeretlen dátum';
     final subscriptionStatus = data['subscriptionStatus'] as String? ?? 'free';
     final userType = data['userType'] as String? ?? 'normal';
     final trialEndDate = data['trialEndDate'] as Timestamp?;
@@ -345,8 +411,10 @@ class _UserListScreenState extends State<UserListScreen> {
       statusText = 'Premium aktív';
       statusColor = Colors.green;
       statusIcon = Icons.star;
-    } else if (trialEndDate != null && DateTime.now().isBefore(trialEndDate.toDate())) {
-      final remainingDays = trialEndDate.toDate().difference(DateTime.now()).inDays;
+    } else if (trialEndDate != null &&
+        DateTime.now().isBefore(trialEndDate.toDate())) {
+      final remainingDays =
+          trialEndDate.toDate().difference(DateTime.now()).inDays;
       statusText = 'Próbaidő: $remainingDays nap';
       statusColor = Colors.purple;
       statusIcon = Icons.schedule;
