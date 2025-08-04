@@ -34,71 +34,81 @@ class Sidebar extends StatelessWidget {
     return Container(
       width: 200,
       color: Colors.white,
-      // Az elemek egy oszlopban helyezkednek el.
-      child: Column(
-        children: [
-          // Az admin felület címe a menüsáv tetején, most már kattintható.
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: InkWell(
-              onTap: () => context.go('/notes'),
-              borderRadius: BorderRadius.circular(8), // Lekerekítés a vizuális visszajelzéshez
-              child: const Padding(
-                padding: EdgeInsets.all(8.0), // Belső tér a kattintható terület növeléséhez
-            child: Text(
-                  'Lomedu Admin',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF1E3A8A),
+      child: SafeArea(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: InkWell(
+                onTap: () => context.go('/notes'),
+                borderRadius: BorderRadius.circular(8),
+                child: const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text(
+                    'Lomedu Admin',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1E3A8A),
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
+            _buildMenuItem(
+                context, 'notes', 'Jegyzetek Listája', selectedMenu == 'notes'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Divider(color: const Color(0xFF1E3A8A).withAlpha(77)),
             ),
-          ),
-          // Az egyes menüpontok létrehozása a `_buildMenuItem` segédmetódussal.
-          // Az utolsó paraméter (`isSelected`) dönti el, hogy a menüpont
-          // kiemelt állapotban jelenjen-e meg.
-          _buildMenuItem(context, 'notes', 'Jegyzetek Listája', selectedMenu == 'notes'),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Container(
-              height: 1,
-              color: const Color(0xFF1E3A8A).withValues(alpha: 0.3),
+            _buildMenuItem(context, 'note_create', 'Új Szöveges Jegyzet',
+                selectedMenu == 'note_create'),
+            _buildMenuItem(
+                context,
+                'interactive_note_create',
+                'Új Interaktív Jegyzet',
+                selectedMenu == 'interactive_note_create'),
+            _buildMenuItem(context, 'dynamic_quiz_create', 'Új Dinamikus Kvíz',
+                selectedMenu == 'dynamic_quiz_create'),
+            _buildMenuItem(
+                context,
+                'dynamic_quiz_dual_create',
+                'Új 2-válaszos Dinamikus Kvíz',
+                selectedMenu == 'dynamic_quiz_dual_create'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Divider(color: const Color(0xFF1E3A8A).withAlpha(77)),
             ),
-          ),
-          _buildMenuItem(context, 'note_create', 'Új Szöveges Jegyzet', selectedMenu == 'note_create'),
-          _buildMenuItem(context, 'interactive_note_create', 'Új Interaktív Jegyzet', selectedMenu == 'interactive_note_create'),
-          _buildMenuItem(context, 'dynamic_quiz_create', 'Új Dinamikus Kvíz', selectedMenu == 'dynamic_quiz_create'),
-          _buildMenuItem(context, 'dynamic_quiz_dual_create', 'Új 2-válaszos Dinamikus Kvíz', selectedMenu == 'dynamic_quiz_dual_create'),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Container(
-              height: 1,
-              color: const Color(0xFF1E3A8A).withValues(alpha: 0.3),
+            _buildMenuItem(
+                context, 'bundles', 'Kötegek', selectedMenu == 'bundles'),
+            _buildMenuItem(context, 'question_banks', 'Kérdésbankok',
+                selectedMenu == 'question_banks'),
+            _buildMenuItem(context, 'categories', 'Kategóriák',
+                selectedMenu == 'categories'),
+            _buildMenuItem(
+                context, 'sciences', 'Tudományok', selectedMenu == 'sciences'),
+            _buildMenuItem(context, 'decks', 'Tanulókártya Paklik',
+                selectedMenu == 'decks'),
+            _buildMenuItem(
+                context, 'users', 'Felhasználók', selectedMenu == 'users'),
+            const SizedBox(height: 8),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Color(0xFF6B7280)),
+              title: const Text(
+                'Kijelentkezés',
+                style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF6B7280)),
+              ),
+              onTap: () => _signOut(context),
             ),
-          ),
-          _buildMenuItem(context, 'bundles', 'Kötegek', selectedMenu == 'bundles'),
-          _buildMenuItem(context, 'question_banks', 'Kérdésbankok', selectedMenu == 'question_banks'),
-          _buildMenuItem(context, 'categories', 'Kategóriák', selectedMenu == 'categories'),
-          _buildMenuItem(context, 'sciences', 'Tudományok', selectedMenu == 'sciences'),
-          _buildMenuItem(context, 'decks', 'Tanulókártya Paklik', selectedMenu == 'decks'),
-                    _buildMenuItem(context, 'users', 'Felhasználók', selectedMenu == 'users'),
-          // A `Spacer` kitölti a rendelkezésre álló függőleges teret,
-          // így a kijelentkezés gombot az aljára tolja.
-          const Spacer(),
-          // A kijelentkezés gomb, ami egy `ListTile` widgetként van megvalósítva.
-          ListTile(
-            leading: const Icon(Icons.logout, color: Color(0xFF6B7280)),
-            title: const Text(
-              'Kijelentkezés',
-              style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF6B7280)),
-            ),
-            // A `onTap` esemény a `_signOut` metódust hívja meg.
-            onTap: () => _signOut(context),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -112,7 +122,8 @@ class Sidebar extends StatelessWidget {
   /// [routeName] A menüponthoz tartozó útvonal azonosítója.
   /// [title] A menüponton megjelenő szöveg.
   /// [isSelected] Igaz, ha ez a menüpont van éppen kiválasztva.
-  Widget _buildMenuItem(BuildContext context, String routeName, String title, bool isSelected) {
+  Widget _buildMenuItem(
+      BuildContext context, String routeName, String title, bool isSelected) {
     // A `routeName` alapján kiválasztja a megfelelő ikont.
     final IconData iconData;
     switch (routeName) {
@@ -155,11 +166,13 @@ class Sidebar extends StatelessWidget {
       default:
         iconData = Icons.error;
     }
-    
+
     // A `ListTile` egy kényelmes widget sorok létrehozására, amelyek
     // általában ikont, szöveget és egy kattintási eseményt tartalmaznak.
     return ListTile(
-      leading: Icon(iconData, color: isSelected ? const Color(0xFF1E3A8A) : const Color(0xFF6B7280)),
+      leading: Icon(iconData,
+          color:
+              isSelected ? const Color(0xFF1E3A8A) : const Color(0xFF6B7280)),
       title: Text(
         title,
         // A stílus (szín, vastagság) a `isSelected` állapottól függően változik.
