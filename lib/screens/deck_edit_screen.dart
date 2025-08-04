@@ -22,6 +22,8 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
   List<Map<String, dynamic>> _flashcards = [];
   bool _isLoading = true;
   Map<String, String> _categories = {};
+  List<String> _sciences = [];
+  String? _selectedScience;
 
   @override
   void initState() {
@@ -36,6 +38,7 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
   }
 
   Future<void> _loadInitialData() async {
+    await _loadSciences();
     await _loadCategories();
     await _loadDeckDetails();
     if (mounted) {
@@ -50,6 +53,7 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
       _titleController.text = data['title'];
       _flashcards = List<Map<String, dynamic>>.from(data['flashcards'] ?? []);
       setState(() {
+        _selectedScience = data['science'];
         _selectedCategory = data['category_id'];
       });
     }
@@ -59,9 +63,17 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
     final router = GoRouter.of(context);
     final messenger = ScaffoldMessenger.of(context);
 
+    if (_titleController.text.trim().isEmpty || _selectedScience == null || _selectedCategory == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('A cím, tudomány és kategória kitöltése kötelező!')),
+      );
+      return;
+    }
+
     try {
       await FirebaseFirestore.instance.collection('notes').doc(widget.deckId).update({
         'title': _titleController.text.trim(),
+        'science': _selectedScience,
         'category_id': _selectedCategory,
         'category': _categories[_selectedCategory] ?? '',
         'flashcards': _flashcards,
@@ -163,9 +175,30 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
     });
   }
 
+  Future<void> _loadSciences() async {
+    final snapshot = await FirebaseFirestore.instance.collection('sciences').get();
+    if (mounted) {
+      setState(() {
+        _sciences = snapshot.docs.map((doc) => doc['name'] as String).toList();
+      });
+    }
+  }
+
   Future<void> _loadCategories() async {
-    final snapshot = await FirebaseFirestore.instance.collection('categories').get();
-    if(mounted) {
+    if (_selectedScience == null) {
+      if (mounted) {
+        setState(() {
+          _categories = {};
+        });
+      }
+      return;
+    }
+    
+    final snapshot = await FirebaseFirestore.instance
+        .collection('categories')
+        .where('science', isEqualTo: _selectedScience)
+        .get();
+    if (mounted) {
       setState(() {
         _categories = {for (var doc in snapshot.docs) doc.id: doc['name'] as String};
       });
@@ -220,23 +253,50 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextField(
-                    controller: _titleController,
-                    decoration: const InputDecoration(labelText: 'Pakli címe'),
-                  ),
-                  const SizedBox(height: 24),
-                  DropdownButtonFormField<String>(
-                    value: _selectedCategory,
-                    items: _categories.entries.map((entry) {
-                      return DropdownMenuItem<String>(
-                        value: entry.key,
-                        child: Text(entry.value),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      setState(() => _selectedCategory = val);
-                    },
-                    decoration: const InputDecoration(labelText: 'Kategória'),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _titleController,
+                          decoration: const InputDecoration(labelText: 'Pakli címe'),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: _selectedScience,
+                          items: _sciences.map((String science) => DropdownMenuItem<String>(value: science, child: Text(science))).toList(),
+                          onChanged: (newValue) {
+                            setState(() {
+                              _selectedScience = newValue;
+                              _selectedCategory = null;
+                            });
+                            _loadCategories();
+                          },
+                          decoration: const InputDecoration(labelText: 'Tudomány'),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: _selectedCategory,
+                          items: _categories.entries.map((entry) {
+                            return DropdownMenuItem<String>(
+                              value: entry.key,
+                              child: Text(entry.value),
+                            );
+                          }).toList(),
+                          onChanged: _selectedScience == null ? null : (val) {
+                            setState(() => _selectedCategory = val);
+                          },
+                          decoration: InputDecoration(
+                            labelText: 'Kategória',
+                            fillColor: _selectedScience == null ? Colors.grey[100] : Colors.white,
+                            filled: true,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 24),
                   const Text('Tanulókártyák', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
