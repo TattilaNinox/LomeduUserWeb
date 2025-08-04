@@ -14,10 +14,12 @@ class QuizDualEditScreen extends StatefulWidget {
 class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
   final _titleController = TextEditingController();
   String? _selectedCategory;
+  String? _selectedScience;
   String? _selectedQuestionBankId;
   bool _isSaving = false;
   bool _isLoading = true;
   List<String> _categories = [];
+  List<String> _sciences = [];
   List<DocumentSnapshot> _questionBanks = [];
 
   @override
@@ -27,15 +29,41 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
   }
 
   Future<void> _loadInitialData() async {
+    await _loadSciences();
     await _loadCategories();
     await _loadQuestionBanks();
     await _loadQuizData();
     if (mounted) setState(() => _isLoading = false);
   }
 
+  Future<void> _loadSciences() async {
+    final snapshot = await FirebaseFirestore.instance.collection('sciences').get();
+    if (mounted) {
+      setState(() {
+        _sciences = snapshot.docs.map((doc) => doc['name'] as String).toList();
+      });
+    }
+  }
+
   Future<void> _loadCategories() async {
-    final snapshot = await FirebaseFirestore.instance.collection('categories').get();
-    if (mounted) _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+    if (_selectedScience == null) {
+      if (mounted) {
+        setState(() {
+          _categories = [];
+        });
+      }
+      return;
+    }
+    
+    final snapshot = await FirebaseFirestore.instance
+        .collection('categories')
+        .where('science', isEqualTo: _selectedScience)
+        .get();
+    if (mounted) {
+      setState(() {
+        _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+      });
+    }
   }
 
   Future<void> _loadQuestionBanks() async {
@@ -60,14 +88,15 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
     if (doc.exists) {
       final data = doc.data()!;
       _titleController.text = data['title'];
+      _selectedScience = data['science'];
       _selectedCategory = data['category'];
       _selectedQuestionBankId = data['questionBankId'];
     }
   }
 
   Future<void> _updateQuiz() async {
-    if (_titleController.text.isEmpty || _selectedCategory == null || _selectedQuestionBankId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Minden mező kitöltése kötelező!')));
+    if (_titleController.text.isEmpty || _selectedScience == null || _selectedCategory == null || _selectedQuestionBankId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A cím, tudomány, kategória és kérdésbank kitöltése kötelező!')));
       return;
     }
 
@@ -96,6 +125,7 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
     try {
       await FirebaseFirestore.instance.collection('notes').doc(widget.noteId).update({
         'title': _titleController.text,
+        'science': _selectedScience,
         'category': _selectedCategory,
         'questionBankId': _selectedQuestionBankId,
         'modified': Timestamp.now(),
@@ -149,13 +179,31 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
                   TextField(controller: _titleController, decoration: const InputDecoration(labelText: 'Kvíz címe')),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
+                    value: _selectedScience,
+                    items: _sciences.map((String science) => DropdownMenuItem<String>(value: science, child: Text(science))).toList(),
+                    onChanged: (newValue) {
+                      setState(() {
+                        _selectedScience = newValue;
+                        _selectedCategory = null;
+                        _selectedQuestionBankId = null;
+                      });
+                      _loadCategories();
+                    },
+                    decoration: const InputDecoration(labelText: 'Tudomány'),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
                     value: _selectedCategory,
                     items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                    onChanged: (val) => setState(() {
+                    onChanged: _selectedScience == null ? null : (val) => setState(() {
                       _selectedCategory = val;
                       _selectedQuestionBankId = null;
                     }),
-                    decoration: const InputDecoration(labelText: 'Kategória'),
+                    decoration: InputDecoration(
+                      labelText: 'Kategória',
+                      fillColor: _selectedScience == null ? Colors.grey[100] : Colors.white,
+                      filled: true,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   if (_selectedCategory != null)
@@ -173,4 +221,4 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
       ),
     );
   }
-} 
+}  
