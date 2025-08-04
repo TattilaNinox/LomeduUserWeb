@@ -20,6 +20,8 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
   bool _isLoading = true;
   String? _selectedCategory;
   List<String> _categories = [];
+  List<String> _sciences = [];
+  String? _selectedScience;
 
   @override
   void initState() {
@@ -28,6 +30,7 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
   }
 
   Future<void> _loadInitialData() async {
+    await _loadSciences();
     await _loadCategories();
     await _loadBank();
     if (mounted) {
@@ -35,10 +38,33 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
     }
   }
 
+  Future<void> _loadSciences() async {
+    final snapshot = await FirebaseFirestore.instance.collection('sciences').get();
+    if (mounted) {
+      setState(() {
+        _sciences = snapshot.docs.map((doc) => doc['name'] as String).toList();
+      });
+    }
+  }
+
   Future<void> _loadCategories() async {
-    final snapshot = await FirebaseFirestore.instance.collection('categories').get();
-    if(mounted) {
-      _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+    if (_selectedScience == null) {
+      if (mounted) {
+        setState(() {
+          _categories = [];
+        });
+      }
+      return;
+    }
+    
+    final snapshot = await FirebaseFirestore.instance
+        .collection('categories')
+        .where('science', isEqualTo: _selectedScience)
+        .get();
+    if (mounted) {
+      setState(() {
+        _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+      });
     }
   }
 
@@ -47,14 +73,25 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
     if (doc.exists) {
       final data = doc.data()!;
       _nameController.text = data['name'] ?? '';
+      _selectedScience = data['science'];
       _selectedCategory = data['category'];
       _questions = List<Map<String, dynamic>>.from(data['questions'] ?? []);
     }
   }
 
   Future<void> _saveBank() async {
+    if (_nameController.text.trim().isEmpty || _selectedScience == null || _selectedCategory == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('A név, tudomány és kategória kitöltése kötelező!')),
+        );
+      }
+      return;
+    }
+    
     await FirebaseFirestore.instance.collection('question_banks').doc(widget.bankId).update({
       'name': _nameController.text.trim(),
+      'science': _selectedScience,
       'category': _selectedCategory,
       'questions': _questions,
     });
@@ -193,10 +230,29 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: DropdownButtonFormField<String>(
+                          value: _selectedScience,
+                          items: _sciences.map((String science) => DropdownMenuItem<String>(value: science, child: Text(science))).toList(),
+                          onChanged: (newValue) {
+                            setState(() {
+                              _selectedScience = newValue;
+                              _selectedCategory = null;
+                            });
+                            _loadCategories();
+                          },
+                          decoration: const InputDecoration(labelText: 'Tudomány'),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
                           value: _selectedCategory,
                           items: _categories.map((String category) => DropdownMenuItem<String>(value: category, child: Text(category))).toList(),
-                          onChanged: (newValue) => setState(() => _selectedCategory = newValue),
-                          decoration: const InputDecoration(labelText: 'Kategória'),
+                          onChanged: _selectedScience == null ? null : (newValue) => setState(() => _selectedCategory = newValue),
+                          decoration: InputDecoration(
+                            labelText: 'Kategória',
+                            fillColor: _selectedScience == null ? Colors.grey[100] : Colors.white,
+                            filled: true,
+                          ),
                         ),
                       ),
                     ],
