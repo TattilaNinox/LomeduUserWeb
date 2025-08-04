@@ -43,20 +43,22 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
       }
       return;
     }
-    
+
     final snapshot = await FirebaseFirestore.instance
         .collection('categories')
         .where('science', isEqualTo: _selectedScience)
         .get();
     if (mounted) {
       setState(() {
-        _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+        _categories =
+            snapshot.docs.map((doc) => doc['name'] as String).toList();
       });
     }
   }
 
   Future<void> _loadSciences() async {
-    final snapshot = await FirebaseFirestore.instance.collection('sciences').get();
+    final snapshot =
+        await FirebaseFirestore.instance.collection('sciences').get();
     if (mounted) {
       setState(() {
         _sciences = snapshot.docs.map((doc) => doc['name'] as String).toList();
@@ -65,11 +67,13 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
   }
 
   Future<void> _loadQuestionBanks() async {
-    final snapshot = await FirebaseFirestore.instance.collection('question_banks').get();
+    final snapshot =
+        await FirebaseFirestore.instance.collection('question_banks').get();
     final compatibleBanks = <DocumentSnapshot>[];
     for (final doc in snapshot.docs) {
       final data = doc.data();
-      final questions = List<Map<String, dynamic>>.from(data['questions'] ?? []);
+      final questions =
+          List<Map<String, dynamic>>.from(data['questions'] ?? []);
       if (questions.isEmpty) continue;
       final allValid = questions.every((q) {
         final options = (q['options'] as List).cast<Map<String, dynamic>>();
@@ -82,27 +86,41 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
   }
 
   Future<void> _createQuiz() async {
-    if (_titleController.text.isEmpty || _selectedScience == null || _selectedCategory == null || _selectedQuestionBankId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Minden mező kitöltése kötelező!')));
+    if (_titleController.text.isEmpty ||
+        _selectedScience == null ||
+        _selectedCategory == null ||
+        _selectedQuestionBankId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Minden mező kitöltése kötelező!')));
       return;
     }
 
     final trimmedTitle = _titleController.text.trim();
-    final dupSnap = await FirebaseFirestore.instance.collection('notes').where('title', isEqualTo: trimmedTitle).limit(1).get();
+    final dupSnap = await FirebaseFirestore.instance
+        .collection('notes')
+        .where('title', isEqualTo: trimmedTitle)
+        .limit(1)
+        .get();
     if (!mounted) return; // ensure widget still active
     if (dupSnap.docs.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Már létezik ilyen című jegyzet!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Már létezik ilyen című jegyzet!')));
       return;
     }
 
-    final bankDoc = await FirebaseFirestore.instance.collection('question_banks').doc(_selectedQuestionBankId).get();
+    final bankDoc = await FirebaseFirestore.instance
+        .collection('question_banks')
+        .doc(_selectedQuestionBankId)
+        .get();
     if (!mounted) return;
     if (!bankDoc.exists) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hiba: A kérdésbank nem található.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Hiba: A kérdésbank nem található.')));
       return;
     }
     final bankData = bankDoc.data()!;
-    final questions = List<Map<String, dynamic>>.from(bankData['questions'] ?? []);
+    final questions =
+        List<Map<String, dynamic>>.from(bankData['questions'] ?? []);
     final invalidQuestions = questions.where((q) {
       final options = (q['options'] as List).cast<Map<String, dynamic>>();
       final correctCount = options.where((o) => o['isCorrect'] == true).length;
@@ -111,7 +129,9 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
 
     if (!mounted) return;
     if (invalidQuestions.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A kiválasztott kérdésbank minden kérdésének pontosan 2 helyes válasszal kell rendelkeznie.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'A kiválasztott kérdésbank minden kérdésének pontosan 2 helyes válasszal kell rendelkeznie.')));
       return;
     }
 
@@ -129,7 +149,9 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
       });
       if (mounted) context.go('/notes');
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Hiba: $e')));
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Hiba: $e')));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -139,20 +161,31 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
   Widget build(BuildContext context) {
     final filteredBanks = _selectedCategory == null
         ? _questionBanks
-        : _questionBanks.where((bank) => bank['category'] == _selectedCategory).toList();
+        : _questionBanks
+            .where((bank) => bank['category'] == _selectedCategory)
+            .toList();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Új 2-válaszos Dinamikus Kvíz'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/notes'),
+        ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: ElevatedButton.icon(
-              onPressed: _isSaving ? null : _createQuiz,
-              icon: _isSaving ? const CircularProgressIndicator() : const Icon(Icons.save),
-              label: const Text('Mentés'),
-            ),
-          )
+          TextButton(
+            onPressed: _isSaving ? null : () => context.go('/notes'),
+            child: const Text('Mégse'),
+          ),
+          const SizedBox(width: 12),
+          ElevatedButton.icon(
+            onPressed: _isSaving ? null : _createQuiz,
+            icon: _isSaving
+                ? const CircularProgressIndicator()
+                : const Icon(Icons.save),
+            label: const Text('Mentés'),
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Row(
@@ -163,11 +196,16 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 children: [
-                  TextField(controller: _titleController, decoration: const InputDecoration(labelText: 'Kvíz címe')),
+                  TextField(
+                      controller: _titleController,
+                      decoration:
+                          const InputDecoration(labelText: 'Kvíz címe')),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     value: _selectedScience,
-                    items: _sciences.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                    items: _sciences
+                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                        .toList(),
                     onChanged: (val) => setState(() {
                       _selectedScience = val;
                       _selectedCategory = null;
@@ -179,23 +217,33 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     value: _selectedCategory,
-                    items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                    onChanged: _selectedScience == null ? null : (val) => setState(() {
-                      _selectedCategory = val;
-                      _selectedQuestionBankId = null;
-                    }),
+                    items: _categories
+                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                        .toList(),
+                    onChanged: _selectedScience == null
+                        ? null
+                        : (val) => setState(() {
+                              _selectedCategory = val;
+                              _selectedQuestionBankId = null;
+                            }),
                     decoration: InputDecoration(
                       labelText: 'Kategória',
-                      fillColor: _selectedScience == null ? Colors.grey[100] : null,
+                      fillColor:
+                          _selectedScience == null ? Colors.grey[100] : null,
                     ),
                   ),
                   const SizedBox(height: 16),
                   if (_selectedCategory != null)
                     DropdownButtonFormField<String>(
                       value: _selectedQuestionBankId,
-                      items: filteredBanks.map((doc) => DropdownMenuItem(value: doc.id, child: Text(doc['name']))).toList(),
-                      onChanged: (val) => setState(() => _selectedQuestionBankId = val),
-                      decoration: const InputDecoration(labelText: 'Válassz Kérdésbankot'),
+                      items: filteredBanks
+                          .map((doc) => DropdownMenuItem(
+                              value: doc.id, child: Text(doc['name'])))
+                          .toList(),
+                      onChanged: (val) =>
+                          setState(() => _selectedQuestionBankId = val),
+                      decoration: const InputDecoration(
+                          labelText: 'Válassz Kérdésbankot'),
                     ),
                   const SizedBox(height: 24),
                   if (_selectedQuestionBankId != null)
@@ -216,9 +264,14 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
   void _showQuizPreview() async {
     if (_selectedQuestionBankId == null) return;
 
-    final bankDoc = await FirebaseFirestore.instance.collection('question_banks').doc(_selectedQuestionBankId).get();
+    final bankDoc = await FirebaseFirestore.instance
+        .collection('question_banks')
+        .doc(_selectedQuestionBankId)
+        .get();
     if (!bankDoc.exists) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hiba: A kérdésbank nem található.')));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Hiba: A kérdésbank nem található.')));
       return;
     }
     final bank = bankDoc.data()!;
@@ -227,7 +280,9 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
     final selectedQuestions = questions.take(10).toList();
 
     if (selectedQuestions.isEmpty) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ez a kérdésbank nem tartalmaz kérdéseket.')));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Ez a kérdésbank nem tartalmaz kérdéseket.')));
       return;
     }
 
@@ -251,4 +306,4 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
       );
     }
   }
-}  
+}

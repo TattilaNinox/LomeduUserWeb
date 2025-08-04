@@ -95,7 +95,8 @@ class _NoteTableState extends State<NoteTable> {
     if (widget.selectedStatus != null && widget.selectedStatus!.isNotEmpty) {
       query = query.where('status', isEqualTo: widget.selectedStatus);
     }
-    if (widget.selectedCategory != null && widget.selectedCategory!.isNotEmpty) {
+    if (widget.selectedCategory != null &&
+        widget.selectedCategory!.isNotEmpty) {
       query = query.where('category', isEqualTo: widget.selectedCategory);
     }
     if (widget.selectedScience != null && widget.selectedScience!.isNotEmpty) {
@@ -110,7 +111,8 @@ class _NoteTableState extends State<NoteTable> {
 
     return Expanded(
       child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        key: ValueKey('${widget.selectedStatus}|${widget.selectedCategory}|${widget.selectedScience}|${widget.selectedTag}|${widget.selectedType}|${widget.searchText}'),
+        key: ValueKey(
+            '${widget.selectedStatus}|${widget.selectedCategory}|${widget.selectedScience}|${widget.selectedTag}|${widget.selectedType}|${widget.searchText}'),
         stream: query.snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -127,9 +129,11 @@ class _NoteTableState extends State<NoteTable> {
             return const Center(child: Text('Nincsenek találatok.'));
           }
           final filteredNotes = notes.where((doc) {
-            final data = doc.data()  ;
+            final data = doc.data();
             final title = (data['title'] ?? '');
-            return title.toLowerCase().contains(widget.searchText.toLowerCase());
+            return title
+                .toLowerCase()
+                .contains(widget.searchText.toLowerCase());
           }).toList();
 
           if (filteredNotes.isEmpty) {
@@ -153,7 +157,8 @@ class _NoteTableState extends State<NoteTable> {
                             itemBuilder: (context, index) {
                               final doc = filteredNotes[index];
                               final data = doc.data();
-                              final noteType = data['type'] as String? ?? 'standard';
+                              final noteType =
+                                  data['type'] as String? ?? 'standard';
                               if (noteType == 'deck') {
                                 return _buildDeckCard(context, doc);
                               } else {
@@ -167,7 +172,8 @@ class _NoteTableState extends State<NoteTable> {
                               itemBuilder: (context, index) {
                                 final doc = filteredNotes[index];
                                 final data = doc.data();
-                                final noteType = data['type'] as String? ?? 'standard';
+                                final noteType =
+                                    data['type'] as String? ?? 'standard';
                                 if (noteType == 'deck') {
                                   return _buildDeckCard(context, doc);
                                 } else {
@@ -201,7 +207,8 @@ class _NoteTableState extends State<NoteTable> {
   }
 
   Widget _buildHeader() {
-    const TextStyle headerStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.bold);
+    const TextStyle headerStyle =
+        TextStyle(fontSize: 14, fontWeight: FontWeight.bold);
 
     Widget buildCell(String label, SortColumn column, int flex) {
       final bool isActive = _sortColumn == column;
@@ -235,18 +242,19 @@ class _NoteTableState extends State<NoteTable> {
       child: Row(
         children: [
           buildCell('Cím', SortColumn.title, 3),
-          buildCell('Kategória', SortColumn.category, 2),
-          buildCell('Címkék', SortColumn.tags, 2),
+          buildCell('Kategória', SortColumn.category, 1),
+          buildCell('Címkék', SortColumn.tags, 1),
           buildCell('Státusz', SortColumn.status, 1),
           buildCell('Módosítva', SortColumn.modified, 1),
-          const Expanded(flex: 2, child: Text('Fájlok', style: headerStyle)),
+          const Expanded(flex: 3, child: Text('Fájlok', style: headerStyle)),
           const Expanded(flex: 2, child: Text('Műveletek', style: headerStyle)),
         ],
       ),
     );
   }
 
-  Widget _buildNoteRow(BuildContext context, DocumentSnapshot<Map<String, dynamic>> doc) {
+  Widget _buildNoteRow(
+      BuildContext context, DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? <String, dynamic>{};
     final title = (data['title'] ?? '');
     final category = (data['category'] ?? '');
@@ -291,7 +299,8 @@ class _NoteTableState extends State<NoteTable> {
             flex: 3,
             child: Row(
               children: [
-                Icon(getIconForNoteType(noteType), color: AppTheme.primaryColor),
+                Icon(getIconForNoteType(noteType),
+                    color: AppTheme.primaryColor),
                 const SizedBox(width: 8),
                 IconButton(
                   icon: Icon(
@@ -301,14 +310,20 @@ class _NoteTableState extends State<NoteTable> {
                   ),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  tooltip: data['isFree'] == true ? 'Ingyenes jegyzet' : 'Fizetős jegyzet',
-                  onPressed: () => _toggleFreeStatus(context, doc.id, data['isFree'] == true),
+                  tooltip: data['isFree'] == true
+                      ? 'Ingyenes jegyzet'
+                      : 'Fizetős jegyzet',
+                  onPressed: () => _toggleFreeStatus(
+                      context, doc.id, data['isFree'] == true),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(
                     title,
-                    style: cellStyle.copyWith(color: noteType == 'source' ? const Color(0xFF009B77) : null),
+                    style: cellStyle.copyWith(
+                        color: noteType == 'source'
+                            ? const Color(0xFF009B77)
+                            : null),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
                     softWrap: false,
@@ -318,7 +333,7 @@ class _NoteTableState extends State<NoteTable> {
             ),
           ),
           Expanded(
-            flex: 2,
+            flex: 1,
             child: Text(
               category,
               style: cellStyle,
@@ -328,7 +343,7 @@ class _NoteTableState extends State<NoteTable> {
             ),
           ),
           Expanded(
-            flex: 2,
+            flex: 1,
             child: Row(
               children: [
                 for (int i = 0; i < tags.length; i++) ...[
@@ -350,7 +365,7 @@ class _NoteTableState extends State<NoteTable> {
                 style: cellStyle),
           ),
           Expanded(
-            flex: 2,
+            flex: 3,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -386,12 +401,14 @@ class _NoteTableState extends State<NoteTable> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildIconButton(context, Icons.visibility,
-                      AppTheme.primaryColor, () {
-                    if (noteType == 'dynamic_quiz' || noteType == 'dynamic_quiz_dual') {
+                  _buildIconButton(
+                      context, Icons.visibility, AppTheme.primaryColor, () {
+                    if (noteType == 'dynamic_quiz' ||
+                        noteType == 'dynamic_quiz_dual') {
                       final questionBankId = data['questionBankId'] as String?;
                       if (questionBankId != null) {
-                        _showQuizPreviewDialog(context, questionBankId, dualMode: noteType == 'dynamic_quiz_dual');
+                        _showQuizPreviewDialog(context, questionBankId,
+                            dualMode: noteType == 'dynamic_quiz_dual');
                       }
                     } else if (noteType == 'interactive') {
                       context.go('/interactive-note/${doc.id}');
@@ -401,8 +418,11 @@ class _NoteTableState extends State<NoteTable> {
                   }),
                   _buildIconButton(context, Icons.edit, AppTheme.primaryColor,
                       () {
-                    if (noteType == 'dynamic_quiz' || noteType == 'dynamic_quiz_dual') {
-                      context.go(noteType == 'dynamic_quiz' ? '/quiz/edit/${doc.id}' : '/quiz-dual/edit/${doc.id}');
+                    if (noteType == 'dynamic_quiz' ||
+                        noteType == 'dynamic_quiz_dual') {
+                      context.go(noteType == 'dynamic_quiz'
+                          ? '/quiz/edit/${doc.id}'
+                          : '/quiz-dual/edit/${doc.id}');
                     } else {
                       context.go('/note/edit/${doc.id}');
                     }
@@ -419,7 +439,8 @@ class _NoteTableState extends State<NoteTable> {
     );
   }
 
-  Widget _buildDeckCard(BuildContext context, DocumentSnapshot<Map<String, dynamic>> doc) {
+  Widget _buildDeckCard(
+      BuildContext context, DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? <String, dynamic>{};
     final title = data['title'] as String? ?? 'Névtelen pakli';
     final flashcards = data['flashcards'] as List<dynamic>? ?? [];
@@ -460,8 +481,11 @@ class _NoteTableState extends State<NoteTable> {
                   ),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  tooltip: data['isFree'] == true ? 'Ingyenes jegyzet' : 'Fizetős jegyzet',
-                  onPressed: () => _toggleFreeStatus(context, doc.id, data['isFree'] == true),
+                  tooltip: data['isFree'] == true
+                      ? 'Ingyenes jegyzet'
+                      : 'Fizetős jegyzet',
+                  onPressed: () => _toggleFreeStatus(
+                      context, doc.id, data['isFree'] == true),
                 ),
                 const SizedBox(width: 16),
                 Column(
@@ -476,15 +500,15 @@ class _NoteTableState extends State<NoteTable> {
                         softWrap: false),
                     if (flashcards.isNotEmpty)
                       Text('${flashcards.length} kártya',
-                          style:
-                              const TextStyle(fontSize: 12, color: Colors.grey)),
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.grey)),
                   ],
                 ),
               ],
             ),
           ),
           Expanded(
-            flex: 2,
+            flex: 1,
             child: Text(
               category,
               style: cellStyle,
@@ -494,7 +518,7 @@ class _NoteTableState extends State<NoteTable> {
             ),
           ),
           Expanded(
-            flex: 2,
+            flex: 1,
             child: Row(
               children: [
                 for (int i = 0; i < tags.length; i++) ...[
@@ -517,7 +541,7 @@ class _NoteTableState extends State<NoteTable> {
             ),
           ),
           Expanded(
-            flex: 2,
+            flex: 3,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -553,11 +577,12 @@ class _NoteTableState extends State<NoteTable> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildIconButton(context, Icons.visibility, AppTheme.primaryColor,
-                      () {
+                  _buildIconButton(
+                      context, Icons.visibility, AppTheme.primaryColor, () {
                     context.go('/deck/${doc.id}/view');
                   }),
-                  _buildIconButton(context, Icons.edit, AppTheme.primaryColor, () {
+                  _buildIconButton(context, Icons.edit, AppTheme.primaryColor,
+                      () {
                     context.go('/decks/edit/${doc.id}');
                   }),
                   _buildStatusMenu(context, doc.id, status),
@@ -593,18 +618,24 @@ class _NoteTableState extends State<NoteTable> {
     return Tooltip(
       message: tooltip,
       child: IconButton(
-        icon: Icon(icon, color: color),
+        iconSize: 18,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+        icon: Icon(icon, color: color, size: 18),
         onPressed: onPressed,
       ),
     );
   }
 
-  Widget _buildStatusMenu(BuildContext context, String noteId, String currentStatus) {
+  // A státusz menü ikon méretének csökkentése is, hogy illeszkedjen a kisebb ikonmérethez.
+  Widget _buildStatusMenu(
+      BuildContext context, String noteId, String currentStatus) {
     const statuses = ['Published', 'Draft', 'Archived'];
-    final effectiveStatus = currentStatus == 'Public' ? 'Published' : currentStatus;
+    final effectiveStatus =
+        currentStatus == 'Public' ? 'Published' : currentStatus;
 
     return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert, color: AppTheme.primaryColor),
+      icon: const Icon(Icons.more_vert, color: AppTheme.primaryColor, size: 18),
       tooltip: 'Státusz módosítása',
       onSelected: (String newStatus) {
         _updateNoteStatus(context, noteId, newStatus);
@@ -613,17 +644,23 @@ class _NoteTableState extends State<NoteTable> {
         return statuses.map((String status) {
           return PopupMenuItem<String>(
             value: status,
-            child: Text(status, style: TextStyle(
-              color: status == effectiveStatus ? Colors.blue : null,
-              fontWeight: status == effectiveStatus ? FontWeight.bold : FontWeight.normal,
-            )),
+            child: Text(status,
+                style: TextStyle(
+                  color: status == effectiveStatus ? Colors.blue : null,
+                  fontWeight: status == effectiveStatus
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                )),
           );
         }).toList();
       },
+      // A menügomb minimális mérete
+      constraints: const BoxConstraints(minWidth: 24),
     );
   }
 
-  Future<void> _updateNoteStatus(BuildContext context, String noteId, String newStatus) async {
+  Future<void> _updateNoteStatus(
+      BuildContext context, String noteId, String newStatus) async {
     try {
       await FirebaseFirestore.instance.collection('notes').doc(noteId).update({
         'status': newStatus,
@@ -636,14 +673,19 @@ class _NoteTableState extends State<NoteTable> {
     }
   }
 
-  Future<void> _toggleFreeStatus(BuildContext context, String noteId, bool currentFree) async {
+  Future<void> _toggleFreeStatus(
+      BuildContext context, String noteId, bool currentFree) async {
     try {
       await FirebaseFirestore.instance.collection('notes').doc(noteId).update({
         'isFree': !currentFree,
         'modified': Timestamp.now(),
       });
       if (!context.mounted) return;
-      _showSnackBar(context, !currentFree ? 'A jegyzet mostantól ingyenes!' : 'Ingyenes státusz kikapcsolva');
+      _showSnackBar(
+          context,
+          !currentFree
+              ? 'A jegyzet mostantól ingyenes!'
+              : 'Ingyenes státusz kikapcsolva');
     } catch (e) {
       _showSnackBar(context, 'Hiba a státusz frissítésekor: $e');
     }
@@ -690,7 +732,8 @@ class _NoteTableState extends State<NoteTable> {
                 );
               }
             },
-            child: const Text('Igen, törlés', style: TextStyle(fontFamily: 'Inter')),
+            child: const Text('Igen, törlés',
+                style: TextStyle(fontFamily: 'Inter')),
           ),
         ],
       ),
@@ -717,10 +760,16 @@ class _NoteTableState extends State<NoteTable> {
     );
   }
 
-  void _showQuizPreviewDialog(BuildContext context, String bankId, {bool dualMode = false}) async {
-    final bankDoc = await FirebaseFirestore.instance.collection('question_banks').doc(bankId).get();
+  void _showQuizPreviewDialog(BuildContext context, String bankId,
+      {bool dualMode = false}) async {
+    final bankDoc = await FirebaseFirestore.instance
+        .collection('question_banks')
+        .doc(bankId)
+        .get();
     if (!bankDoc.exists) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hiba: A kérdésbank nem található.')));
+      if (context.mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Hiba: A kérdésbank nem található.')));
       return;
     }
     final bank = bankDoc.data()!;
@@ -729,7 +778,9 @@ class _NoteTableState extends State<NoteTable> {
     final selectedQuestions = questions.take(10).toList();
 
     if (selectedQuestions.isEmpty) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ez a kérdésbank nem tartalmaz kérdéseket.')));
+      if (context.mounted)
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Ez a kérdésbank nem tartalmaz kérdéseket.')));
       return;
     }
 
@@ -741,7 +792,9 @@ class _NoteTableState extends State<NoteTable> {
           content: SizedBox(
             width: MediaQuery.of(context).size.width * 0.8,
             height: MediaQuery.of(context).size.height * 0.8,
-            child: dualMode ? QuizViewerDual(questions: selectedQuestions) : QuizViewer(questions: selectedQuestions),
+            child: dualMode
+                ? QuizViewerDual(questions: selectedQuestions)
+                : QuizViewer(questions: selectedQuestions),
           ),
           actions: [
             TextButton(

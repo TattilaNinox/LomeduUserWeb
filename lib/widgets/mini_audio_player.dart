@@ -60,18 +60,17 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
         if (!mounted) return;
         setState(() => _position = position);
       });
-      
+
       _audioPlayer.onPlayerComplete.listen((event) {
         if (!mounted) return;
         setState(() {
-            _playerState = PlayerState.completed;
-            _position = _duration; // Vagy Duration.zero, ízlés szerint
+          _playerState = PlayerState.completed;
+          _position = _duration; // Vagy Duration.zero, ízlés szerint
         });
       });
 
       if (!mounted) return;
       setState(() => _isInitialized = true);
-
     } catch (e) {
       debugPrint('Hiba az audio inicializálásakor (audioplayers): $e');
       if (mounted) {
@@ -123,7 +122,7 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
 
     return SizedBox(
       height: 32,
-      width: 220,
+      width: 160,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -143,8 +142,7 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
                 await _audioPlayer.pause();
               } else if (_playerState == PlayerState.paused) {
                 await _audioPlayer.resume();
-              }
-              else {
+              } else {
                 // Ha a lejátszás befejeződött vagy le lett állítva,
                 // a play metódus újra elindítja a forrástól.
                 await _audioPlayer.play(UrlSource(widget.audioUrl));
@@ -197,7 +195,9 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
           Padding(
             padding: const EdgeInsets.only(left: 4),
             child: Text(
-              _formatDuration(_position),
+              _formatDuration((_duration - _position).isNegative
+                  ? Duration.zero
+                  : _duration - _position),
               style: const TextStyle(
                   fontSize: 10, fontFeatures: [FontFeature.tabularFigures()]),
             ),
