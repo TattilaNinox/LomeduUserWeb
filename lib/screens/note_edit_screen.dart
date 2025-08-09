@@ -41,6 +41,8 @@ class _NoteEditScreenState extends State<NoteEditScreen>
   Map<String, dynamic>? _selectedMp3File;
   Map<String, dynamic>? _selectedVideoFile;
   VideoPlayerController? _videoController;
+  String? _existingAudioUrl;
+  bool _deleteAudio = false;
 
   List<String> _categories = [];
   List<String> _sciences = [];
@@ -62,7 +64,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
       ..style.width = '100%'
       ..style.height = '100%'
       ..style.border = 'none';
-    
+
     // ignore: undefined_prefixed_name
     ui_web.platformViewRegistry.registerViewFactory(
         _previewViewId, (int viewId) => _previewIframeElement);
@@ -110,28 +112,33 @@ class _NoteEditScreenState extends State<NoteEditScreen>
       }
       return;
     }
-    
+
     final snapshot = await FirebaseFirestore.instance
         .collection('categories')
         .where('science', isEqualTo: _selectedScience)
         .get();
     if (mounted) {
       setState(() {
-        _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+        _categories =
+            snapshot.docs.map((doc) => doc['name'] as String).toList();
       });
     }
   }
 
   Future<void> _loadSciences() async {
-    final snapshot = await FirebaseFirestore.instance.collection('sciences').get();
+    final snapshot =
+        await FirebaseFirestore.instance.collection('sciences').get();
     if (mounted) {
       _sciences = snapshot.docs.map((doc) => doc['name'] as String).toList();
     }
   }
 
   Future<void> _loadNoteData() async {
-    final doc = await FirebaseFirestore.instance.collection('notes').doc(widget.noteId).get();
-    
+    final doc = await FirebaseFirestore.instance
+        .collection('notes')
+        .doc(widget.noteId)
+        .get();
+
     if (doc.exists) {
       if (mounted) {
         final data = doc.data()!;
@@ -144,42 +151,55 @@ class _NoteEditScreenState extends State<NoteEditScreen>
         _isFree = data['isFree'] == true;
 
         if (data.containsKey('audioUrl')) {
-          _selectedMp3File = {'name': 'Meglévő hangfájl', 'url': data['audioUrl']};
+          _existingAudioUrl = data['audioUrl'] as String?;
+          _selectedMp3File = {
+            'name': 'Meglévő hangfájl',
+            'url': _existingAudioUrl
+          };
         }
         if (data.containsKey('videoUrl')) {
-          _selectedVideoFile = {'name': 'Meglévő videófájl', 'url': data['videoUrl']};
+          _selectedVideoFile = {
+            'name': 'Meglévő videófájl',
+            'url': data['videoUrl']
+          };
         }
 
         final pages = data['pages'] as List<dynamic>? ?? [];
         final content = pages.isNotEmpty ? pages.first as String : '';
-        
+
         _htmlContentController.text = content;
       }
     } else {
       throw Exception('A jegyzet nem található.');
     }
   }
-  
+
   Future<void> _updateNote() async {
-    if (_titleController.text.isEmpty || _selectedCategory == null || _selectedScience == null) {
+    if (_titleController.text.isEmpty ||
+        _selectedCategory == null ||
+        _selectedScience == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A cím és a kategória megadása kötelező!')),
+        const SnackBar(
+            content: Text('A cím és a kategória megadása kötelező!')),
       );
       return;
     }
-    
+
     if (_htmlContentController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('A tartalom nem lehet üres!')),
       );
       return;
     }
-    
+
     setState(() => _isSaving = true);
 
     try {
       for (final tag in _tags) {
-        FirebaseFirestore.instance.collection('tags').doc(tag).set({'name': tag});
+        FirebaseFirestore.instance
+            .collection('tags')
+            .doc(tag)
+            .set({'name': tag});
       }
 
       final Map<String, dynamic> noteData = {
@@ -192,15 +212,28 @@ class _NoteEditScreenState extends State<NoteEditScreen>
         'modified': Timestamp.now(),
       };
 
+      // Audio törlés / csere kezelése
+      if (_deleteAudio && _existingAudioUrl != null) {
+        try {
+          final ref = FirebaseStorage.instance.refFromURL(_existingAudioUrl!);
+          await ref.delete();
+        } catch (_) {}
+        // csak akkor töröljük a mezőt, ha nem töltünk fel újat
+        noteData['audioUrl'] = FieldValue.delete();
+        _existingAudioUrl = null;
+      }
+
       if (isFileValid(_selectedMp3File) && _selectedMp3File!['bytes'] != null) {
         final mp3Ref = FirebaseStorage.instance
             .ref('notes/${widget.noteId}/${_selectedMp3File!['name']}');
         await mp3Ref.putData(
             Uint8List.fromList(_selectedMp3File!['bytes'] as List<int>));
         noteData['audioUrl'] = await mp3Ref.getDownloadURL();
+        _deleteAudio = false;
       }
 
-      if (isFileValid(_selectedVideoFile) && _selectedVideoFile!['bytes'] != null) {
+      if (isFileValid(_selectedVideoFile) &&
+          _selectedVideoFile!['bytes'] != null) {
         final videoRef = FirebaseStorage.instance
             .ref('notes/${widget.noteId}/${_selectedVideoFile!['name']}');
         await videoRef.putData(
@@ -215,10 +248,11 @@ class _NoteEditScreenState extends State<NoteEditScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Jegyzet sikeresen frissítve!')), // maradunk a képernyőn
+          const SnackBar(
+              content:
+                  Text('Jegyzet sikeresen frissítve!')), // maradunk a képernyőn
         );
       }
-
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -239,9 +273,11 @@ class _NoteEditScreenState extends State<NoteEditScreen>
     }
 
     if (_error != null) {
-      return Scaffold(body: Center(child: Text(_error!, style: const TextStyle(color: Colors.red))));
+      return Scaffold(
+          body: Center(
+              child: Text(_error!, style: const TextStyle(color: Colors.red))));
     }
-    
+
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 249, 250, 251),
       appBar: AppBar(
@@ -271,7 +307,8 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(Icons.save),
               label: const Text('Mentés'),
@@ -300,7 +337,8 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                           children: [
                             Expanded(
                               flex: 2,
-                              child: _buildTextField(_titleController, 'Jegyzet címe'),
+                              child: _buildTextField(
+                                  _titleController, 'Jegyzet címe'),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
@@ -372,7 +410,9 @@ class _NoteEditScreenState extends State<NoteEditScreen>
         DropdownMenuItem(value: 'text', child: Text('Szöveges')),
         DropdownMenuItem(value: 'interactive', child: Text('Interaktív')),
         DropdownMenuItem(value: 'dynamic_quiz', child: Text('Dinamikus Kvíz')),
-        DropdownMenuItem(value: 'dynamic_quiz_dual', child: Text('2-válaszos Dinamikus Kvíz')),
+        DropdownMenuItem(
+            value: 'dynamic_quiz_dual',
+            child: Text('2-válaszos Dinamikus Kvíz')),
         DropdownMenuItem(value: 'deck', child: Text('Pakli')),
         DropdownMenuItem(value: 'source', child: Text('Forrás')),
       ],
@@ -395,11 +435,13 @@ class _NoteEditScreenState extends State<NoteEditScreen>
           child: Text(category),
         );
       }).toList(),
-      onChanged: _selectedScience == null ? null : (newValue) {
-        setState(() {
-          _selectedCategory = newValue;
-        });
-      },
+      onChanged: _selectedScience == null
+          ? null
+          : (newValue) {
+              setState(() {
+                _selectedCategory = newValue;
+              });
+            },
       decoration: InputDecoration(
         labelText: 'Kategória',
         border: const OutlineInputBorder(),
@@ -452,7 +494,8 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                     Tab(text: 'Előnézet'),
                   ],
                   onTap: (index) {
-                    if (index == 1) { // Preview tab
+                    if (index == 1) {
+                      // Preview tab
                       final htmlContent = _htmlContentController.text;
                       if (htmlContent.isNotEmpty) {
                         if (parse(htmlContent).documentElement == null) {
@@ -466,7 +509,8 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                           return;
                         }
                         setState(() {
-                          _previewIframeElement.src = 'data:text/html;charset=utf-8,${Uri.encodeComponent(htmlContent)}';
+                          _previewIframeElement.src =
+                              'data:text/html;charset=utf-8,${Uri.encodeComponent(htmlContent)}';
                           _showPreview = true;
                         });
                       } else {
@@ -522,30 +566,31 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                   padding: const EdgeInsets.only(top: 8.0),
                   child: SizedBox(
                     height: 300,
-                  child: ValueListenableBuilder<double>(
-                    valueListenable: _editorFontSize,
-                    builder: (context, fontSize, child) {
-                      return TextField(
-                        controller: _htmlContentController,
-                        onChanged: (value) {
-                            if (_tabController.index == 1) {
-                              setState(() {
-                                _previewIframeElement.src = 'data:text/html;charset=utf-8,${Uri.encodeComponent(value)}';
-                              });
-                            }
-                        },
-                        style: TextStyle(fontSize: fontSize, fontFamily: 'monospace'),
-                          maxLines: 15,
-                        textAlignVertical: TextAlignVertical.top,
-                        decoration: const InputDecoration(
-                          hintText: 'Írd ide a HTML tartalmat...',
-                          border: OutlineInputBorder(),
-                          filled: true,
-                          fillColor: Colors.white,
-                        ),
-                      );
-                      }
-                    ),
+                    child: ValueListenableBuilder<double>(
+                        valueListenable: _editorFontSize,
+                        builder: (context, fontSize, child) {
+                          return TextField(
+                            controller: _htmlContentController,
+                            onChanged: (value) {
+                              if (_tabController.index == 1) {
+                                setState(() {
+                                  _previewIframeElement.src =
+                                      'data:text/html;charset=utf-8,${Uri.encodeComponent(value)}';
+                                });
+                              }
+                            },
+                            style: TextStyle(
+                                fontSize: fontSize, fontFamily: 'monospace'),
+                            maxLines: 15,
+                            textAlignVertical: TextAlignVertical.top,
+                            decoration: const InputDecoration(
+                              hintText: 'Írd ide a HTML tartalmat...',
+                              border: OutlineInputBorder(),
+                              filled: true,
+                              fillColor: Colors.white,
+                            ),
+                          );
+                        }),
                   ),
                 ),
                 // Preview
@@ -556,8 +601,12 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
                       }
-                      if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-                        return const Center(child: Text('Hiba a kvíz kérdések betöltésekor, vagy nincs kérdés a bankban.'));
+                      if (snapshot.hasError ||
+                          !snapshot.hasData ||
+                          snapshot.data!.isEmpty) {
+                        return const Center(
+                            child: Text(
+                                'Hiba a kvíz kérdések betöltésekor, vagy nincs kérdés a bankban.'));
                       }
                       return QuizViewer(questions: snapshot.data!);
                     },
@@ -568,7 +617,8 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                           padding: const EdgeInsets.only(top: 8.0),
                           child: HtmlElementView(viewType: _previewViewId),
                         )
-                      : const Center(child: Text('Az előnézethez válts fület.')),
+                      : const Center(
+                          child: Text('Az előnézethez válts fület.')),
               ],
             ),
           )
@@ -590,17 +640,20 @@ class _NoteEditScreenState extends State<NoteEditScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Címkék', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text('Címkék',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8.0,
           runSpacing: 4.0,
-          children: _tags.map((tag) => Chip(
-            label: Text(tag),
-            onDeleted: () {
-              setState(() => _tags.remove(tag));
-            },
-          )).toList(),
+          children: _tags
+              .map((tag) => Chip(
+                    label: Text(tag),
+                    onDeleted: () {
+                      setState(() => _tags.remove(tag));
+                    },
+                  ))
+              .toList(),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -610,7 +663,8 @@ class _NoteEditScreenState extends State<NoteEditScreen>
             suffixIcon: IconButton(
               icon: const Icon(Icons.add),
               onPressed: () {
-                if (_tagController.text.isNotEmpty && !_tags.contains(_tagController.text)) {
+                if (_tagController.text.isNotEmpty &&
+                    !_tags.contains(_tagController.text)) {
                   setState(() {
                     _tags.add(_tagController.text);
                     _tagController.clear();
@@ -636,13 +690,57 @@ class _NoteEditScreenState extends State<NoteEditScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Fájlok', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text('Fájlok',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 16),
-        _buildFileUploadButton(
-          label: 'MP3 Csere',
-          icon: Icons.audiotrack,
-          file: _selectedMp3File,
-          onPressed: _pickMp3File,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _pickMp3File,
+                    icon: const Icon(Icons.audiotrack),
+                    label: const Text('MP3 Csere'),
+                    style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (_existingAudioUrl != null || _selectedMp3File != null)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _deleteAudio = true;
+                          _selectedMp3File = null;
+                        });
+                      },
+                      icon: const Icon(Icons.delete_forever, color: Colors.red),
+                      label: const Text('MP3 Törlés',
+                          style: TextStyle(color: Colors.red)),
+                      style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12)),
+                    ),
+                  ),
+              ],
+            ),
+            if (_selectedMp3File != null || _existingAudioUrl != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  _deleteAudio
+                      ? 'Hangfájl törlésre megjelölve'
+                      : 'Kiválasztva: ${_selectedMp3File != null ? _selectedMp3File!['name'] : 'Meglévő hangfájl'}',
+                  style: TextStyle(
+                    fontStyle: FontStyle.italic,
+                    color: _deleteAudio ? Colors.red : null,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 12),
         _buildFileUploadButton(
@@ -651,14 +749,16 @@ class _NoteEditScreenState extends State<NoteEditScreen>
           file: _selectedVideoFile,
           onPressed: _pickVideoFile,
         ),
-         if (_selectedVideoFile != null && _selectedVideoFile!['path'] != null && !kIsWeb)
-           Padding(
-             padding: const EdgeInsets.only(top: 8.0),
-             child: AspectRatio(
-               aspectRatio: _videoController!.value.aspectRatio,
-               child: VideoPlayer(_videoController!),
-             ),
-           )
+        if (_selectedVideoFile != null &&
+            _selectedVideoFile!['path'] != null &&
+            !kIsWeb)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: AspectRatio(
+              aspectRatio: _videoController!.value.aspectRatio,
+              child: VideoPlayer(_videoController!),
+            ),
+          )
       ],
     );
   }
@@ -706,34 +806,47 @@ class _NoteEditScreenState extends State<NoteEditScreen>
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('A hangfájl mérete nem haladhatja meg az 5 MB-ot!')),
+              content:
+                  Text('A hangfájl mérete nem haladhatja meg az 5 MB-ot!')),
         );
         return;
       }
       setState(() => _selectedMp3File = {
-            'name': file.name, 'size': bytes.length, 'bytes': bytes
-      });
+            'name': file.name,
+            'size': bytes.length,
+            'bytes': bytes
+          });
+      // új fájl választásakor ne legyen törlés jelölve
+      setState(() => _deleteAudio = false);
     }
   }
 
   Future<void> _pickVideoFile() async {
-    const typeGroup = XTypeGroup(label: 'Video', extensions: ['mp4', 'mov', 'avi']);
+    const typeGroup =
+        XTypeGroup(label: 'Video', extensions: ['mp4', 'mov', 'avi']);
     final file = await openFile(acceptedTypeGroups: [typeGroup]);
     if (file != null) {
       final bytes = await file.readAsBytes();
-       if (bytes.length > 5 * 1024 * 1024) {
+      if (bytes.length > 5 * 1024 * 1024) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('A videófájl mérete nem haladhatja meg az 5 MB-ot!')),
+              content:
+                  Text('A videófájl mérete nem haladhatja meg az 5 MB-ot!')),
         );
         return;
       }
       setState(() {
-        _selectedVideoFile = {'name': file.name, 'size': bytes.length, 'bytes': bytes, 'path': file.path};
+        _selectedVideoFile = {
+          'name': file.name,
+          'size': bytes.length,
+          'bytes': bytes,
+          'path': file.path
+        };
         _videoController?.dispose();
         if (!kIsWeb) {
-          _videoController = VideoPlayerController.file(File(file.path))..initialize().then((_) => setState(() {}));
+          _videoController = VideoPlayerController.file(File(file.path))
+            ..initialize().then((_) => setState(() {}));
         }
       });
     }
@@ -749,11 +862,12 @@ class _NoteEditScreenState extends State<NoteEditScreen>
 
       if (querySnapshot.docs.isNotEmpty) {
         final bank = querySnapshot.docs.first.data();
-        final questions = List<Map<String, dynamic>>.from(bank['questions'] ?? []);
+        final questions =
+            List<Map<String, dynamic>>.from(bank['questions'] ?? []);
         questions.shuffle();
         return questions.take(10).toList();
       }
     }
     return [];
   }
-}      
+}
