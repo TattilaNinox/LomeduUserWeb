@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:html/parser.dart' show parse;
 import 'package:web/web.dart' as web;
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:ui_web' as ui_web;
 
 import '../widgets/sidebar.dart';
@@ -57,6 +58,17 @@ class _NoteEditScreenState extends State<NoteEditScreen>
   late final String _previewViewId;
   final web.HTMLIFrameElement _previewIframeElement = web.HTMLIFrameElement();
   bool _showPreview = false;
+
+  // Segédfüggvény URL megnyitásához
+  Future<void> _openUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Nem sikerült megnyitni a PDF-et.')));
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -783,6 +795,14 @@ class _NoteEditScreenState extends State<NoteEditScreen>
           file: _selectedPdfFile,
           onPressed: _pickPdfFile,
         ),
+        if (_existingPdfUrl != null) ...[
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => _openUrl(_existingPdfUrl!),
+            icon: const Icon(Icons.open_in_new),
+            label: const Text('PDF megnyitása'),
+          ),
+        ],
         if (_selectedVideoFile != null &&
             _selectedVideoFile!['path'] != null &&
             !kIsWeb)
