@@ -61,8 +61,15 @@ class _NoteEditScreenState extends State<NoteEditScreen>
 
   // Segédfüggvény URL megnyitásához
   Future<void> _openUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+    // Weben sok böngésző a PDF-et azonnal letölti. A Google Docs Viewerrel
+    // biztosan egy új fülön, beágyazva nyílik meg.
+    final targetUrl = kIsWeb
+        ? 'https://docs.google.com/gview?embedded=1&url=${Uri.encodeComponent(url)}'
+        : url;
+
+    final uri = Uri.parse(targetUrl);
+    if (!await launchUrl(uri,
+        mode: LaunchMode.externalApplication, webOnlyWindowName: '_blank')) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Nem sikerült megnyitni a PDF-et.')));
