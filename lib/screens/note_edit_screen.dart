@@ -842,6 +842,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
               ),
           ],
         ),
+        const SizedBox(height: 24),
         // PDF CSERE + TÖRLÉS EGY SORBAN
         Row(
           children: [
