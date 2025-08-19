@@ -15,6 +15,26 @@ class QuestionBankEditScreen extends StatefulWidget {
 }
 
 class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
+  // Segédfüggvény az Excel cellákban található "igaz" értékek felismeréséhez.
+  bool _isTrueValue(dynamic cellValue) {
+    if (cellValue == null) return false;
+    final normalized = cellValue.toString().trim().toUpperCase();
+    // Elfogadott jelölések a helyes válaszra
+    const truthy = {
+      'IGAZ', // teljes szó
+      'I', // rövidítés
+      'TRUE',
+      'T',
+      'YES',
+      'Y',
+      '1',
+      'X',
+      '✔',
+      'HELYES'
+    };
+    return truthy.contains(normalized);
+  }
+
   final _nameController = TextEditingController();
   List<Map<String, dynamic>> _questions = [];
   bool _isLoading = true;
@@ -215,18 +235,20 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
         final options = <Map<String, dynamic>>[];
         for (var j = 0; j < 4; j++) {
           final optionText = row[1 + j * 3]?.value.toString().trim() ?? '';
-          final isCorrectStr =
-              row[2 + j * 3]?.value.toString().trim().toUpperCase() ?? 'HAMIS';
+          final rawCorrectCell = row[2 + j * 3]?.value;
           final rationale = row[3 + j * 3]?.value.toString().trim() ?? '';
           options.add({
             'text': optionText,
-            'isCorrect': isCorrectStr == 'IGAZ',
+            'isCorrect': _isTrueValue(rawCorrectCell),
             'rationale': rationale
           });
         }
-        if (options.where((opt) => opt['isCorrect'] == true).length != 1) {
+        final correctCnt =
+            options.where((opt) => opt['isCorrect'] == true).length;
+        if ((_selectedMode == 'single' && correctCnt != 1) ||
+            (_selectedMode == 'dual' && correctCnt != 2)) {
           throw Exception(
-              'Minden kérdéshez pontosan egy helyes választ kell megadni (sor: ${i + 1})');
+              'A(z) ${i + 1}. sorban a kiválasztott kérdés-típusnak megfelelően ${_selectedMode == 'single' ? '1' : '2'} helyes választ kell megjelölni, jelenleg $correctCnt van.');
         }
         newQuestions.add({'question': questionText, 'options': options});
       } catch (e) {

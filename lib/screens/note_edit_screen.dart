@@ -168,6 +168,12 @@ class _NoteEditScreenState extends State<NoteEditScreen>
         final content = pages.isNotEmpty ? pages.first as String : '';
 
         _htmlContentController.text = content;
+
+        // A kategóriák frissítése a jegyzet tudománya alapján, hogy a legördülő lista megfelelően feltöltődjön.
+        if (_selectedScience != null) {
+          // A _loadCategories() aszinkron, de itt megvárjuk, hogy biztosan legyenek kategóriák, mire a képernyő kirajzolódik.
+          await _loadCategories();
+        }
       }
     } else {
       throw Exception('A jegyzet nem található.');

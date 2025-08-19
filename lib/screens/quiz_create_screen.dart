@@ -67,8 +67,10 @@ class _QuizCreateScreenState extends State<QuizCreateScreen> {
   }
 
   Future<void> _loadQuestionBanks() async {
-    final snapshot =
-        await FirebaseFirestore.instance.collection('question_banks').get();
+    final snapshot = await FirebaseFirestore.instance
+        .collection('question_banks')
+        .where('mode', isEqualTo: 'single')
+        .get();
     if (mounted) _questionBanks = snapshot.docs;
   }
 

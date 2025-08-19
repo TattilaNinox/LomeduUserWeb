@@ -67,8 +67,10 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
   }
 
   Future<void> _loadQuestionBanks() async {
-    final snapshot =
-        await FirebaseFirestore.instance.collection('question_banks').get();
+    final snapshot = await FirebaseFirestore.instance
+        .collection('question_banks')
+        .where('mode', isEqualTo: 'dual')
+        .get();
     final compatibleBanks = <DocumentSnapshot>[];
     for (final doc in snapshot.docs) {
       final data = doc.data();
