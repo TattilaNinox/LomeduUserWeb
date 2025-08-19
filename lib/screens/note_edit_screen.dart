@@ -48,6 +48,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
   // Új: PDF fájl kezelése
   Map<String, dynamic>? _selectedPdfFile;
   String? _existingPdfUrl;
+  bool _deletePdf = false;
 
   List<String> _categories = [];
   List<String> _sciences = [];
@@ -278,13 +279,23 @@ class _NoteEditScreenState extends State<NoteEditScreen>
         noteData['videoUrl'] = await videoRef.getDownloadURL();
       }
 
-      // PDF feltöltése
+      // PDF törlés  / csere kezelése
+      if (_deletePdf && _existingPdfUrl != null) {
+        try {
+          final ref = FirebaseStorage.instance.refFromURL(_existingPdfUrl!);
+          await ref.delete();
+        } catch (_) {}
+        noteData['pdfUrl'] = FieldValue.delete();
+        _existingPdfUrl = null;
+      }
+
       if (isFileValid(_selectedPdfFile) && _selectedPdfFile!['bytes'] != null) {
         final pdfRef = FirebaseStorage.instance
             .ref('notes/${widget.noteId}/${_selectedPdfFile!['name']}');
         await pdfRef.putData(
             Uint8List.fromList(_selectedPdfFile!['bytes'] as List<int>));
         noteData['pdfUrl'] = await pdfRef.getDownloadURL();
+        _deletePdf = false;
       }
 
       await FirebaseFirestore.instance
@@ -802,14 +813,44 @@ class _NoteEditScreenState extends State<NoteEditScreen>
           file: _selectedPdfFile,
           onPressed: _pickPdfFile,
         ),
-        if (_existingPdfUrl != null) ...[
-          const SizedBox(height: 8),
+        const SizedBox(width: 8),
+        if (_existingPdfUrl != null)
           OutlinedButton.icon(
             onPressed: () => _openUrl(_existingPdfUrl!),
             icon: const Icon(Icons.open_in_new),
-            label: const Text('PDF megnyitása'),
+            label: const Text('Megnyitás'),
           ),
-        ],
+        const SizedBox(width: 8),
+        if (_existingPdfUrl != null || _selectedPdfFile != null)
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _deletePdf = true;
+                  _selectedPdfFile = null;
+                });
+              },
+              icon: const Icon(Icons.delete_forever, color: Colors.red),
+              label: const Text('PDF Törlés',
+                  style: TextStyle(color: Colors.red)),
+              style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12)),
+            ),
+          ),
+        if (_deletePdf || _selectedPdfFile != null || _existingPdfUrl != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(
+              _deletePdf
+                  ? 'PDF törlésre megjelölve'
+                  : 'Kiválasztva: ${_selectedPdfFile != null ? _selectedPdfFile!['name'] : 'Meglévő PDF'}',
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                color: _deletePdf ? Colors.red : null,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         if (_selectedVideoFile != null &&
             _selectedVideoFile!['path'] != null &&
             !kIsWeb)
