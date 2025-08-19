@@ -315,10 +315,10 @@ class _NoteEditScreenState extends State<NoteEditScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content:
-                  Text('Jegyzet sikeresen frissítve!')), // maradunk a képernyőn
-        );
+            const SnackBar(content: Text('Jegyzet sikeresen frissítve!')));
+        // Frissítsük a lokális állapotot, hogy a feltöltött/törölt fájlok
+        // azonnal tükröződjenek.
+        await _loadNoteData();
       }
     } catch (e) {
       if (mounted) {
