@@ -9,8 +9,9 @@ import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:html/parser.dart' show parse;
 import 'package:web/web.dart' as web;
-import 'package:url_launcher/url_launcher.dart';
 import 'dart:ui_web' as ui_web;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
 
 import '../widgets/sidebar.dart';
 import '../widgets/quiz_viewer.dart';
@@ -81,8 +82,8 @@ class _NoteEditScreenState extends State<NoteEditScreen>
     if (!await launchUrl(uri,
         mode: LaunchMode.externalApplication, webOnlyWindowName: '_blank')) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Nem sikerült megnyitni a PDF-et.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Nem sikerült megnyitni a PDF-et.')));
       }
     }
   }
@@ -199,10 +200,10 @@ class _NoteEditScreenState extends State<NoteEditScreen>
 
         if (data.containsKey('pdfUrl')) {
           _existingPdfUrl = data['pdfUrl'] as String?;
-          _selectedPdfFile = {
-            'name': 'Meglévő PDF fájl',
-            'url': _existingPdfUrl
-          };
+          final fileName = Uri.parse(_existingPdfUrl!).pathSegments.isNotEmpty
+              ? Uri.parse(_existingPdfUrl!).pathSegments.last
+              : 'pdf_dokumentum.pdf';
+          _selectedPdfFile = {'name': fileName, 'url': _existingPdfUrl};
         }
 
         final pages = data['pages'] as List<dynamic>? ?? [];
@@ -415,6 +416,39 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                         ),
                         const SizedBox(height: 24),
                         _buildEditorAndPreview(),
+                        if (_selectedPdfFile != null ||
+                            (_existingPdfUrl != null && !_deletePdf)) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'PDF: $_pdfFileDisplayName',
+                                  style: const TextStyle(
+                                      fontStyle: FontStyle.italic,
+                                      fontSize: 12),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (_existingPdfUrl != null && !_deletePdf) ...[
+                                IconButton(
+                                  tooltip: 'URL másolása',
+                                  onPressed: () async {
+                                    await Clipboard.setData(
+                                        ClipboardData(text: _existingPdfUrl!));
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                              content: Text(
+                                                  'PDF URL vágólapra másolva')));
+                                    }
+                                  },
+                                  icon: const Icon(Icons.link),
+                                ),
+                              ]
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -808,34 +842,57 @@ class _NoteEditScreenState extends State<NoteEditScreen>
               ),
           ],
         ),
-        const SizedBox(height: 12),
-        // PDF CSERE
-        ElevatedButton.icon(
-          onPressed: _pickPdfFile,
-          icon: const Icon(Icons.picture_as_pdf),
-          label: const Text('PDF Csere'),
-          style:
-              ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+        // PDF CSERE + TÖRLÉS EGY SORBAN
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _pickPdfFile,
+                icon: const Icon(Icons.picture_as_pdf),
+                label: const Text('PDF Csere'),
+                style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12)),
+              ),
+            ),
+            if ((_existingPdfUrl != null && !_deletePdf) ||
+                _selectedPdfFile != null) ...[
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    _deletePdf = true;
+                    _selectedPdfFile = null;
+                  });
+                },
+                icon: const Icon(Icons.delete_forever, color: Colors.red),
+                tooltip: 'PDF törlése',
+              ),
+            ],
+          ],
         ),
-        if (_existingPdfUrl != null) ...[
+        if (_existingPdfUrl != null && !_deletePdf) ...[
           const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () => _openUrl(_existingPdfUrl!),
-            icon: const Icon(Icons.open_in_new),
-            label: const Text('PDF Megnyitása'),
-          ),
-        ],
-        if (_existingPdfUrl != null || _selectedPdfFile != null) ...[
-          const SizedBox(height: 8),
-          IconButton(
-            onPressed: () {
-              setState(() {
-                _deletePdf = true;
-                _selectedPdfFile = null;
-              });
-            },
-            icon: const Icon(Icons.delete_forever, color: Colors.red),
-            tooltip: 'PDF törlése',
+          Row(
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => _openUrl(_existingPdfUrl!),
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('PDF Megnyitása'),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                tooltip: 'URL másolása',
+                onPressed: () async {
+                  await Clipboard.setData(
+                      ClipboardData(text: _existingPdfUrl!));
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('PDF URL vágólapra másolva')));
+                  }
+                },
+                icon: const Icon(Icons.link),
+              ),
+            ],
           ),
         ],
         if (_selectedVideoFile != null &&
