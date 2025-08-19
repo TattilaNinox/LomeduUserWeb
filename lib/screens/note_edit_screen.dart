@@ -800,43 +800,44 @@ class _NoteEditScreenState extends State<NoteEditScreen>
           ],
         ),
         const SizedBox(height: 12),
-        _buildFileUploadButton(
-          label: 'Videó Csere',
-          icon: Icons.videocam,
-          file: _selectedVideoFile,
-          onPressed: _pickVideoFile,
-        ),
-        const SizedBox(height: 12),
-        _buildFileUploadButton(
-          label: 'PDF Csere',
-          icon: Icons.picture_as_pdf,
-          file: _selectedPdfFile,
-          onPressed: _pickPdfFile,
-        ),
-        const SizedBox(width: 8),
-        if (_existingPdfUrl != null)
-          OutlinedButton.icon(
-            onPressed: () => _openUrl(_existingPdfUrl!),
-            icon: const Icon(Icons.open_in_new),
-            label: const Text('Megnyitás'),
-          ),
-        const SizedBox(width: 8),
-        if (_existingPdfUrl != null || _selectedPdfFile != null)
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: () {
-                setState(() {
-                  _deletePdf = true;
-                  _selectedPdfFile = null;
-                });
-              },
-              icon: const Icon(Icons.delete_forever, color: Colors.red),
-              label: const Text('PDF Törlés',
-                  style: TextStyle(color: Colors.red)),
-              style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12)),
+        Row(
+          children: [
+            // PDF csere gomb (kitölti a rendelkezésre álló helyet)
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _pickPdfFile,
+                icon: const Icon(Icons.picture_as_pdf),
+                label: const Text('PDF Csere'),
+                style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12)),
+              ),
             ),
-          ),
+            if (_existingPdfUrl != null) ...[
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: () => _openUrl(_existingPdfUrl!),
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('Megnyitás'),
+              ),
+            ],
+            if (_existingPdfUrl != null || _selectedPdfFile != null) ...[
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _deletePdf = true;
+                    _selectedPdfFile = null;
+                  });
+                },
+                icon: const Icon(Icons.delete_forever, color: Colors.red),
+                label: const Text('PDF Törlés',
+                    style: TextStyle(color: Colors.red)),
+                style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12)),
+              ),
+            ]
+          ],
+        ),
         if (_deletePdf || _selectedPdfFile != null || _existingPdfUrl != null)
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
