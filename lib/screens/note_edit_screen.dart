@@ -800,58 +800,37 @@ class _NoteEditScreenState extends State<NoteEditScreen>
           ],
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            // PDF csere gomb (kitölti a rendelkezésre álló helyet)
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _pickPdfFile,
-                icon: const Icon(Icons.picture_as_pdf),
-                label: const Text('PDF Csere'),
-                style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12)),
-              ),
-            ),
-            if (_existingPdfUrl != null) ...[
-              const SizedBox(width: 8),
-              OutlinedButton.icon(
-                onPressed: () => _openUrl(_existingPdfUrl!),
-                icon: const Icon(Icons.open_in_new),
-                label: const Text('Megnyitás'),
-              ),
-            ],
-            if (_existingPdfUrl != null || _selectedPdfFile != null) ...[
-              const SizedBox(width: 8),
-              OutlinedButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _deletePdf = true;
-                    _selectedPdfFile = null;
-                  });
-                },
-                icon: const Icon(Icons.delete_forever, color: Colors.red),
-                label: const Text('PDF Törlés',
-                    style: TextStyle(color: Colors.red)),
-                style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12)),
-              ),
-            ]
-          ],
+        // PDF CSERE
+        ElevatedButton.icon(
+          onPressed: _pickPdfFile,
+          icon: const Icon(Icons.picture_as_pdf),
+          label: const Text('PDF Csere'),
+          style:
+              ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
         ),
-        if (_deletePdf || _selectedPdfFile != null || _existingPdfUrl != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: Text(
-              _deletePdf
-                  ? 'PDF törlésre megjelölve'
-                  : 'Kiválasztva: ${_selectedPdfFile != null ? _selectedPdfFile!['name'] : 'Meglévő PDF'}',
-              style: TextStyle(
-                fontStyle: FontStyle.italic,
-                color: _deletePdf ? Colors.red : null,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
+        if (_existingPdfUrl != null) ...[
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => _openUrl(_existingPdfUrl!),
+            icon: const Icon(Icons.open_in_new),
+            label: const Text('PDF Megnyitása'),
           ),
+        ],
+        if (_existingPdfUrl != null || _selectedPdfFile != null) ...[
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () {
+              setState(() {
+                _deletePdf = true;
+                _selectedPdfFile = null;
+              });
+            },
+            icon: const Icon(Icons.delete_forever, color: Colors.red),
+            label: const Text('PDF Törlés', style: TextStyle(color: Colors.red)),
+            style:
+                OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+          ),
+        ],
         if (_selectedVideoFile != null &&
             _selectedVideoFile!['path'] != null &&
             !kIsWeb)
