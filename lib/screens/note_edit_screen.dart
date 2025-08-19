@@ -44,6 +44,10 @@ class _NoteEditScreenState extends State<NoteEditScreen>
   String? _existingAudioUrl;
   bool _deleteAudio = false;
 
+  // Új: PDF fájl kezelése
+  Map<String, dynamic>? _selectedPdfFile;
+  String? _existingPdfUrl;
+
   List<String> _categories = [];
   List<String> _sciences = [];
   String? _selectedScience;
@@ -164,6 +168,14 @@ class _NoteEditScreenState extends State<NoteEditScreen>
           };
         }
 
+        if (data.containsKey('pdfUrl')) {
+          _existingPdfUrl = data['pdfUrl'] as String?;
+          _selectedPdfFile = {
+            'name': 'Meglévő PDF fájl',
+            'url': _existingPdfUrl
+          };
+        }
+
         final pages = data['pages'] as List<dynamic>? ?? [];
         final content = pages.isNotEmpty ? pages.first as String : '';
 
@@ -245,6 +257,15 @@ class _NoteEditScreenState extends State<NoteEditScreen>
         await videoRef.putData(
             Uint8List.fromList(_selectedVideoFile!['bytes'] as List<int>));
         noteData['videoUrl'] = await videoRef.getDownloadURL();
+      }
+
+      // PDF feltöltése
+      if (isFileValid(_selectedPdfFile) && _selectedPdfFile!['bytes'] != null) {
+        final pdfRef = FirebaseStorage.instance
+            .ref('notes/${widget.noteId}/${_selectedPdfFile!['name']}');
+        await pdfRef.putData(
+            Uint8List.fromList(_selectedPdfFile!['bytes'] as List<int>));
+        noteData['pdfUrl'] = await pdfRef.getDownloadURL();
       }
 
       await FirebaseFirestore.instance
@@ -755,6 +776,13 @@ class _NoteEditScreenState extends State<NoteEditScreen>
           file: _selectedVideoFile,
           onPressed: _pickVideoFile,
         ),
+        const SizedBox(height: 12),
+        _buildFileUploadButton(
+          label: 'PDF Csere',
+          icon: Icons.picture_as_pdf,
+          file: _selectedPdfFile,
+          onPressed: _pickPdfFile,
+        ),
         if (_selectedVideoFile != null &&
             _selectedVideoFile!['path'] != null &&
             !kIsWeb)
@@ -854,6 +882,28 @@ class _NoteEditScreenState extends State<NoteEditScreen>
           _videoController = VideoPlayerController.file(File(file.path))
             ..initialize().then((_) => setState(() {}));
         }
+      });
+    }
+  }
+
+  // PDF kiválasztása
+  Future<void> _pickPdfFile() async {
+    const typeGroup = XTypeGroup(label: 'PDF', extensions: ['pdf']);
+    final file = await openFile(acceptedTypeGroups: [typeGroup]);
+    if (file != null) {
+      final bytes = await file.readAsBytes();
+      if (bytes.length > 10 * 1024 * 1024) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('A PDF mérete nem haladhatja meg a 10 MB-ot!')));
+        return;
+      }
+      setState(() {
+        _selectedPdfFile = {
+          'name': file.name,
+          'size': bytes.length,
+          'bytes': bytes,
+        };
       });
     }
   }

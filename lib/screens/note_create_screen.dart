@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:html/parser.dart' show parse;
 import 'package:web/web.dart' as web;
 import 'dart:ui_web' as ui_web;
+import 'dart:typed_data';
 
 import '../widgets/sidebar.dart';
 
@@ -27,6 +28,8 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
   String _selectedType = 'text';
   Map<String, dynamic>? _selectedMp3File;
   Map<String, dynamic>? _selectedVideoFile;
+  // Új PDF
+  Map<String, dynamic>? _selectedPdfFile;
   bool _isUploading = false;
   bool _isFree = false; // Új mező: ingyenesen megtekinthető-e
   List<String> _categories = [];
@@ -161,6 +164,27 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
     }
   }
 
+  Future<void> _pickPdfFile() async {
+    const typeGroup = XTypeGroup(label: 'PDF', extensions: ['pdf']);
+    final file = await openFile(acceptedTypeGroups: [typeGroup]);
+    if (file != null) {
+      final bytes = await file.readAsBytes();
+      if (bytes.isNotEmpty) {
+        if (bytes.length > 10 * 1024 * 1024) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('A PDF mérete nem haladhatja meg a 10 MB-ot!')));
+          return;
+        }
+        setState(() => _selectedPdfFile = {
+              'name': file.name,
+              'size': bytes.length,
+              'bytes': bytes,
+            });
+      }
+    }
+  }
+
   Future<void> _uploadNote() async {
     if (_titleController.text.isEmpty ||
         _selectedScience == null ||
@@ -218,6 +242,15 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
         videoUrl = await videoRef.getDownloadURL();
       }
 
+      String? pdfUrl;
+      if (isFileValid(_selectedPdfFile)) {
+        final pdfRef = FirebaseStorage.instance
+            .ref('notes/$noteId/${_selectedPdfFile!['name']}');
+        await pdfRef.putData(
+            Uint8List.fromList(_selectedPdfFile!['bytes'] as List<int>));
+        pdfUrl = await pdfRef.getDownloadURL();
+      }
+
       final noteData = {
         'title': _titleController.text,
         'category': _selectedCategory,
@@ -231,6 +264,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
       };
       if (mp3Url != null) noteData['audioUrl'] = mp3Url;
       if (videoUrl != null) noteData['videoUrl'] = videoUrl;
+      if (pdfUrl != null) noteData['pdfUrl'] = pdfUrl;
 
       await noteRef.set(noteData);
 
@@ -246,6 +280,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
           _selectedScience = null;
           _selectedMp3File = null;
           _selectedVideoFile = null;
+          _selectedPdfFile = null;
           _videoController?.dispose();
           _videoController = null;
           _tags.clear();
@@ -641,6 +676,13 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
           icon: Icons.videocam,
           file: _selectedVideoFile,
           onPressed: _pickVideoFile,
+        ),
+        const SizedBox(height: 12),
+        _buildFileUploadButton(
+          label: 'PDF Feltöltés',
+          icon: Icons.picture_as_pdf,
+          file: _selectedPdfFile,
+          onPressed: _pickPdfFile,
         ),
          if (_selectedVideoFile != null && _selectedVideoFile!['path'] != null && !kIsWeb)
            Padding(
