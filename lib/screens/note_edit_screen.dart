@@ -50,6 +50,15 @@ class _NoteEditScreenState extends State<NoteEditScreen>
   String? _existingPdfUrl;
   bool _deletePdf = false;
 
+  String get _pdfFileDisplayName {
+    if (_selectedPdfFile != null) return _selectedPdfFile!['name'] as String;
+    if (_existingPdfUrl != null) {
+      final path = Uri.parse(_existingPdfUrl!).pathSegments;
+      return path.isNotEmpty ? path.last : 'PDF fájl';
+    }
+    return '';
+  }
+
   List<String> _categories = [];
   List<String> _sciences = [];
   String? _selectedScience;
@@ -818,7 +827,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
         ],
         if (_existingPdfUrl != null || _selectedPdfFile != null) ...[
           const SizedBox(height: 8),
-          OutlinedButton.icon(
+          IconButton(
             onPressed: () {
               setState(() {
                 _deletePdf = true;
@@ -826,9 +835,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
               });
             },
             icon: const Icon(Icons.delete_forever, color: Colors.red),
-            label: const Text('PDF Törlés', style: TextStyle(color: Colors.red)),
-            style:
-                OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+            tooltip: 'PDF törlése',
           ),
         ],
         if (_selectedVideoFile != null &&
