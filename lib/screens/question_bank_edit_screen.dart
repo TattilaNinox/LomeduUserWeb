@@ -259,28 +259,38 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
       }
     }
     if (!mounted) return;
-    final confirmed = await showDialog<bool>(
+    final action = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Importálás megerősítése'),
         content: Text(
-            'Biztosan felülírja a jelenlegi ${_questions.length} kérdést a fájlban található ${newQuestions.length} kérdéssel?'),
+            'A fájlban ${newQuestions.length} kérdés található. A jelenlegi kérdésbankban ${_questions.length} kérdés van. Mit szeretnél tenni?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
+              onPressed: () => Navigator.of(context).pop('cancel'),
               child: const Text('Mégse')),
           TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
+              onPressed: () => Navigator.of(context).pop('append'),
+              child: const Text('Hozzáfűzés')),
+          TextButton(
+              onPressed: () => Navigator.of(context).pop('replace'),
               style: TextButton.styleFrom(foregroundColor: Colors.orange),
               child: const Text('Felülírás')),
         ],
       ),
     );
-    if (confirmed == true) {
-      setState(() => _questions = newQuestions);
-      if (mounted)
+    if (action == 'append') {
+      setState(() => _questions.addAll(newQuestions));
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Importálás sikeres! Ne felejts el menteni.')));
+            content: Text('Sikeres importálás: kérdések hozzáfűzve. Ne felejts el menteni.')));
+      }
+    } else if (action == 'replace') {
+      setState(() => _questions = newQuestions);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Sikeres importálás: kérdések felülírva. Ne felejts el menteni.')));
+      }
     }
   }
 

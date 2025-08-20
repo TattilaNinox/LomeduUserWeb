@@ -149,20 +149,24 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
       }
     }
     if (!mounted) return;
-    final confirmed = await showDialog<bool>(
+    final action = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Importálás megerősítése'),
-        content: Text('Biztosan felülírja a jelenlegi ${_flashcards.length} kártyát a fájlban található ${newFlashcards.length} kártyával?'),
+        content: Text('A fájlban ${newFlashcards.length} kártya található. A jelenlegi pakliban ${_flashcards.length} kártya van. Mit szeretnél tenni?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Mégse')),
-          TextButton(onPressed: () => Navigator.of(context).pop(true), style: TextButton.styleFrom(foregroundColor: Colors.orange), child: const Text('Felülírás')),
+          TextButton(onPressed: () => Navigator.of(context).pop('cancel'), child: const Text('Mégse')),
+          TextButton(onPressed: () => Navigator.of(context).pop('append'), child: const Text('Hozzáfűzés')),
+          TextButton(onPressed: () => Navigator.of(context).pop('replace'), style: TextButton.styleFrom(foregroundColor: Colors.orange), child: const Text('Felülírás')),
         ],
       ),
     );
-    if (confirmed == true) {
+    if (action == 'append') {
+      setState(() => _flashcards.addAll(newFlashcards));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sikeres importálás: kártyák hozzáfűzve. Ne felejts el menteni.')));
+    } else if (action == 'replace') {
       setState(() => _flashcards = newFlashcards);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Importálás sikeres! Ne felejts el menteni.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sikeres importálás: kártyák felülírva. Ne felejts el menteni.')));
     }
   }
 
