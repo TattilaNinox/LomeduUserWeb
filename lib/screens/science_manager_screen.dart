@@ -16,9 +16,11 @@ class _ScienceManagerScreenState extends State<ScienceManagerScreen> {
   final _searchController = TextEditingController();
 
   void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
+      );
+    }
   }
 
   Future<void> _addScience() async {
@@ -64,32 +66,46 @@ class _ScienceManagerScreenState extends State<ScienceManagerScreen> {
     _showSnackBar('Törölve.');
   }
 
-  void _showEditDialog(String docId, String currentName) {
+  void _showEditDialog(BuildContext context, String docId, String currentName) {
     final ctrl = TextEditingController(text: currentName);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Tudomány átnevezése'),
         content: TextField(controller: ctrl, decoration: const InputDecoration(labelText: 'Új név')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Mégse')),
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Mégse')),
           ElevatedButton(
             onPressed: () async {
               final newName = ctrl.text.trim();
               if (newName.isEmpty) return;
+              // Capture messenger before async gaps to avoid using context across awaits
+              final messenger = ScaffoldMessenger.of(context);
               final dup = await FirebaseFirestore.instance
                   .collection('sciences')
                   .where('name', isEqualTo: newName)
                   .limit(1)
                   .get();
               if (dup.docs.isNotEmpty && dup.docs.first.id != docId) {
-                _showSnackBar('Ez a név már foglalt.');
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Ez a név már foglalt.'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
                 return;
               }
               await FirebaseFirestore.instance.collection('sciences').doc(docId).update({'name': newName});
               if (!mounted) return;
-              Navigator.pop(context);
-              _showSnackBar('Frissítve.');
+              if (dialogContext.mounted) {
+                Navigator.of(dialogContext).pop();
+              }
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text('Frissítve.'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
             },
             child: const Text('Mentés'),
           ),
@@ -169,7 +185,7 @@ class _ScienceManagerScreenState extends State<ScienceManagerScreen> {
                                       children: [
                                         IconButton(
                                           icon: const Icon(Icons.edit, color: Colors.blue),
-                                          onPressed: () => _showEditDialog(doc.id, name),
+                                          onPressed: () => _showEditDialog(context, doc.id, name),
                                         ),
                                         IconButton(
                                           icon: const Icon(Icons.delete, color: Colors.red),

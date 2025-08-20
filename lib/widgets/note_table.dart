@@ -767,9 +767,10 @@ class _NoteTableState extends State<NoteTable> {
         .doc(bankId)
         .get();
     if (!bankDoc.exists) {
-      if (context.mounted)
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Hiba: A kérdésbank nem található.')));
+      }
       return;
     }
     final bank = bankDoc.data()!;
@@ -778,9 +779,10 @@ class _NoteTableState extends State<NoteTable> {
     final selectedQuestions = questions.take(10).toList();
 
     if (selectedQuestions.isEmpty) {
-      if (context.mounted)
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Ez a kérdésbank nem tartalmaz kérdéseket.')));
+      }
       return;
     }
 

@@ -34,7 +34,7 @@ class _UserListScreenState extends State<UserListScreen> {
     setState(() {
       _sciences = sciences;
       // ensure default selection is 'Összes' (null = all)
-      if (_selectedScience == null) _selectedScience = 'Összes';
+      _selectedScience ??= 'Összes';
     });
   }
 
@@ -109,9 +109,7 @@ class _UserListScreenState extends State<UserListScreen> {
                 return const CircularProgressIndicator();
               }
 
-              List<DocumentSnapshot<Map<String, dynamic>>> docs = snapshot
-                  .data!.docs
-                  .cast<DocumentSnapshot<Map<String, dynamic>>>();
+              var docs = snapshot.data!.docs;
               if (_searchQuery.isNotEmpty) {
                 final filtered = docs.where((d) {
                   final data = (d.data() as Map<String, dynamic>? ?? {});

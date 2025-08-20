@@ -227,8 +227,9 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
     for (var i = 1; i < sheet.rows.length; i++) {
       final row = sheet.rows[i];
       if (row.every(
-          (cell) => cell == null || cell.value.toString().trim().isEmpty))
+          (cell) => cell == null || cell.value.toString().trim().isEmpty)) {
         continue;
+      }
       try {
         final questionText = row[0]?.value.toString().trim() ?? '';
         if (questionText.isEmpty) continue;

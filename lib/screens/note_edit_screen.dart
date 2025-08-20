@@ -3,9 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:video_player/video_player.dart';
-import 'dart:io' show File;
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:html/parser.dart' show parse;
 import 'package:web/web.dart' as web;
@@ -434,13 +432,13 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                                 IconButton(
                                   tooltip: 'URL másolása',
                                   onPressed: () async {
+                                    final messenger = ScaffoldMessenger.of(context);
                                     await Clipboard.setData(
                                         ClipboardData(text: _existingPdfUrl!));
                                     if (mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(const SnackBar(
-                                              content: Text(
-                                                  'PDF URL vágólapra másolva')));
+                                      messenger.showSnackBar(const SnackBar(
+                                          content: Text(
+                                              'PDF URL vágólapra másolva')));
                                     }
                                   },
                                   icon: const Icon(Icons.link),
@@ -910,36 +908,6 @@ class _NoteEditScreenState extends State<NoteEditScreen>
     );
   }
 
-  Widget _buildFileUploadButton({
-    required String label,
-    required IconData icon,
-    required Map<String, dynamic>? file,
-    required VoidCallback onPressed,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ElevatedButton.icon(
-          onPressed: onPressed,
-          icon: Icon(icon),
-          label: Text(label),
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-          ),
-        ),
-        if (file != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: Text(
-              'Kiválasztva: ${file['name']}',
-              style: const TextStyle(fontStyle: FontStyle.italic),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-      ],
-    );
-  }
-
   bool isFileValid(Map<String, dynamic>? file) {
     return file != null && file['name'] != null;
   }
@@ -965,37 +933,6 @@ class _NoteEditScreenState extends State<NoteEditScreen>
           });
       // új fájl választásakor ne legyen törlés jelölve
       setState(() => _deleteAudio = false);
-    }
-  }
-
-  Future<void> _pickVideoFile() async {
-    const typeGroup =
-        XTypeGroup(label: 'Video', extensions: ['mp4', 'mov', 'avi']);
-    final file = await openFile(acceptedTypeGroups: [typeGroup]);
-    if (file != null) {
-      final bytes = await file.readAsBytes();
-      if (bytes.length > 5 * 1024 * 1024) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content:
-                  Text('A videófájl mérete nem haladhatja meg az 5 MB-ot!')),
-        );
-        return;
-      }
-      setState(() {
-        _selectedVideoFile = {
-          'name': file.name,
-          'size': bytes.length,
-          'bytes': bytes,
-          'path': file.path
-        };
-        _videoController?.dispose();
-        if (!kIsWeb) {
-          _videoController = VideoPlayerController.file(File(file.path))
-            ..initialize().then((_) => setState(() {}));
-        }
-      });
     }
   }
 

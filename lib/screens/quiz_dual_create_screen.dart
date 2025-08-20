@@ -149,11 +149,14 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
         'createdAt': Timestamp.now(),
         'modified': Timestamp.now(),
       });
-      if (mounted) context.go('/notes');
+      if (mounted) {
+        context.go('/notes');
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Hiba: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -242,8 +245,9 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
                           .map((doc) => DropdownMenuItem(
                               value: doc.id, child: Text(doc['name'])))
                           .toList(),
-                      onChanged: (val) =>
-                          setState(() => _selectedQuestionBankId = val),
+                      onChanged: (val) {
+                        setState(() => _selectedQuestionBankId = val);
+                      },
                       decoration: const InputDecoration(
                           labelText: 'Válassz Kérdésbankot'),
                     ),
@@ -271,9 +275,10 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
         .doc(_selectedQuestionBankId)
         .get();
     if (!bankDoc.exists) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Hiba: A kérdésbank nem található.')));
+      }
       return;
     }
     final bank = bankDoc.data()!;
@@ -282,9 +287,10 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
     final selectedQuestions = questions.take(10).toList();
 
     if (selectedQuestions.isEmpty) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Ez a kérdésbank nem tartalmaz kérdéseket.')));
+      }
       return;
     }
 
