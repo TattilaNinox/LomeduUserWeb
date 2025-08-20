@@ -280,10 +280,18 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
       ),
     );
     if (action == 'append') {
-      setState(() => _questions.addAll(newQuestions));
+      final existing = _questions
+          .map((q) => (q['question'] as String).trim().toLowerCase())
+          .toSet();
+      final uniqueToAdd = newQuestions
+          .where((q) => !existing.contains((q['question'] as String).trim().toLowerCase()))
+          .toList();
+      final skipped = newQuestions.length - uniqueToAdd.length;
+      setState(() => _questions.addAll(uniqueToAdd));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Sikeres importálás: kérdések hozzáfűzve. Ne felejts el menteni.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                'Import sikeres: ${uniqueToAdd.length} új kérdés hozzáadva${skipped > 0 ? ', $skipped duplikált kihagyva' : ''}. Ne felejts el menteni.')));
       }
     } else if (action == 'replace') {
       setState(() => _questions = newQuestions);

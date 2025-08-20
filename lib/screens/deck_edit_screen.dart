@@ -162,8 +162,17 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
       ),
     );
     if (action == 'append') {
-      setState(() => _flashcards.addAll(newFlashcards));
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sikeres importálás: kártyák hozzáfűzve. Ne felejts el menteni.')));
+      final existing = _flashcards
+          .map((c) => ((c['front'] ?? '') as String).trim().toLowerCase())
+          .toSet();
+      final uniqueToAdd = newFlashcards
+          .where((c) => !existing.contains(((c['front'] ?? '') as String).trim().toLowerCase()))
+          .toList();
+      final skipped = newFlashcards.length - uniqueToAdd.length;
+      setState(() => _flashcards.addAll(uniqueToAdd));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Import sikeres: ${uniqueToAdd.length} új kártya hozzáadva${skipped > 0 ? ', $skipped duplikált kihagyva' : ''}. Ne felejts el menteni.')));
+      }
     } else if (action == 'replace') {
       setState(() => _flashcards = newFlashcards);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sikeres importálás: kártyák felülírva. Ne felejts el menteni.')));
