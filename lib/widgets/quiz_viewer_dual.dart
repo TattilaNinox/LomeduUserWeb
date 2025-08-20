@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 
 class QuizViewerDual extends StatefulWidget {
   final List<Map<String, dynamic>> questions;
@@ -7,6 +8,173 @@ class QuizViewerDual extends StatefulWidget {
 
   @override
   State<QuizViewerDual> createState() => _QuizViewerDualState();
+}
+
+class OptionCardDual extends StatefulWidget {
+  final Map<String, dynamic> option;
+  final bool isSelected;
+  final bool answerChecked;
+  final VoidCallback onSelect;
+
+  const OptionCardDual({
+    super.key,
+    required this.option,
+    required this.isSelected,
+    required this.answerChecked,
+    required this.onSelect,
+  });
+
+  @override
+  State<OptionCardDual> createState() => _OptionCardDualState();
+}
+
+class _OptionCardDualState extends State<OptionCardDual> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _animation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant OptionCardDual oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reset flip when navigating to next question or reselecting
+    if (!widget.answerChecked && oldWidget.answerChecked) {
+      _controller.reset();
+    }
+    if (!widget.isSelected && oldWidget.isSelected) {
+      _controller.reset();
+    }
+  }
+
+  void _handleTap() {
+    if (!widget.answerChecked) {
+      widget.onSelect();
+    } else {
+      if (!widget.isSelected) return; // Flip only selected option
+      if (_controller.isCompleted) {
+        _controller.reverse();
+      } else {
+        _controller.forward();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    bool isCorrect = widget.option['isCorrect'] as bool? ?? false;
+    bool showResult = widget.answerChecked;
+
+    return GestureDetector(
+      onTap: _handleTap,
+      child: AnimatedBuilder(
+        animation: _animation,
+        builder: (context, child) {
+          final rotation = widget.isSelected ? _animation.value * math.pi : 0.0;
+          final isFlipped = widget.isSelected && _controller.value > 0.5;
+
+          return Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.001)
+              ..rotateX(rotation),
+            child: isFlipped
+                ? _buildCardBack()
+                : _buildCardFront(isCorrect, showResult),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCardFront(bool isCorrect, bool showResult) {
+    Color borderColor = Colors.grey.shade300;
+    Color? iconColor;
+    IconData? resultIcon;
+
+    if (showResult) {
+      if (isCorrect) {
+        borderColor = Colors.green;
+        iconColor = Colors.green;
+        resultIcon = Icons.check_circle;
+      } else if (widget.isSelected) {
+        borderColor = Colors.red;
+        iconColor = Colors.red;
+        resultIcon = Icons.cancel;
+      }
+    } else if (widget.isSelected) {
+      borderColor = Colors.blue;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(child: Text(widget.option['text'] ?? '', style: const TextStyle(fontSize: 16))),
+          if (showResult && widget.isSelected)
+            Row(
+              children: [
+                const SizedBox(width: 8),
+                const Icon(Icons.threesixty, color: Colors.grey, size: 20),
+                const SizedBox(width: 8),
+                Icon(resultIcon, color: iconColor),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCardBack() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.secondary,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300, width: 2),
+      ),
+      child: Transform(
+        alignment: Alignment.center,
+        transform: Matrix4.rotationX(math.pi),
+        child: Center(
+          child: Text(
+            widget.option['rationale'] ?? 'Nincs indoklás.',
+            style: const TextStyle(color: Colors.white, fontSize: 16),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _QuizViewerDualState extends State<QuizViewerDual> with TickerProviderStateMixin {
@@ -184,56 +352,11 @@ class _QuizViewerDualState extends State<QuizViewerDual> with TickerProviderStat
 
   Widget _buildAnswerOption(Map<String, dynamic> option, int index) {
     final isSelected = _selectedOptionIndices.contains(index);
-    final isCorrectOption = option['isCorrect'] == true;
-
-    Color tileColor = Colors.white;
-    if (_answerChecked) {
-      if (isCorrectOption) {
-        tileColor = Colors.green.withValues(alpha: 0.2);
-      } else if (isSelected && !isCorrectOption) {
-        tileColor = Colors.red.withValues(alpha: 0.2);
-      }
-    } else if (isSelected) {
-      tileColor = Colors.blue.withValues(alpha: 0.1);
-    }
-
-    return GestureDetector(
-      onTap: () => _toggleOption(index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.symmetric(vertical: 8.0),
-        padding: const EdgeInsets.all(16.0),
-        decoration: BoxDecoration(
-          color: tileColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? Colors.blue : Colors.grey.shade300,
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                shape: BoxShape.rectangle,
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Colors.blue, width: 2),
-                color: isSelected ? Colors.blue : Colors.transparent,
-              ),
-              child: isSelected
-                  ? const Icon(Icons.check, size: 18, color: Colors.white)
-                  : null,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(option['text'], style: const TextStyle(fontSize: 16)),
-            ),
-          ],
-        ),
-      ),
+    return OptionCardDual(
+      option: option,
+      isSelected: isSelected,
+      answerChecked: _answerChecked,
+      onSelect: () => _toggleOption(index),
     );
   }
 
