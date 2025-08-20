@@ -16,8 +16,9 @@ import '../widgets/quiz_viewer.dart';
 
 class NoteEditScreen extends StatefulWidget {
   final String noteId;
+  final String? from;
 
-  const NoteEditScreen({super.key, required this.noteId});
+  const NoteEditScreen({super.key, required this.noteId, this.from});
 
   @override
   State<NoteEditScreen> createState() => _NoteEditScreenState();
@@ -349,7 +350,13 @@ class _NoteEditScreenState extends State<NoteEditScreen>
         title: Text('"${_titleController.text}" szerkesztése'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/notes'),
+          onPressed: () {
+            if (widget.from != null && widget.from!.isNotEmpty) {
+              context.go(Uri.decodeComponent(widget.from!));
+            } else {
+              context.go('/notes');
+            }
+          },
         ),
         actions: [
           if (_bundleId != null)
@@ -361,7 +368,13 @@ class _NoteEditScreenState extends State<NoteEditScreen>
               },
             ),
           TextButton(
-            onPressed: () => context.go('/notes'),
+            onPressed: () {
+              if (widget.from != null && widget.from!.isNotEmpty) {
+                context.go(Uri.decodeComponent(widget.from!));
+              } else {
+                context.go('/notes');
+              }
+            },
             child: const Text('Mégse'),
           ),
           const SizedBox(width: 12),

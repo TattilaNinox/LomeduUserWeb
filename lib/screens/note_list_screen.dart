@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 
 import '../widgets/sidebar.dart';
 import '../widgets/header.dart';
@@ -13,7 +14,22 @@ import '../widgets/note_table.dart';
 /// A képernyő felépítése több al-widgetre van bontva a jobb átláthatóság érdekében
 /// (`Sidebar`, `Header`, `Filters`, `NoteTable`).
 class NoteListScreen extends StatefulWidget {
-  const NoteListScreen({super.key});
+  final String? initialSearch;
+  final String? initialStatus;
+  final String? initialCategory;
+  final String? initialScience;
+  final String? initialTag;
+  final String? initialType;
+
+  const NoteListScreen({
+    super.key,
+    this.initialSearch,
+    this.initialStatus,
+    this.initialCategory,
+    this.initialScience,
+    this.initialTag,
+    this.initialType,
+  });
 
   @override
   State<NoteListScreen> createState() => _NoteListScreenState();
@@ -41,6 +57,13 @@ class _NoteListScreenState extends State<NoteListScreen> {
   @override
   void initState() {
     super.initState();
+    // Bootstrap filters from initial query params
+    _searchText = widget.initialSearch ?? '';
+    _selectedStatus = widget.initialStatus;
+    _selectedCategory = widget.initialCategory;
+    _selectedScience = widget.initialScience;
+    _selectedTag = widget.initialTag;
+    _selectedType = widget.initialType;
     _loadCategories();
     _loadSciences();
     _loadTags();
@@ -92,6 +115,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
     setState(() {
       _searchText = value;
     });
+    _pushFiltersToUrl();
   }
 
   /// Frissíti a kiválasztott státuszt a `Filters` widgetből.
@@ -99,6 +123,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
     setState(() {
       _selectedStatus = value;
     });
+    _pushFiltersToUrl();
   }
 
   /// Frissíti a kiválasztott kategóriát a `Filters` widgetből.
@@ -106,6 +131,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
     setState(() {
       _selectedCategory = value;
     });
+    _pushFiltersToUrl();
   }
 
   /// Frissíti a kiválasztott tudományt.
@@ -113,16 +139,19 @@ class _NoteListScreenState extends State<NoteListScreen> {
     setState(() {
       _selectedScience = value;
     });
+    _pushFiltersToUrl();
   }
 
   /// Frissíti a kiválasztott címkét a `Filters` widgetből.
   void _onTagChanged(String? value) {
     setState(() => _selectedTag = value);
+    _pushFiltersToUrl();
   }
 
   /// Frissíti a kiválasztott típust.
   void _onTypeChanged(String? value) {
     setState(() => _selectedType = value);
+    _pushFiltersToUrl();
   }
 
 
@@ -135,6 +164,23 @@ class _NoteListScreenState extends State<NoteListScreen> {
       _selectedTag = null;
       _selectedType = null;
     });
+    _pushFiltersToUrl();
+  }
+
+  void _pushFiltersToUrl() {
+    final params = <String, String>{};
+    void put(String key, String? val) {
+      if (val != null && val.isNotEmpty) params[key] = val;
+    }
+    put('q', _searchText);
+    put('status', _selectedStatus);
+    put('category', _selectedCategory);
+    put('science', _selectedScience);
+    put('tag', _selectedTag);
+    put('type', _selectedType);
+    final uri = Uri(path: '/notes', queryParameters: params.isEmpty ? null : params);
+    // go_router: go() replaces current route without adding history entry
+    GoRouter.of(context).go(uri.toString());
   }
 
   @override

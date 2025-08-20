@@ -418,13 +418,20 @@ class _NoteTableState extends State<NoteTable> {
                   }),
                   _buildIconButton(context, Icons.edit, AppTheme.primaryColor,
                       () {
+                    // Build return URL with active filters
+                    final currentUri = GoRouter.of(context)
+                        .routeInformationProvider
+                        .value
+                        .uri
+                        .toString();
+                    final from = Uri.encodeComponent(currentUri);
                     if (noteType == 'dynamic_quiz' ||
                         noteType == 'dynamic_quiz_dual') {
                       context.go(noteType == 'dynamic_quiz'
-                          ? '/quiz/edit/${doc.id}'
-                          : '/quiz-dual/edit/${doc.id}');
+                          ? '/quiz/edit/${doc.id}?from=$from'
+                          : '/quiz-dual/edit/${doc.id}?from=$from');
                     } else {
-                      context.go('/note/edit/${doc.id}');
+                      context.go('/note/edit/${doc.id}?from=$from');
                     }
                   }),
                   _buildStatusMenu(context, doc.id, status),

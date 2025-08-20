@@ -67,7 +67,17 @@ final _router = GoRouter(
     // Jegyzetek listájának képernyője.
     GoRoute(
       path: '/notes',
-      builder: (context, state) => const NoteListScreen(),
+      builder: (context, state) {
+        final qp = state.uri.queryParameters;
+        return NoteListScreen(
+          initialSearch: qp['q'],
+          initialStatus: qp['status'],
+          initialCategory: qp['category'],
+          initialScience: qp['science'],
+          initialTag: qp['tag'],
+          initialType: qp['type'],
+        );
+      },
     ),
     // Új útvonalak a létrehozó képernyőkhöz
     GoRoute(
@@ -159,7 +169,8 @@ final _router = GoRouter(
       path: '/note/edit/:noteId',
       builder: (context, state) {
         final noteId = state.pathParameters['noteId']!;
-        return NoteEditScreen(noteId: noteId);
+        final from = state.uri.queryParameters['from'];
+        return NoteEditScreen(noteId: noteId, from: from);
       },
     ),
     // Flashcard Card Edit
