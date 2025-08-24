@@ -39,20 +39,23 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
     _tagController.dispose();
     super.dispose();
   }
-  
+
   Widget _buildTagsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Címkék', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text('Címkék',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
           runSpacing: 4,
-          children: _tags.map((tag) => Chip(
-            label: Text(tag),
-            onDeleted: () => setState(() => _tags.remove(tag)),
-          )).toList(),
+          children: _tags
+              .map((tag) => Chip(
+                    label: Text(tag),
+                    onDeleted: () => setState(() => _tags.remove(tag)),
+                  ))
+              .toList(),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -62,7 +65,8 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
             suffixIcon: IconButton(
               icon: const Icon(Icons.add),
               onPressed: () {
-                if (_tagController.text.isNotEmpty && !_tags.contains(_tagController.text)) {
+                if (_tagController.text.isNotEmpty &&
+                    !_tags.contains(_tagController.text)) {
                   setState(() {
                     _tags.add(_tagController.text);
                     _tagController.clear();
@@ -94,7 +98,10 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
   }
 
   Future<void> _loadDeckDetails() async {
-    final doc = await FirebaseFirestore.instance.collection('notes').doc(widget.deckId).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('notes')
+        .doc(widget.deckId)
+        .get();
     if (doc.exists && mounted) {
       final data = doc.data()!;
       _titleController.text = data['title'];
@@ -111,23 +118,26 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
     final router = GoRouter.of(context);
     final messenger = ScaffoldMessenger.of(context);
 
-    if (_titleController.text.trim().isEmpty || _selectedScience == null || _selectedCategory == null) {
+    if (_titleController.text.trim().isEmpty ||
+        _selectedScience == null ||
+        _selectedCategory == null) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('A cím, tudomány és kategória kitöltése kötelező!')),
+        const SnackBar(
+            content: Text('A cím, tudomány és kategória kitöltése kötelező!')),
       );
       return;
     }
 
     // Címkék mentése a közös gyűjteménybe
     for (final tag in _tags) {
-      FirebaseFirestore.instance
-          .collection('tags')
-          .doc(tag)
-          .set({'name': tag});
+      FirebaseFirestore.instance.collection('tags').doc(tag).set({'name': tag});
     }
-    
+
     try {
-      await FirebaseFirestore.instance.collection('notes').doc(widget.deckId).update({
+      await FirebaseFirestore.instance
+          .collection('notes')
+          .doc(widget.deckId)
+          .update({
         'title': _titleController.text.trim(),
         'science': _selectedScience,
         'category_id': _selectedCategory,
@@ -169,7 +179,8 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
     final bytes = excel.save();
     if (bytes != null) {
       // Egyszerűbb megközelítés a fájl letöltéshez
-      final dataUrl = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64Encode(bytes)}';
+      final dataUrl =
+          'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64Encode(bytes)}';
       web.HTMLAnchorElement()
         ..href = dataUrl
         ..setAttribute('download', '${_titleController.text.trim()}.xlsx')
@@ -186,13 +197,16 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
     final sheet = excel.tables[excel.tables.keys.first];
     if (sheet == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hiba: Nem található munkalap.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Hiba: Nem található munkalap.')));
       return;
     }
     final newFlashcards = <Map<String, dynamic>>[];
     for (var i = 1; i < sheet.rows.length; i++) {
       final row = sheet.rows[i];
-      if (row.every((cell) => cell == null || cell.value.toString().trim().isEmpty)) continue;
+      if (row.every(
+          (cell) => cell == null || cell.value.toString().trim().isEmpty))
+        continue;
       try {
         final frontText = row[0]?.value.toString().trim() ?? '';
         final backText = row[1]?.value.toString().trim() ?? '';
@@ -201,7 +215,8 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
         newFlashcards.add({'front': frontText, 'back': backText});
       } catch (e) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Hiba a(z) ${i+1}. sor feldolgozásakor: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Hiba a(z) ${i + 1}. sor feldolgozásakor: $e')));
         return;
       }
     }
@@ -210,11 +225,19 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Importálás megerősítése'),
-        content: Text('A fájlban ${newFlashcards.length} kártya található. A jelenlegi pakliban ${_flashcards.length} kártya van. Mit szeretnél tenni?'),
+        content: Text(
+            'A fájlban ${newFlashcards.length} kártya található. A jelenlegi pakliban ${_flashcards.length} kártya van. Mit szeretnél tenni?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop('cancel'), child: const Text('Mégse')),
-          TextButton(onPressed: () => Navigator.of(context).pop('append'), child: const Text('Hozzáfűzés')),
-          TextButton(onPressed: () => Navigator.of(context).pop('replace'), style: TextButton.styleFrom(foregroundColor: Colors.orange), child: const Text('Felülírás')),
+          TextButton(
+              onPressed: () => Navigator.of(context).pop('cancel'),
+              child: const Text('Mégse')),
+          TextButton(
+              onPressed: () => Navigator.of(context).pop('append'),
+              child: const Text('Hozzáfűzés')),
+          TextButton(
+              onPressed: () => Navigator.of(context).pop('replace'),
+              style: TextButton.styleFrom(foregroundColor: Colors.orange),
+              child: const Text('Felülírás')),
         ],
       ),
     );
@@ -223,16 +246,22 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
           .map((c) => ((c['front'] ?? '') as String).trim().toLowerCase())
           .toSet();
       final uniqueToAdd = newFlashcards
-          .where((c) => !existing.contains(((c['front'] ?? '') as String).trim().toLowerCase()))
+          .where((c) => !existing
+              .contains(((c['front'] ?? '') as String).trim().toLowerCase()))
           .toList();
       final skipped = newFlashcards.length - uniqueToAdd.length;
       setState(() => _flashcards.addAll(uniqueToAdd));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Import sikeres: ${uniqueToAdd.length} új kártya hozzáadva${skipped > 0 ? ', $skipped duplikált kihagyva' : ''}. Ne felejts el menteni.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                'Import sikeres: ${uniqueToAdd.length} új kártya hozzáadva${skipped > 0 ? ', $skipped duplikált kihagyva' : ''}. Ne felejts el menteni.')));
       }
     } else if (action == 'replace') {
       setState(() => _flashcards = newFlashcards);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sikeres importálás: kártyák felülírva. Ne felejts el menteni.')));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Sikeres importálás: kártyák felülírva. Ne felejts el menteni.')));
     }
   }
 
@@ -246,7 +275,8 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
   }
 
   Future<void> _loadSciences() async {
-    final snapshot = await FirebaseFirestore.instance.collection('sciences').get();
+    final snapshot =
+        await FirebaseFirestore.instance.collection('sciences').get();
     if (mounted) {
       setState(() {
         _sciences = snapshot.docs.map((doc) => doc['name'] as String).toList();
@@ -263,14 +293,16 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
       }
       return;
     }
-    
+
     final snapshot = await FirebaseFirestore.instance
         .collection('categories')
         .where('science', isEqualTo: _selectedScience)
         .get();
     if (mounted) {
       setState(() {
-        _categories = {for (var doc in snapshot.docs) doc.id: doc['name'] as String};
+        _categories = {
+          for (var doc in snapshot.docs) doc.id: doc['name'] as String
+        };
       });
     }
   }
@@ -289,7 +321,9 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Bezárás')),
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Bezárás')),
         ],
       ),
     );
@@ -298,7 +332,9 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Scaffold(appBar: AppBar(title: const Text('Betöltés...')), body: const Center(child: CircularProgressIndicator()));
+      return Scaffold(
+          appBar: AppBar(title: const Text('Betöltés...')),
+          body: const Center(child: CircularProgressIndicator()));
     }
     return Scaffold(
       appBar: AppBar(
@@ -308,9 +344,18 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
           onPressed: () => context.go('/decks'),
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.file_download), onPressed: _exportToExcel, tooltip: 'Exportálás Excelbe'),
-          IconButton(icon: const Icon(Icons.file_upload), onPressed: _importFromExcel, tooltip: 'Importálás Excelből'),
-          IconButton(icon: const Icon(Icons.save), onPressed: _saveDeck, tooltip: 'Mentés'),
+          IconButton(
+              icon: const Icon(Icons.file_download),
+              onPressed: _exportToExcel,
+              tooltip: 'Exportálás Excelbe'),
+          IconButton(
+              icon: const Icon(Icons.file_upload),
+              onPressed: _importFromExcel,
+              tooltip: 'Importálás Excelből'),
+          IconButton(
+              icon: const Icon(Icons.save),
+              onPressed: _saveDeck,
+              tooltip: 'Mentés'),
           const SizedBox(width: 12),
         ],
       ),
@@ -328,14 +373,18 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
                       Expanded(
                         child: TextField(
                           controller: _titleController,
-                          decoration: const InputDecoration(labelText: 'Pakli címe'),
+                          decoration:
+                              const InputDecoration(labelText: 'Pakli címe'),
                         ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
                         child: DropdownButtonFormField<String>(
                           value: _selectedScience,
-                          items: _sciences.map((String science) => DropdownMenuItem<String>(value: science, child: Text(science))).toList(),
+                          items: _sciences
+                              .map((String science) => DropdownMenuItem<String>(
+                                  value: science, child: Text(science)))
+                              .toList(),
                           onChanged: (newValue) {
                             setState(() {
                               _selectedScience = newValue;
@@ -343,7 +392,8 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
                             });
                             _loadCategories();
                           },
-                          decoration: const InputDecoration(labelText: 'Tudomány'),
+                          decoration:
+                              const InputDecoration(labelText: 'Tudomány'),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -356,12 +406,16 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
                               child: Text(entry.value),
                             );
                           }).toList(),
-                          onChanged: _selectedScience == null ? null : (val) {
-                            setState(() => _selectedCategory = val);
-                          },
+                          onChanged: _selectedScience == null
+                              ? null
+                              : (val) {
+                                  setState(() => _selectedCategory = val);
+                                },
                           decoration: InputDecoration(
                             labelText: 'Kategória',
-                            fillColor: _selectedScience == null ? Colors.grey[100] : Colors.white,
+                            fillColor: _selectedScience == null
+                                ? Colors.grey[100]
+                                : Colors.white,
                             filled: true,
                           ),
                         ),
@@ -371,7 +425,9 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
                   const SizedBox(height: 24),
                   _buildTagsSection(),
                   const SizedBox(height: 24),
-                  const Text('Tanulókártyák', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text('Tanulókártyák',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const Divider(height: 24),
                   Expanded(
                     child: ReorderableListView.builder(
@@ -384,7 +440,8 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
                         });
                       },
                       itemBuilder: (context, index) {
-                        return _buildFlashcardEditor(_flashcards[index], index, key: ValueKey(index));
+                        return _buildFlashcardEditor(_flashcards[index], index,
+                            key: ValueKey(index));
                       },
                     ),
                   ),
@@ -402,12 +459,17 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
     );
   }
 
-  Widget _buildFlashcardEditor(Map<String, dynamic> card, int index, {Key? key}) {
-    final frontController = TextEditingController(text: card['front'] as String? ?? '');
-    frontController.addListener(() => _flashcards[index]['front'] = frontController.text);
+  Widget _buildFlashcardEditor(Map<String, dynamic> card, int index,
+      {Key? key}) {
+    final frontController =
+        TextEditingController(text: card['front'] as String? ?? '');
+    frontController
+        .addListener(() => _flashcards[index]['front'] = frontController.text);
 
-    final backController = TextEditingController(text: card['back'] as String? ?? '');
-    backController.addListener(() => _flashcards[index]['back'] = backController.text);
+    final backController =
+        TextEditingController(text: card['back'] as String? ?? '');
+    backController
+        .addListener(() => _flashcards[index]['back'] = backController.text);
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
@@ -419,7 +481,8 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Kártya ${index + 1}', style: Theme.of(context).textTheme.titleMedium),
+                Text('Kártya ${index + 1}',
+                    style: Theme.of(context).textTheme.titleMedium),
                 IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red),
                   onPressed: () {
