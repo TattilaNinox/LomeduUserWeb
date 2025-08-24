@@ -17,6 +17,7 @@ class NoteTable extends StatefulWidget {
   final String? selectedScience;
   final String? selectedTag;
   final String? selectedType;
+  final VoidCallback? onEmptyResults;
 
   const NoteTable({
     super.key,
@@ -26,6 +27,7 @@ class NoteTable extends StatefulWidget {
     required this.selectedScience,
     required this.selectedTag,
     required this.selectedType,
+    this.onEmptyResults,
   });
 
   @override
@@ -126,6 +128,12 @@ class _NoteTableState extends State<NoteTable> {
               .where((d) => !(d.data()['deletedAt'] != null))
               .toList();
           if (notes.isEmpty) {
+            // Ha van onEmptyResults callback, hívjuk meg
+            if (widget.onEmptyResults != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                widget.onEmptyResults!();
+              });
+            }
             return const Center(child: Text('Nincsenek találatok.'));
           }
           final filteredNotes = notes.where((doc) {
@@ -137,6 +145,12 @@ class _NoteTableState extends State<NoteTable> {
           }).toList();
 
           if (filteredNotes.isEmpty) {
+            // Ha van onEmptyResults callback, hívjuk meg
+            if (widget.onEmptyResults != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                widget.onEmptyResults!();
+              });
+            }
             return const Center(child: Text('Nincsenek találatok.'));
           }
 

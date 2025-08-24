@@ -45,6 +45,9 @@ class _NoteListScreenState extends State<NoteListScreen> {
   String? _selectedTag;
   String? _selectedType;
 
+  // TextEditingController a keresőmező vezérléséhez
+  final _searchController = TextEditingController();
+
   // Listák a Firestore-ból betöltött kategóriák, tudományok és címkék tárolására.
   List<String> _categories = [];
   List<String> _sciences = [];
@@ -59,6 +62,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
     super.initState();
     // Bootstrap filters from initial query params
     _searchText = widget.initialSearch ?? '';
+    _searchController.text = _searchText; // Inicializáljuk a controller-t
     _selectedStatus = widget.initialStatus;
     _selectedCategory = widget.initialCategory;
     _selectedScience = widget.initialScience;
@@ -69,9 +73,16 @@ class _NoteListScreenState extends State<NoteListScreen> {
     _loadTags();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   /// Betölti a kategóriákat a Firestore `categories` kollekciójából.
   Future<void> _loadCategories() async {
-    final snapshot = await FirebaseFirestore.instance.collection('categories').get();
+    final snapshot =
+        await FirebaseFirestore.instance.collection('categories').get();
     // A `setState` frissíti a widget állapotát a betöltött adatokkal,
     // ami újraépíti a UI-t, és a `Filters` widget megkapja a kategóriákat.
     setState(() {
@@ -81,15 +92,18 @@ class _NoteListScreenState extends State<NoteListScreen> {
 
   /// Betölti a címkéket a Firestore `tags` kollekciójából.
   Future<void> _loadSciences() async {
-    final snapshot = await FirebaseFirestore.instance.collection('sciences').get();
+    final snapshot =
+        await FirebaseFirestore.instance.collection('sciences').get();
     setState(() {
       _sciences = snapshot.docs.map((doc) => doc['name'] as String).toList();
     });
   }
 
   Future<void> _loadTags() async {
-    final notesSnapshot = await FirebaseFirestore.instance.collection('notes').get();
-    final allTags = <String>{}; // Set-et használunk a duplikátumok automatikus kezelésére
+    final notesSnapshot =
+        await FirebaseFirestore.instance.collection('notes').get();
+    final allTags =
+        <String>{}; // Set-et használunk a duplikátumok automatikus kezelésére
 
     for (final doc in notesSnapshot.docs) {
       final data = doc.data();
@@ -98,10 +112,11 @@ class _NoteListScreenState extends State<NoteListScreen> {
         allTags.addAll(tags);
       }
     }
-    
+
     if (mounted) {
       setState(() {
-        _tags = allTags.toList()..sort(); // Opcionális: ABC sorrendbe rendezzük a listát
+        _tags = allTags.toList()
+          ..sort(); // Opcionális: ABC sorrendbe rendezzük a listát
       });
     }
   }
@@ -115,6 +130,10 @@ class _NoteListScreenState extends State<NoteListScreen> {
     setState(() {
       _searchText = value;
     });
+    // Ha a controller értéke eltér, frissítjük
+    if (_searchController.text != value) {
+      _searchController.text = value;
+    }
     _pushFiltersToUrl();
   }
 
@@ -154,7 +173,6 @@ class _NoteListScreenState extends State<NoteListScreen> {
     _pushFiltersToUrl();
   }
 
-
   /// Törli az összes aktív szűrőt.
   void _onClearFilters() {
     setState(() {
@@ -172,13 +190,15 @@ class _NoteListScreenState extends State<NoteListScreen> {
     void put(String key, String? val) {
       if (val != null && val.isNotEmpty) params[key] = val;
     }
+
     put('q', _searchText);
     put('status', _selectedStatus);
     put('category', _selectedCategory);
     put('science', _selectedScience);
     put('tag', _selectedTag);
     put('type', _selectedType);
-    final uri = Uri(path: '/notes', queryParameters: params.isEmpty ? null : params);
+    final uri =
+        Uri(path: '/notes', queryParameters: params.isEmpty ? null : params);
     // go_router: go() replaces current route without adding history entry
     GoRouter.of(context).go(uri.toString());
   }
@@ -237,7 +257,37 @@ class _NoteListScreenState extends State<NoteListScreen> {
                   selectedScience: _selectedScience,
                   selectedTag: _selectedTag,
                   selectedType: _selectedType,
-                                  ),
+                  onEmptyResults: () {
+                    // Ha nincs találat és van aktív szűrő, töröljük azokat
+                    if (_selectedStatus != null ||
+                        _selectedCategory != null ||
+                        _selectedScience != null ||
+                        _selectedTag != null ||
+                        _selectedType != null ||
+                        _searchText.isNotEmpty) {
+                      // Üzenet megjelenítése
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                              'Nincs találat a megadott szűrési feltételekkel. A szűrők törlésre kerültek.'),
+                          duration: Duration(seconds: 3),
+                        ),
+                      );
+
+                      // Szűrők törlése
+                      setState(() {
+                        _searchText = '';
+                        _searchController.clear(); // Keresőmező törlése
+                        _selectedStatus = null;
+                        _selectedCategory = null;
+                        _selectedScience = null;
+                        _selectedTag = null;
+                        _selectedType = null;
+                      });
+                      _pushFiltersToUrl();
+                    }
+                  },
+                ),
               ],
             ),
           ),
