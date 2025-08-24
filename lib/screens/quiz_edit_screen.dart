@@ -32,9 +32,9 @@ class _QuizEditScreenState extends State<QuizEditScreen> {
 
   Future<void> _loadInitialData() async {
     await _loadSciences();
-    await _loadCategories();
     await _loadQuestionBanks();
     await _loadQuizData();
+    await _loadCategories(); // Most töltjük be a kategóriákat, miután a kvíz adataiból tudományt beállítottuk
     if (mounted) setState(() => _isLoading = false);
   }
 

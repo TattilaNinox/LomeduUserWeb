@@ -32,14 +32,15 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
 
   Future<void> _loadInitialData() async {
     await _loadSciences();
-    await _loadCategories();
     await _loadQuestionBanks();
     await _loadQuizData();
+    await _loadCategories(); // Módosított sorrend: kategóriákat a kvíz betöltése után töltjük be
     if (mounted) setState(() => _isLoading = false);
   }
 
   Future<void> _loadSciences() async {
-    final snapshot = await FirebaseFirestore.instance.collection('sciences').get();
+    final snapshot =
+        await FirebaseFirestore.instance.collection('sciences').get();
     if (mounted) {
       setState(() {
         _sciences = snapshot.docs.map((doc) => doc['name'] as String).toList();
@@ -56,24 +57,27 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
       }
       return;
     }
-    
+
     final snapshot = await FirebaseFirestore.instance
         .collection('categories')
         .where('science', isEqualTo: _selectedScience)
         .get();
     if (mounted) {
       setState(() {
-        _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+        _categories =
+            snapshot.docs.map((doc) => doc['name'] as String).toList();
       });
     }
   }
 
   Future<void> _loadQuestionBanks() async {
-    final snapshot = await FirebaseFirestore.instance.collection('question_banks').get();
+    final snapshot =
+        await FirebaseFirestore.instance.collection('question_banks').get();
     final compatibleBanks = <DocumentSnapshot>[];
     for (final doc in snapshot.docs) {
       final data = doc.data();
-      final questions = List<Map<String, dynamic>>.from(data['questions'] ?? []);
+      final questions =
+          List<Map<String, dynamic>>.from(data['questions'] ?? []);
       if (questions.isEmpty) continue;
       final allValid = questions.every((q) {
         final options = (q['options'] as List).cast<Map<String, dynamic>>();
@@ -86,7 +90,10 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
   }
 
   Future<void> _loadQuizData() async {
-    final doc = await FirebaseFirestore.instance.collection('notes').doc(widget.noteId).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('notes')
+        .doc(widget.noteId)
+        .get();
     if (doc.exists) {
       final data = doc.data()!;
       _titleController.text = data['title'];
@@ -98,20 +105,30 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
   }
 
   Future<void> _updateQuiz() async {
-    if (_titleController.text.isEmpty || _selectedScience == null || _selectedCategory == null || _selectedQuestionBankId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A cím, tudomány, kategória és kérdésbank kitöltése kötelező!')));
+    if (_titleController.text.isEmpty ||
+        _selectedScience == null ||
+        _selectedCategory == null ||
+        _selectedQuestionBankId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'A cím, tudomány, kategória és kérdésbank kitöltése kötelező!')));
       return;
     }
 
     // Validáció: a kiválasztott kérdésbank minden kérdésének pontosan 2 helyes válasza legyen.
-    final bankDoc = await FirebaseFirestore.instance.collection('question_banks').doc(_selectedQuestionBankId).get();
+    final bankDoc = await FirebaseFirestore.instance
+        .collection('question_banks')
+        .doc(_selectedQuestionBankId)
+        .get();
     if (!mounted) return;
     if (!bankDoc.exists) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hiba: A kérdésbank nem található.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Hiba: A kérdésbank nem található.')));
       return;
     }
     final bankData = bankDoc.data()!;
-    final questions = List<Map<String, dynamic>>.from(bankData['questions'] ?? []);
+    final questions =
+        List<Map<String, dynamic>>.from(bankData['questions'] ?? []);
     final invalidQuestions = questions.where((q) {
       final options = (q['options'] as List).cast<Map<String, dynamic>>();
       final correctCount = options.where((o) => o['isCorrect'] == true).length;
@@ -120,22 +137,24 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
 
     if (!mounted) return;
     if (invalidQuestions.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A kiválasztott kérdésbank minden kérdésének pontosan 2 helyes válasszal kell rendelkeznie.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'A kiválasztott kérdésbank minden kérdésének pontosan 2 helyes válasszal kell rendelkeznie.')));
       return;
     }
 
     setState(() => _isSaving = true);
-    
+
     // Címkék mentése a közös gyűjteménybe
     for (final tag in _tags) {
-      FirebaseFirestore.instance
-          .collection('tags')
-          .doc(tag)
-          .set({'name': tag});
+      FirebaseFirestore.instance.collection('tags').doc(tag).set({'name': tag});
     }
-    
+
     try {
-      await FirebaseFirestore.instance.collection('notes').doc(widget.noteId).update({
+      await FirebaseFirestore.instance
+          .collection('notes')
+          .doc(widget.noteId)
+          .update({
         'title': _titleController.text,
         'science': _selectedScience,
         'category': _selectedCategory,
@@ -145,7 +164,9 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
       });
       if (mounted) context.go('/notes');
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Hiba: $e')));
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Hiba: $e')));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -162,15 +183,18 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Címkék', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text('Címkék',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
           runSpacing: 4,
-          children: _tags.map((tag) => Chip(
-            label: Text(tag),
-            onDeleted: () => setState(() => _tags.remove(tag)),
-          )).toList(),
+          children: _tags
+              .map((tag) => Chip(
+                    label: Text(tag),
+                    onDeleted: () => setState(() => _tags.remove(tag)),
+                  ))
+              .toList(),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -180,7 +204,8 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
             suffixIcon: IconButton(
               icon: const Icon(Icons.add),
               onPressed: () {
-                if (_tagController.text.isNotEmpty && !_tags.contains(_tagController.text)) {
+                if (_tagController.text.isNotEmpty &&
+                    !_tags.contains(_tagController.text)) {
                   setState(() {
                     _tags.add(_tagController.text);
                     _tagController.clear();
@@ -210,7 +235,9 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
 
     final filteredBanks = _selectedCategory == null
         ? _questionBanks
-        : _questionBanks.where((bank) => bank['category'] == _selectedCategory).toList();
+        : _questionBanks
+            .where((bank) => bank['category'] == _selectedCategory)
+            .toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -227,7 +254,9 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
           const SizedBox(width: 12),
           ElevatedButton.icon(
             onPressed: _isSaving ? null : _updateQuiz,
-            icon: _isSaving ? const CircularProgressIndicator() : const Icon(Icons.save),
+            icon: _isSaving
+                ? const CircularProgressIndicator()
+                : const Icon(Icons.save),
             label: const Text('Mentés'),
           )
         ],
@@ -240,11 +269,17 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 children: [
-                  TextField(controller: _titleController, decoration: const InputDecoration(labelText: 'Kvíz címe')),
+                  TextField(
+                      controller: _titleController,
+                      decoration:
+                          const InputDecoration(labelText: 'Kvíz címe')),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     value: _selectedScience,
-                    items: _sciences.map((String science) => DropdownMenuItem<String>(value: science, child: Text(science))).toList(),
+                    items: _sciences
+                        .map((String science) => DropdownMenuItem<String>(
+                            value: science, child: Text(science)))
+                        .toList(),
                     onChanged: (newValue) {
                       setState(() {
                         _selectedScience = newValue;
@@ -258,14 +293,20 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     value: _selectedCategory,
-                    items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                    onChanged: _selectedScience == null ? null : (val) => setState(() {
-                      _selectedCategory = val;
-                      _selectedQuestionBankId = null;
-                    }),
+                    items: _categories
+                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                        .toList(),
+                    onChanged: _selectedScience == null
+                        ? null
+                        : (val) => setState(() {
+                              _selectedCategory = val;
+                              _selectedQuestionBankId = null;
+                            }),
                     decoration: InputDecoration(
                       labelText: 'Kategória',
-                      fillColor: _selectedScience == null ? Colors.grey[100] : Colors.white,
+                      fillColor: _selectedScience == null
+                          ? Colors.grey[100]
+                          : Colors.white,
                       filled: true,
                     ),
                   ),
@@ -273,9 +314,14 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
                   if (_selectedCategory != null)
                     DropdownButtonFormField<String>(
                       value: _selectedQuestionBankId,
-                      items: filteredBanks.map((doc) => DropdownMenuItem(value: doc.id, child: Text(doc['name']))).toList(),
-                      onChanged: (val) => setState(() => _selectedQuestionBankId = val),
-                      decoration: const InputDecoration(labelText: 'Válassz Kérdésbankot'),
+                      items: filteredBanks
+                          .map((doc) => DropdownMenuItem(
+                              value: doc.id, child: Text(doc['name'])))
+                          .toList(),
+                      onChanged: (val) =>
+                          setState(() => _selectedQuestionBankId = val),
+                      decoration: const InputDecoration(
+                          labelText: 'Válassz Kérdésbankot'),
                     ),
                   const SizedBox(height: 16),
                   _buildTagsSection(),
@@ -287,4 +333,4 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
       ),
     );
   }
-}  
+}
