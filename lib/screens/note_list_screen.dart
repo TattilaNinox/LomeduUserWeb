@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 
+import '../utils/filter_storage.dart';
 import '../widgets/sidebar.dart';
 import '../widgets/header.dart';
 import '../widgets/filters.dart';
@@ -57,20 +58,45 @@ class _NoteListScreenState extends State<NoteListScreen> {
   ///
   /// Akkor hívódik meg, amikor a widget először bekerül a widget-fába.
   /// Itt indítjuk el a kategóriák és címkék betöltését a Firestore-ból.
+  /// Betölti a mentett szűrőket vagy az URL-ből származó kezdeti szűrőket.
   @override
   void initState() {
     super.initState();
-    // Bootstrap filters from initial query params
-    _searchText = widget.initialSearch ?? '';
-    _searchController.text = _searchText; // Inicializáljuk a controller-t
-    _selectedStatus = widget.initialStatus;
-    _selectedCategory = widget.initialCategory;
-    _selectedScience = widget.initialScience;
-    _selectedTag = widget.initialTag;
-    _selectedType = widget.initialType;
+    // Mentett vagy URL paraméterekből származó szűrők betöltése
+    _loadSavedFilters();
     _loadCategories();
     _loadSciences();
     _loadTags();
+  }
+
+  /// Betölti a mentett szűrőket vagy az URL paraméterekből származó kezdeti szűrőket.
+  void _loadSavedFilters() {
+    // Először megnézzük, hogy vannak-e mentett szűrők a FilterStorage-ban
+    if (FilterStorage.searchText != null || FilterStorage.status != null ||
+        FilterStorage.category != null || FilterStorage.science != null ||
+        FilterStorage.tag != null || FilterStorage.type != null) {
+      // Ha vannak mentett szűrők, akkor azokat használjuk
+      setState(() {
+        _searchText = FilterStorage.searchText ?? '';
+        _searchController.text = _searchText;
+        _selectedStatus = FilterStorage.status;
+        _selectedCategory = FilterStorage.category;
+        _selectedScience = FilterStorage.science;
+        _selectedTag = FilterStorage.tag;
+        _selectedType = FilterStorage.type;
+      });
+    } else {
+      // Ha nincsenek mentett szűrők, akkor az URL paramétereket használjuk
+      setState(() {
+        _searchText = widget.initialSearch ?? '';
+        _searchController.text = _searchText;
+        _selectedStatus = widget.initialStatus;
+        _selectedCategory = widget.initialCategory;
+        _selectedScience = widget.initialScience;
+        _selectedTag = widget.initialTag;
+        _selectedType = widget.initialType;
+      });
+    }
   }
 
   @override
@@ -134,6 +160,8 @@ class _NoteListScreenState extends State<NoteListScreen> {
     if (_searchController.text != value) {
       _searchController.text = value;
     }
+    // Menti a keresési feltételt a FilterStorage-ba
+    FilterStorage.searchText = value.isNotEmpty ? value : null;
     _pushFiltersToUrl();
   }
 
@@ -142,6 +170,8 @@ class _NoteListScreenState extends State<NoteListScreen> {
     setState(() {
       _selectedStatus = value;
     });
+    // Menti a státusz szűrőt a FilterStorage-ba
+    FilterStorage.status = value;
     _pushFiltersToUrl();
   }
 
@@ -150,6 +180,8 @@ class _NoteListScreenState extends State<NoteListScreen> {
     setState(() {
       _selectedCategory = value;
     });
+    // Menti a kategória szűrőt a FilterStorage-ba
+    FilterStorage.category = value;
     _pushFiltersToUrl();
   }
 
@@ -158,30 +190,40 @@ class _NoteListScreenState extends State<NoteListScreen> {
     setState(() {
       _selectedScience = value;
     });
+    // Menti a tudomány szűrőt a FilterStorage-ba
+    FilterStorage.science = value;
     _pushFiltersToUrl();
   }
 
   /// Frissíti a kiválasztott címkét a `Filters` widgetből.
   void _onTagChanged(String? value) {
     setState(() => _selectedTag = value);
+    // Menti a címke szűrőt a FilterStorage-ba
+    FilterStorage.tag = value;
     _pushFiltersToUrl();
   }
 
   /// Frissíti a kiválasztott típust.
   void _onTypeChanged(String? value) {
     setState(() => _selectedType = value);
+    // Menti a típus szűrőt a FilterStorage-ba
+    FilterStorage.type = value;
     _pushFiltersToUrl();
   }
 
   /// Törli az összes aktív szűrőt.
   void _onClearFilters() {
     setState(() {
+      _searchText = '';
+      _searchController.clear();
       _selectedStatus = null;
       _selectedCategory = null;
       _selectedScience = null;
       _selectedTag = null;
       _selectedType = null;
     });
+    // Törli a szűrőket a FilterStorage-ból is
+    FilterStorage.clearFilters();
     _pushFiltersToUrl();
   }
 
@@ -258,7 +300,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
                   selectedTag: _selectedTag,
                   selectedType: _selectedType,
                   onEmptyResults: () {
-                    // Ha nincs találat és van aktív szűrő, töröljük azokat
+                    // Ha nincs találat és van aktív szűrő, csak jelezzük, de ne töröljük automatikusan
                     if (_selectedStatus != null ||
                         _selectedCategory != null ||
                         _selectedScience != null ||
@@ -269,22 +311,12 @@ class _NoteListScreenState extends State<NoteListScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text(
-                              'Nincs találat a megadott szűrési feltételekkel. A szűrők törlésre kerültek.'),
+                              'Nincs találat a megadott szűrési feltételekkel.'),
                           duration: Duration(seconds: 3),
                         ),
                       );
-
-                      // Szűrők törlése
-                      setState(() {
-                        _searchText = '';
-                        _searchController.clear(); // Keresőmező törlése
-                        _selectedStatus = null;
-                        _selectedCategory = null;
-                        _selectedScience = null;
-                        _selectedTag = null;
-                        _selectedType = null;
-                      });
-                      _pushFiltersToUrl();
+                      // NEM töröljük a szűrőket automatikusan, csak hagyjuk őket ahogy vannak
+                      // A felhasználó manuálisan törölheti a szűrőket a "szűrők törlése" gombbal
                     }
                   },
                 ),
