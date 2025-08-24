@@ -24,6 +24,8 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
   Map<String, String> _categories = {};
   List<String> _sciences = [];
   String? _selectedScience;
+  List<String> _tags = [];
+  final _tagController = TextEditingController();
 
   @override
   void initState() {
@@ -34,7 +36,52 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
   @override
   void dispose() {
     _titleController.dispose();
+    _tagController.dispose();
     super.dispose();
+  }
+  
+  Widget _buildTagsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text('Címkék', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: _tags.map((tag) => Chip(
+            label: Text(tag),
+            onDeleted: () => setState(() => _tags.remove(tag)),
+          )).toList(),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _tagController,
+          decoration: InputDecoration(
+            labelText: 'Új címke',
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                if (_tagController.text.isNotEmpty && !_tags.contains(_tagController.text)) {
+                  setState(() {
+                    _tags.add(_tagController.text);
+                    _tagController.clear();
+                  });
+                }
+              },
+            ),
+          ),
+          onSubmitted: (val) {
+            if (val.isNotEmpty && !_tags.contains(val)) {
+              setState(() {
+                _tags.add(val);
+                _tagController.clear();
+              });
+            }
+          },
+        ),
+      ],
+    );
   }
 
   Future<void> _loadInitialData() async {
@@ -55,6 +102,7 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
       setState(() {
         _selectedScience = data['science'];
         _selectedCategory = data['category_id'];
+        _tags = List<String>.from(data['tags'] ?? []);
       });
     }
   }
@@ -70,6 +118,14 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
       return;
     }
 
+    // Címkék mentése a közös gyűjteménybe
+    for (final tag in _tags) {
+      FirebaseFirestore.instance
+          .collection('tags')
+          .doc(tag)
+          .set({'name': tag});
+    }
+    
     try {
       await FirebaseFirestore.instance.collection('notes').doc(widget.deckId).update({
         'title': _titleController.text.trim(),
@@ -77,6 +133,7 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
         'category_id': _selectedCategory,
         'category': _categories[_selectedCategory] ?? '',
         'flashcards': _flashcards,
+        'tags': _tags,
         'modified': Timestamp.now(),
       });
 
@@ -311,6 +368,8 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 24),
+                  _buildTagsSection(),
                   const SizedBox(height: 24),
                   const Text('Tanulókártyák', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const Divider(height: 24),
