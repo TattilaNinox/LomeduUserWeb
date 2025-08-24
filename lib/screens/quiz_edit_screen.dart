@@ -21,6 +21,8 @@ class _QuizEditScreenState extends State<QuizEditScreen> {
   List<String> _categories = [];
   List<String> _sciences = [];
   List<DocumentSnapshot> _questionBanks = [];
+  List<String> _tags = [];
+  final _tagController = TextEditingController();
 
   @override
   void initState() {
@@ -79,6 +81,7 @@ class _QuizEditScreenState extends State<QuizEditScreen> {
       _selectedScience = data['science'];
       _selectedCategory = data['category'];
       _selectedQuestionBankId = data['questionBankId'];
+      _tags = List<String>.from(data['tags'] ?? []);
     }
   }
 
@@ -88,12 +91,22 @@ class _QuizEditScreenState extends State<QuizEditScreen> {
       return;
     }
     setState(() => _isSaving = true);
+    
+    // Címkék mentése a közös gyűjteménybe
+    for (final tag in _tags) {
+      FirebaseFirestore.instance
+          .collection('tags')
+          .doc(tag)
+          .set({'name': tag});
+    }
+    
     try {
       await FirebaseFirestore.instance.collection('notes').doc(widget.noteId).update({
         'title': _titleController.text,
         'science': _selectedScience,
         'category': _selectedCategory,
         'questionBankId': _selectedQuestionBankId,
+        'tags': _tags,
         'modified': Timestamp.now(),
       });
       if (mounted) context.go('/notes');
@@ -102,6 +115,57 @@ class _QuizEditScreenState extends State<QuizEditScreen> {
     } finally {
       if(mounted) setState(() => _isSaving = false);
     }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _tagController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildTagsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text('Címkék', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: _tags.map((tag) => Chip(
+            label: Text(tag),
+            onDeleted: () => setState(() => _tags.remove(tag)),
+          )).toList(),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _tagController,
+          decoration: InputDecoration(
+            labelText: 'Új címke',
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                if (_tagController.text.isNotEmpty && !_tags.contains(_tagController.text)) {
+                  setState(() {
+                    _tags.add(_tagController.text);
+                    _tagController.clear();
+                  });
+                }
+              },
+            ),
+          ),
+          onSubmitted: (val) {
+            if (val.isNotEmpty && !_tags.contains(val)) {
+              setState(() {
+                _tags.add(val);
+                _tagController.clear();
+              });
+            }
+          },
+        ),
+      ],
+    );
   }
 
   @override
@@ -179,6 +243,8 @@ class _QuizEditScreenState extends State<QuizEditScreen> {
                       onChanged: (val) => setState(() => _selectedQuestionBankId = val),
                       decoration: const InputDecoration(labelText: 'Válassz Kérdésbankot'),
                     ),
+                  const SizedBox(height: 16),
+                  _buildTagsSection(),
                 ],
               ),
             ),
