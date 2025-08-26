@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:go_router/go_router.dart';
+import '../core/app_messenger.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:io' show File;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -10,7 +11,6 @@ import 'package:flutter/services.dart';
 import 'package:html/parser.dart' show parse;
 import 'package:web/web.dart' as web;
 import 'dart:ui_web' as ui_web;
-
 
 import '../widgets/sidebar.dart';
 
@@ -21,7 +21,8 @@ class NoteCreateScreen extends StatefulWidget {
   State<NoteCreateScreen> createState() => _NoteCreateScreenState();
 }
 
-class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerProviderStateMixin {
+class _NoteCreateScreenState extends State<NoteCreateScreen>
+    with SingleTickerProviderStateMixin {
   final _titleController = TextEditingController();
   final _htmlContentController = TextEditingController();
   String? _selectedCategory;
@@ -50,7 +51,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _previewViewId = 'note-create-preview-iframe-$hashCode';
-    
+
     _previewIframeElement
       ..style.width = '100%'
       ..style.height = '100%'
@@ -84,20 +85,22 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
       }
       return;
     }
-    
+
     final snapshot = await FirebaseFirestore.instance
         .collection('categories')
         .where('science', isEqualTo: _selectedScience)
         .get();
-    if(mounted) {
+    if (mounted) {
       setState(() {
-        _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+        _categories =
+            snapshot.docs.map((doc) => doc['name'] as String).toList();
       });
     }
   }
 
   Future<void> _loadSciences() async {
-    final snapshot = await FirebaseFirestore.instance.collection('sciences').get();
+    final snapshot =
+        await FirebaseFirestore.instance.collection('sciences').get();
     if (mounted) {
       setState(() {
         _sciences = snapshot.docs.map((doc) => doc['name'] as String).toList();
@@ -202,10 +205,19 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
     // Egyediség ellenőrzése csak akkor, ha nem forrás típus
     if (_selectedType != 'source') {
       final trimmedTitle = _titleController.text.trim();
-      final dupSnap = await FirebaseFirestore.instance.collection('notes').where('title', isEqualTo: trimmedTitle).limit(1).get();
+      final dupSnap = await FirebaseFirestore.instance
+          .collection('notes')
+          .where('title', isEqualTo: trimmedTitle)
+          .where('type', isEqualTo: _selectedType)
+          .where('category', isEqualTo: _selectedCategory)
+          .limit(1)
+          .get();
       if (dupSnap.docs.isNotEmpty) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Már létezik ilyen című jegyzet!')));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content:
+                Text('Már létezik ilyen című, típusú és kategóriájú jegyzet!'),
+          ));
         }
         return;
       }
@@ -269,9 +281,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
       await noteRef.set(noteData);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Jegyzet sikeresen létrehozva!')),
-        );
+        AppMessenger.showSuccess('Jegyzet sikeresen létrehozva!');
 
         setState(() {
           _titleController.clear();
@@ -323,7 +333,8 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(Icons.save),
               label: const Text('Mentés'),
@@ -335,7 +346,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
       body: Row(
         children: [
           const Sidebar(selectedMenu: 'note_create'),
-           Expanded(
+          Expanded(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Row(
@@ -351,7 +362,8 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
                           children: [
                             Expanded(
                               flex: 2,
-                              child: _buildTextField(_titleController, 'Jegyzet címe'),
+                              child: _buildTextField(
+                                  _titleController, 'Jegyzet címe'),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
@@ -402,7 +414,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
       ),
     );
   }
-  
+
   Widget _buildTextField(TextEditingController controller, String label) {
     return TextField(
       controller: controller,
@@ -422,7 +434,9 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
         DropdownMenuItem(value: 'text', child: Text('Szöveges')),
         DropdownMenuItem(value: 'interactive', child: Text('Interaktív')),
         DropdownMenuItem(value: 'dynamic_quiz', child: Text('Dinamikus Kvíz')),
-        DropdownMenuItem(value: 'dynamic_quiz_dual', child: Text('2-válaszos Dinamikus Kvíz')),
+        DropdownMenuItem(
+            value: 'dynamic_quiz_dual',
+            child: Text('2-válaszos Dinamikus Kvíz')),
         DropdownMenuItem(value: 'deck', child: Text('Pakli')),
         DropdownMenuItem(value: 'source', child: Text('Forrás')),
       ],
@@ -449,11 +463,13 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
           child: Text(category),
         );
       }).toList(),
-      onChanged: _selectedScience == null ? null : (newValue) {
-        setState(() {
-          _selectedCategory = newValue;
-        });
-      },
+      onChanged: _selectedScience == null
+          ? null
+          : (newValue) {
+              setState(() {
+                _selectedCategory = newValue;
+              });
+            },
       decoration: InputDecoration(
         labelText: 'Kategória',
         border: const OutlineInputBorder(),
@@ -461,7 +477,7 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
         fillColor: _selectedScience == null ? Colors.grey[100] : Colors.white,
       ),
     );
-    }
+  }
 
   Widget _buildScienceDropdown() {
     return DropdownButtonFormField<String>(
@@ -506,50 +522,59 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
                     Tab(text: 'Előnézet'),
                   ],
                   onTap: (index) {
-                    if (index == 1) { // Preview tab
+                    if (index == 1) {
+                      // Preview tab
                       final htmlContent = _htmlContentController.text;
                       if (htmlContent.isNotEmpty) {
                         if (parse(htmlContent).documentElement == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Figyelem: A HTML kód érvénytelennek tűnik.'), backgroundColor: Colors.orange),
-                            );
-                            _tabController.index = 0; 
-                            return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text(
+                                    'Figyelem: A HTML kód érvénytelennek tűnik.'),
+                                backgroundColor: Colors.orange),
+                          );
+                          _tabController.index = 0;
+                          return;
                         }
                         setState(() {
                           _previewIframeElement.srcdoc = htmlContent;
                           _showPreview = true;
                         });
                       } else {
-                        setState(() { _showPreview = false; });
+                        setState(() {
+                          _showPreview = false;
+                        });
                       }
                     } else {
-                      setState(() { _showPreview = false; });
+                      setState(() {
+                        _showPreview = false;
+                      });
                     }
                   },
                 ),
               ),
-               const SizedBox(width: 16),
+              const SizedBox(width: 16),
               ValueListenableBuilder<double>(
-                valueListenable: _editorFontSize,
-                builder: (context, fontSize, child) {
-                  return Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.remove),
-                        onPressed: () => { if (fontSize > 8.0) _editorFontSize.value-- },
-                        tooltip: 'Betűméret csökkentése',
-                      ),
-                      Text('${fontSize.toInt()}pt'),
-                      IconButton(
-                        icon: const Icon(Icons.add),
-                        onPressed: () => { if (fontSize < 24.0) _editorFontSize.value++ },
-                        tooltip: 'Betűméret növelése',
-                      ),
-                    ],
-                  );
-                }
-              ),
+                  valueListenable: _editorFontSize,
+                  builder: (context, fontSize, child) {
+                    return Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.remove),
+                          onPressed: () =>
+                              {if (fontSize > 8.0) _editorFontSize.value--},
+                          tooltip: 'Betűméret csökkentése',
+                        ),
+                        Text('${fontSize.toInt()}pt'),
+                        IconButton(
+                          icon: const Icon(Icons.add),
+                          onPressed: () =>
+                              {if (fontSize < 24.0) _editorFontSize.value++},
+                          tooltip: 'Betűméret növelése',
+                        ),
+                      ],
+                    );
+                  }),
             ],
           ),
           Expanded(
@@ -560,41 +585,45 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
                   padding: const EdgeInsets.only(top: 8.0),
                   child: SizedBox(
                     height: 300,
-                  child: ValueListenableBuilder<double>(
-                    valueListenable: _editorFontSize,
-                    builder: (context, fontSize, child) {
-                      return TextField(
-                        controller: _htmlContentController,
+                    child: ValueListenableBuilder<double>(
+                      valueListenable: _editorFontSize,
+                      builder: (context, fontSize, child) {
+                        return TextField(
+                          controller: _htmlContentController,
                           onChanged: (value) {
                             if (_tabController.index == 1) {
                               setState(() {
-                                _previewIframeElement.src = 'data:text/html;charset=utf-8,${Uri.encodeComponent(value)}';
+                                _previewIframeElement.src =
+                                    'data:text/html;charset=utf-8,${Uri.encodeComponent(value)}';
                               });
                             }
                           },
-                        style: TextStyle(fontSize: fontSize, fontFamily: 'monospace'),
+                          style: TextStyle(
+                              fontSize: fontSize, fontFamily: 'monospace'),
                           maxLines: 15,
-                        textAlignVertical: TextAlignVertical.top,
-                        decoration: const InputDecoration(
-                          hintText: 'Írd ide a HTML tartalmat...',
-                          border: OutlineInputBorder(),
-                          filled: true,
-                          fillColor: Colors.white,
-                        ),
-                      );
+                          textAlignVertical: TextAlignVertical.top,
+                          decoration: const InputDecoration(
+                            hintText: 'Írd ide a HTML tartalmat...',
+                            border: OutlineInputBorder(),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                        );
                       },
                     ),
                   ),
                 ),
                 _showPreview
-                  ? Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Container(
-                      decoration: BoxDecoration(border: Border.all(color: Colors.grey[300]!)),
-                      child: HtmlElementView(viewType: _previewViewId)
-                    ),
-                  )
-                  : const Center(child: Text('Az előnézethez írj be HTML tartalmat és válts fület.')),
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Container(
+                            decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey[300]!)),
+                            child: HtmlElementView(viewType: _previewViewId)),
+                      )
+                    : const Center(
+                        child: Text(
+                            'Az előnézethez írj be HTML tartalmat és válts fület.')),
               ],
             ),
           )
@@ -616,17 +645,20 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Címkék', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text('Címkék',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8.0,
           runSpacing: 4.0,
-          children: _tags.map((tag) => Chip(
-            label: Text(tag),
-            onDeleted: () {
-              setState(() => _tags.remove(tag));
-            },
-          )).toList(),
+          children: _tags
+              .map((tag) => Chip(
+                    label: Text(tag),
+                    onDeleted: () {
+                      setState(() => _tags.remove(tag));
+                    },
+                  ))
+              .toList(),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -636,7 +668,8 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
             suffixIcon: IconButton(
               icon: const Icon(Icons.add),
               onPressed: () {
-                if (_tagController.text.isNotEmpty && !_tags.contains(_tagController.text)) {
+                if (_tagController.text.isNotEmpty &&
+                    !_tags.contains(_tagController.text)) {
                   setState(() {
                     _tags.add(_tagController.text);
                     _tagController.clear();
@@ -662,7 +695,8 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Fájlok', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text('Fájlok',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 16),
         _buildFileUploadButton(
           label: 'MP3 Feltöltés',
@@ -684,14 +718,16 @@ class _NoteCreateScreenState extends State<NoteCreateScreen> with SingleTickerPr
           file: _selectedPdfFile,
           onPressed: _pickPdfFile,
         ),
-         if (_selectedVideoFile != null && _selectedVideoFile!['path'] != null && !kIsWeb)
-           Padding(
-             padding: const EdgeInsets.only(top: 8.0),
-             child: AspectRatio(
-               aspectRatio: _videoController!.value.aspectRatio,
-               child: VideoPlayer(_videoController!),
-             ),
-           )
+        if (_selectedVideoFile != null &&
+            _selectedVideoFile!['path'] != null &&
+            !kIsWeb)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: AspectRatio(
+              aspectRatio: _videoController!.value.aspectRatio,
+              child: VideoPlayer(_videoController!),
+            ),
+          )
       ],
     );
   }

@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -30,16 +31,32 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     });
 
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      // Create user in Firebase Authentication
+      final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
+      
+      // Create corresponding document in Firestore users collection
+      await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+        'email': _emailController.text.trim(),
+        'userType': 'normal',
+        'subscriptionStatus': 'free',
+        'isSubscriptionActive': false,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      
       if (mounted) {
         context.go('/notes');
       }
     } on FirebaseAuthException catch (e) {
       setState(() {
         _errorMessage = e.message;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Hiba történt a regisztráció során: $e';
       });
     } finally {
       setState(() {

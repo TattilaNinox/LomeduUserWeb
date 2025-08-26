@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../core/app_messenger.dart';
 import '../widgets/sidebar.dart';
 import '../widgets/quiz_viewer_dual.dart';
 
@@ -103,12 +104,15 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
     final dupSnap = await FirebaseFirestore.instance
         .collection('notes')
         .where('title', isEqualTo: trimmedTitle)
+        .where('type', isEqualTo: 'dynamic_quiz_dual')
+        .where('category', isEqualTo: _selectedCategory)
         .limit(1)
         .get();
     if (!mounted) return; // ensure widget still active
     if (dupSnap.docs.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Már létezik ilyen című jegyzet!')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:
+              Text('Már létezik ilyen című, típusú és kategóriájú jegyzet!')));
       return;
     }
 
@@ -141,10 +145,7 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
 
     setState(() => _isSaving = true);
     for (final tag in _tags) {
-      FirebaseFirestore.instance
-          .collection('tags')
-          .doc(tag)
-          .set({'name': tag});
+      FirebaseFirestore.instance.collection('tags').doc(tag).set({'name': tag});
     }
     try {
       await FirebaseFirestore.instance.collection('notes').add({
@@ -159,6 +160,7 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
         'tags': _tags,
       });
       if (mounted) {
+        AppMessenger.showSuccess('Jegyzet sikeresen létrehozva!');
         context.go('/notes');
       }
     } catch (e) {
@@ -182,12 +184,17 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Címkék', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text('Címkék',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
           runSpacing: 4,
-          children: _tags.map((tag) => Chip(label: Text(tag), onDeleted: () => setState(() => _tags.remove(tag)))).toList(),
+          children: _tags
+              .map((tag) => Chip(
+                  label: Text(tag),
+                  onDeleted: () => setState(() => _tags.remove(tag))))
+              .toList(),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -197,15 +204,22 @@ class _QuizDualCreateScreenState extends State<QuizDualCreateScreen> {
             suffixIcon: IconButton(
               icon: const Icon(Icons.add),
               onPressed: () {
-                if (_tagController.text.isNotEmpty && !_tags.contains(_tagController.text)) {
-                  setState(() { _tags.add(_tagController.text); _tagController.clear(); });
+                if (_tagController.text.isNotEmpty &&
+                    !_tags.contains(_tagController.text)) {
+                  setState(() {
+                    _tags.add(_tagController.text);
+                    _tagController.clear();
+                  });
                 }
               },
             ),
           ),
           onSubmitted: (val) {
             if (val.isNotEmpty && !_tags.contains(val)) {
-              setState(() { _tags.add(val); _tagController.clear(); });
+              setState(() {
+                _tags.add(val);
+                _tagController.clear();
+              });
             }
           },
         ),

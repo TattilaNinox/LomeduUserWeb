@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
+import '../core/app_messenger.dart';
 import '../widgets/sidebar.dart';
 
 class QuizEditScreen extends StatefulWidget {
@@ -120,7 +121,10 @@ class _QuizEditScreenState extends State<QuizEditScreen> {
         'tags': _tags,
         'modified': Timestamp.now(),
       });
-      if (mounted) context.go('/notes');
+      if (mounted) {
+        AppMessenger.showSuccess('Kvíz sikeresen frissítve!');
+        context.go('/notes');
+      }
     } catch (e) {
       if (mounted)
         ScaffoldMessenger.of(context)

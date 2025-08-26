@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
+import '../core/app_messenger.dart';
 import '../widgets/sidebar.dart';
 import '../widgets/quiz_viewer.dart';
 
@@ -91,22 +92,22 @@ class _QuizCreateScreenState extends State<QuizCreateScreen> {
     final dupSnap = await FirebaseFirestore.instance
         .collection('notes')
         .where('title', isEqualTo: trimmedTitle)
+        .where('type', isEqualTo: 'dynamic_quiz')
+        .where('category', isEqualTo: _selectedCategory)
         .limit(1)
         .get();
     if (dupSnap.docs.isNotEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Már létezik ilyen című jegyzet!')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Már létezik ilyen című, típusú és kategóriájú jegyzet!')));
       }
       return;
     }
     setState(() => _isSaving = true);
     // címkék rögzítése a közös tags kollekcióba
     for (final tag in _tags) {
-      FirebaseFirestore.instance
-          .collection('tags')
-          .doc(tag)
-          .set({'name': tag});
+      FirebaseFirestore.instance.collection('tags').doc(tag).set({'name': tag});
     }
     try {
       await FirebaseFirestore.instance.collection('notes').add({
@@ -121,6 +122,7 @@ class _QuizCreateScreenState extends State<QuizCreateScreen> {
         'modified': Timestamp.now(),
       });
       if (mounted) {
+        AppMessenger.showSuccess('Jegyzet sikeresen létrehozva!');
         context.go('/notes');
       }
     } catch (e) {

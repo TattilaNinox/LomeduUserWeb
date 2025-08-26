@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:go_router/go_router.dart';
+import '../core/app_messenger.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:io' show File;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -22,7 +23,8 @@ class InteractiveNoteCreateScreen extends StatefulWidget {
 }
 
 class _InteractiveNoteCreateScreenState
-    extends State<InteractiveNoteCreateScreen> with SingleTickerProviderStateMixin {
+    extends State<InteractiveNoteCreateScreen>
+    with SingleTickerProviderStateMixin {
   final _titleController = TextEditingController();
   final _htmlContentController = TextEditingController();
   String? _selectedCategory;
@@ -55,7 +57,7 @@ class _InteractiveNoteCreateScreenState
     // ignore: undefined_prefixed_name
     ui_web.platformViewRegistry.registerViewFactory(
         _previewViewId, (int viewId) => _previewIframeElement);
-        
+
     _loadCategories();
     _loadSciences();
   }
@@ -80,20 +82,22 @@ class _InteractiveNoteCreateScreenState
       }
       return;
     }
-    
+
     final snapshot = await FirebaseFirestore.instance
         .collection('categories')
         .where('science', isEqualTo: _selectedScience)
         .get();
     if (mounted) {
       setState(() {
-        _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
+        _categories =
+            snapshot.docs.map((doc) => doc['name'] as String).toList();
       });
     }
   }
 
   Future<void> _loadSciences() async {
-    final snapshot = await FirebaseFirestore.instance.collection('sciences').get();
+    final snapshot =
+        await FirebaseFirestore.instance.collection('sciences').get();
     if (mounted) {
       setState(() {
         _sciences = snapshot.docs.map((doc) => doc['name'] as String).toList();
@@ -182,10 +186,19 @@ class _InteractiveNoteCreateScreenState
     }
 
     final trimmedTitle = _titleController.text.trim();
-    final dupSnap = await FirebaseFirestore.instance.collection('notes').where('title', isEqualTo: trimmedTitle).limit(1).get();
+    final dupSnap = await FirebaseFirestore.instance
+        .collection('notes')
+        .where('title', isEqualTo: trimmedTitle)
+        .where('type', isEqualTo: 'interactive')
+        .where('category', isEqualTo: _selectedCategory)
+        .limit(1)
+        .get();
     if (dupSnap.docs.isNotEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Már létezik ilyen című jegyzet!')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:
+              Text('Már létezik ilyen című, típusú és kategóriájú jegyzet!'),
+        ));
       }
       return;
     }
@@ -239,10 +252,7 @@ class _InteractiveNoteCreateScreenState
       await noteRef.set(noteData);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Interaktív jegyzet sikeresen létrehozva!')),
-        );
+        AppMessenger.showSuccess('Interaktív jegyzet sikeresen létrehozva!');
 
         setState(() {
           _titleController.clear();
@@ -292,7 +302,8 @@ class _InteractiveNoteCreateScreenState
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(Icons.save),
               label: const Text('Mentés'),
@@ -304,7 +315,7 @@ class _InteractiveNoteCreateScreenState
       body: Row(
         children: [
           const Sidebar(selectedMenu: 'interactive_note_create'),
-           Expanded(
+          Expanded(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Row(
@@ -321,7 +332,8 @@ class _InteractiveNoteCreateScreenState
                           children: [
                             Expanded(
                               flex: 2,
-                              child: _buildTextField(_titleController, 'Jegyzet címe'),
+                              child: _buildTextField(
+                                  _titleController, 'Jegyzet címe'),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
@@ -369,7 +381,7 @@ class _InteractiveNoteCreateScreenState
       ),
     );
   }
-  
+
   Widget _buildTextField(TextEditingController controller, String label) {
     return TextField(
       controller: controller,
@@ -391,11 +403,13 @@ class _InteractiveNoteCreateScreenState
           child: Text(category),
         );
       }).toList(),
-      onChanged: _selectedScience == null ? null : (newValue) {
-        setState(() {
-          _selectedCategory = newValue;
-        });
-      },
+      onChanged: _selectedScience == null
+          ? null
+          : (newValue) {
+              setState(() {
+                _selectedCategory = newValue;
+              });
+            },
       decoration: InputDecoration(
         labelText: 'Kategória',
         border: const OutlineInputBorder(),
@@ -448,19 +462,24 @@ class _InteractiveNoteCreateScreenState
                     Tab(text: 'Előnézet'),
                   ],
                   onTap: (index) {
-                    if (index == 1) { // Preview tab
+                    if (index == 1) {
+                      // Preview tab
                       final htmlContent = _htmlContentController.text;
                       if (htmlContent.isNotEmpty) {
                         if (parse(htmlContent).documentElement == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Figyelem: A HTML kód érvénytelennek tűnik.'), backgroundColor: Colors.orange),
-                            );
-                            _tabController.index = 0; // Visszaváltás
-                            return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text(
+                                    'Figyelem: A HTML kód érvénytelennek tűnik.'),
+                                backgroundColor: Colors.orange),
+                          );
+                          _tabController.index = 0; // Visszaváltás
+                          return;
                         }
 
                         setState(() {
-                          _previewIframeElement.src = 'data:text/html;charset=utf-8,${Uri.encodeComponent(htmlContent)}';
+                          _previewIframeElement.src =
+                              'data:text/html;charset=utf-8,${Uri.encodeComponent(htmlContent)}';
                           _showPreview = true;
                         });
                       } else {
@@ -476,35 +495,34 @@ class _InteractiveNoteCreateScreenState
                   },
                 ),
               ),
-               const SizedBox(width: 16),
+              const SizedBox(width: 16),
               ValueListenableBuilder<double>(
-                valueListenable: _editorFontSize,
-                builder: (context, fontSize, child) {
-                  return Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.remove),
-                        onPressed: () {
-                          if (fontSize > 8.0) {
-                            _editorFontSize.value--;
-                          }
-                        },
-                        tooltip: 'Betűméret csökkentése',
-                      ),
-                      Text('${fontSize.toInt()}pt'),
-                      IconButton(
-                        icon: const Icon(Icons.add),
-                        onPressed: () {
-                          if (fontSize < 12.0) {
-                            _editorFontSize.value++;
-                          }
-                        },
-                        tooltip: 'Betűméret növelése',
-                      ),
-                    ],
-                  );
-                }
-              ),
+                  valueListenable: _editorFontSize,
+                  builder: (context, fontSize, child) {
+                    return Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.remove),
+                          onPressed: () {
+                            if (fontSize > 8.0) {
+                              _editorFontSize.value--;
+                            }
+                          },
+                          tooltip: 'Betűméret csökkentése',
+                        ),
+                        Text('${fontSize.toInt()}pt'),
+                        IconButton(
+                          icon: const Icon(Icons.add),
+                          onPressed: () {
+                            if (fontSize < 12.0) {
+                              _editorFontSize.value++;
+                            }
+                          },
+                          tooltip: 'Betűméret növelése',
+                        ),
+                      ],
+                    );
+                  }),
             ],
           ),
           Expanded(
@@ -516,39 +534,42 @@ class _InteractiveNoteCreateScreenState
                   padding: const EdgeInsets.only(top: 8.0),
                   child: SizedBox(
                     height: 300,
-                  child: ValueListenableBuilder<double>(
-                    valueListenable: _editorFontSize,
-                    builder: (context, fontSize, child) {
-                      return TextField(
-                        controller: _htmlContentController,
-                          onChanged: (value) {
-                            if (_tabController.index == 1) {
-                              setState(() {
-                                _previewIframeElement.src = 'data:text/html;charset=utf-8,${Uri.encodeComponent(value)}';
-                              });
-                            }
-                          },
-                          style: TextStyle(fontSize: fontSize, fontFamily: 'monospace'),
-                          maxLines: 15,
-                        textAlignVertical: TextAlignVertical.top,
-                        decoration: const InputDecoration(
-                          hintText: 'Írd ide a HTML tartalmat...',
-                          border: OutlineInputBorder(),
-                          filled: true,
-                          fillColor: Colors.white,
-                        ),
-                      );
-                    }
-                    ),
+                    child: ValueListenableBuilder<double>(
+                        valueListenable: _editorFontSize,
+                        builder: (context, fontSize, child) {
+                          return TextField(
+                            controller: _htmlContentController,
+                            onChanged: (value) {
+                              if (_tabController.index == 1) {
+                                setState(() {
+                                  _previewIframeElement.src =
+                                      'data:text/html;charset=utf-8,${Uri.encodeComponent(value)}';
+                                });
+                              }
+                            },
+                            style: TextStyle(
+                                fontSize: fontSize, fontFamily: 'monospace'),
+                            maxLines: 15,
+                            textAlignVertical: TextAlignVertical.top,
+                            decoration: const InputDecoration(
+                              hintText: 'Írd ide a HTML tartalmat...',
+                              border: OutlineInputBorder(),
+                              filled: true,
+                              fillColor: Colors.white,
+                            ),
+                          );
+                        }),
                   ),
                 ),
                 // Preview
                 _showPreview
-                  ? Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: HtmlElementView(viewType: _previewViewId),
-                  )
-                  : const Center(child: Text('Az előnézethez válts a szerkesztőre és írj be HTML tartalmat.')),
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: HtmlElementView(viewType: _previewViewId),
+                      )
+                    : const Center(
+                        child: Text(
+                            'Az előnézethez válts a szerkesztőre és írj be HTML tartalmat.')),
               ],
             ),
           )
@@ -561,17 +582,20 @@ class _InteractiveNoteCreateScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Címkék', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text('Címkék',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8.0,
           runSpacing: 4.0,
-          children: _tags.map((tag) => Chip(
-            label: Text(tag),
-            onDeleted: () {
-              setState(() => _tags.remove(tag));
-            },
-          )).toList(),
+          children: _tags
+              .map((tag) => Chip(
+                    label: Text(tag),
+                    onDeleted: () {
+                      setState(() => _tags.remove(tag));
+                    },
+                  ))
+              .toList(),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -581,7 +605,8 @@ class _InteractiveNoteCreateScreenState
             suffixIcon: IconButton(
               icon: const Icon(Icons.add),
               onPressed: () {
-                if (_tagController.text.isNotEmpty && !_tags.contains(_tagController.text)) {
+                if (_tagController.text.isNotEmpty &&
+                    !_tags.contains(_tagController.text)) {
                   setState(() {
                     _tags.add(_tagController.text);
                     _tagController.clear();
@@ -607,7 +632,8 @@ class _InteractiveNoteCreateScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Fájlok', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text('Fájlok',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 16),
         _buildFileUploadButton(
           label: 'MP3 Feltöltés',
@@ -622,14 +648,16 @@ class _InteractiveNoteCreateScreenState
           file: _selectedVideoFile,
           onPressed: _pickVideoFile,
         ),
-         if (_selectedVideoFile != null && _selectedVideoFile!['path'] != null && !kIsWeb)
-           Padding(
-             padding: const EdgeInsets.only(top: 8.0),
-             child: AspectRatio(
-               aspectRatio: _videoController!.value.aspectRatio,
-               child: VideoPlayer(_videoController!),
-             ),
-           )
+        if (_selectedVideoFile != null &&
+            _selectedVideoFile!['path'] != null &&
+            !kIsWeb)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: AspectRatio(
+              aspectRatio: _videoController!.value.aspectRatio,
+              child: VideoPlayer(_videoController!),
+            ),
+          )
       ],
     );
   }
@@ -663,4 +691,4 @@ class _InteractiveNoteCreateScreenState
       ],
     );
   }
-}        
+}

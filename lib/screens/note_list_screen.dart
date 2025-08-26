@@ -72,9 +72,12 @@ class _NoteListScreenState extends State<NoteListScreen> {
   /// Betölti a mentett szűrőket vagy az URL paraméterekből származó kezdeti szűrőket.
   void _loadSavedFilters() {
     // Először megnézzük, hogy vannak-e mentett szűrők a FilterStorage-ban
-    if (FilterStorage.searchText != null || FilterStorage.status != null ||
-        FilterStorage.category != null || FilterStorage.science != null ||
-        FilterStorage.tag != null || FilterStorage.type != null) {
+    if (FilterStorage.searchText != null ||
+        FilterStorage.status != null ||
+        FilterStorage.category != null ||
+        FilterStorage.science != null ||
+        FilterStorage.tag != null ||
+        FilterStorage.type != null) {
       // Ha vannak mentett szűrők, akkor azokat használjuk
       setState(() {
         _searchText = FilterStorage.searchText ?? '';

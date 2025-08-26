@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
+import '../core/app_messenger.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -313,8 +314,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
           .update(noteData);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Jegyzet sikeresen frissítve!')));
+        AppMessenger.showSuccess('Jegyzet sikeresen frissítve!');
         // Frissítsük a lokális állapotot, hogy a feltöltött/törölt fájlok
         // azonnal tükröződjenek.
         await _loadNoteData();
@@ -445,7 +445,8 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                                 IconButton(
                                   tooltip: 'URL másolása',
                                   onPressed: () async {
-                                    final messenger = ScaffoldMessenger.of(context);
+                                    final messenger =
+                                        ScaffoldMessenger.of(context);
                                     await Clipboard.setData(
                                         ClipboardData(text: _existingPdfUrl!));
                                     if (mounted) {

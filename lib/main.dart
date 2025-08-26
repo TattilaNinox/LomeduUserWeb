@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'core/firebase_config.dart';
 import 'screens/login_screen.dart';
+import 'core/app_messenger.dart';
 import 'screens/note_list_screen.dart';
 import 'screens/note_pages_screen.dart';
 import 'screens/interactive_note_create_screen.dart';
@@ -244,6 +245,7 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       // A "debug" szalag eltávolítása a jobb felső sarokból.
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: AppMessenger.key,
       // A korábban definiált router konfiguráció átadása az alkalmazásnak.
       routerConfig: _router,
     );
