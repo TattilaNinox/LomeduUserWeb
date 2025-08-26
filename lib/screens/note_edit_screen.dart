@@ -119,7 +119,8 @@ class _NoteEditScreenState extends State<NoteEditScreen>
 
   Future<void> _loadInitialData() async {
     try {
-      await _loadCategories();
+      // Előbb a tudományok listája, majd a jegyzet adatai,
+      // végül a kategóriák a kiválasztott tudomány alapján.
       await _loadSciences();
       await _loadNoteData();
     } catch (e) {
@@ -211,10 +212,15 @@ class _NoteEditScreenState extends State<NoteEditScreen>
 
         _htmlContentController.text = content;
 
-        // A kategóriák frissítése a jegyzet tudománya alapján, hogy a legördülő lista megfelelően feltöltődjön.
+        // A kategóriák frissítése a jegyzet tudománya alapján
         if (_selectedScience != null) {
-          // A _loadCategories() aszinkron, de itt megvárjuk, hogy biztosan legyenek kategóriák, mire a képernyő kirajzolódik.
           await _loadCategories();
+          // Ha a jegyzet kategóriája nincs a listában (adatkonzisztencia hiba vagy hiányzó kategória),
+          // ne nullázzuk ki, inkább hagyjuk meg a meglévő értéket, és a dropdown-ban legyen disabled.
+          if (!_categories.contains(_selectedCategory)) {
+            // Itt nem állítunk null-t, csak a dropdown értéke lesz null, a mentésnél viszont a meglévő
+            // _selectedCategory fog szerepelni, amíg a felhasználó nem választ új értéket.
+          }
         }
       }
     } else {
@@ -540,7 +546,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
 
   Widget _buildCategoryDropdown() {
     return DropdownButtonFormField<String>(
-      value: _selectedCategory,
+      value: _categories.contains(_selectedCategory) ? _selectedCategory : null,
       items: _categories.map((String category) {
         return DropdownMenuItem<String>(
           value: category,

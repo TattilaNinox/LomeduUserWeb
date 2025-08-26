@@ -90,8 +90,10 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
 
   Future<void> _loadInitialData() async {
     await _loadSciences();
-    await _loadCategories();
+    // Először a pakli adatai (tudomány, kategória) töltsenek be
     await _loadDeckDetails();
+    // Ezután a kiválasztott tudomány alapján töltsük a kategóriákat
+    await _loadCategories();
     if (mounted) {
       setState(() => _isLoading = false);
     }
@@ -399,7 +401,9 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          value: _selectedCategory,
+                          value: _categories.containsKey(_selectedCategory)
+                              ? _selectedCategory
+                              : null,
                           items: _categories.entries.map((entry) {
                             return DropdownMenuItem<String>(
                               value: entry.key,
