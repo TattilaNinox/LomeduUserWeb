@@ -26,6 +26,12 @@ service cloud.firestore {
       match /category_stats/{catId}              { allow read, write, delete: if isAdmin() || (request.auth != null && request.auth.uid == userId); }
     }
 
+    // ────────── Kétfaktoros hitelesítés (user_2fa) ──────────
+    // A felhasználó csak a saját 2FA dokumentumát olvashatja/írhatja
+    match /user_2fa/{userId} {
+      allow read, write: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+    }
+
     // ────────── Jegyzetek (minden típus, beleértve: text, interactive, deck, dynamic_quiz, source stb.) ──────────
     match /notes/{noteId} {
       // Olvasás: admin bármit, más csak Published / Public (a források mindig Public státuszúak)

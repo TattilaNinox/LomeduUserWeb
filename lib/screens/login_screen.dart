@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../core/two_factor_auth.dart';
 
 /// A bejelentkezési képernyőt megvalósító widget.
 ///
@@ -18,7 +19,8 @@ class LoginScreenState extends State<LoginScreen> {
   // A beviteli mezők vezérlői (controller), amelyekkel elérhető és módosítható
   // a mezők tartalma. A fejlesztés megkönnyítése érdekében előre ki vannak
   // töltve teszt adatokkal.
-  final _emailController = TextEditingController(text: 'tattila.ninox@gmail.com');
+  final _emailController =
+      TextEditingController(text: 'tattila.ninox@gmail.com');
   final _passwordController = TextEditingController(text: 'Tolgyesi88');
 
   // Egy állapotváltozó a bejelentkezési hibaüzenetek tárolására.
@@ -28,20 +30,35 @@ class LoginScreenState extends State<LoginScreen> {
   /// A bejelentkezési folyamatot kezelő aszinkron metódus.
   Future<void> _signIn() async {
     try {
+      setState(() {
+        _errorMessage = null;
+      });
+
       // Megpróbál bejelentkezni a Firebase Authentication szolgáltatással,
       // az e-mail és jelszó mezők aktuális értékét használva.
       // A `.trim()` metódus eltávolítja a felesleges szóközöket a szöveg elejéről és végéről.
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      final userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // Sikeres bejelentkezés után ellenőrzi, hogy a widget még a fán van-e
-      // (`mounted` tulajdonság), mielőtt navigálna. Ez megakadályozza a hibákat,
-      // ha a felhasználó időközben elnavigálna az oldalról.
-      if (mounted) {
-        // A `go_router` segítségével átirányítja a felhasználót a főoldalra ('/notes').
-        context.go('/notes');
+      // Ellenőrizzük, hogy a felhasználónak be van-e kapcsolva a 2FA
+      if (userCredential.user != null) {
+        final has2FA =
+            await TwoFactorAuth.isTwoFactorEnabled(userCredential.user!);
+
+        // Sikeres bejelentkezés után ellenőrzi, hogy a widget még a fán van-e
+        // (`mounted` tulajdonság), mielőtt navigálna.
+        if (mounted) {
+          if (has2FA) {
+            // Ha be van kapcsolva a 2FA, akkor a kód ellenőrző oldalra irányítjuk
+            context.go('/verify-otp');
+          } else {
+            // Ha nincs 2FA, akkor egyből a főoldalra irányítjuk
+            context.go('/notes');
+          }
+        }
       }
     } on FirebaseAuthException catch (e) {
       // Ha a bejelentkezés során a Firebase hibát dob (pl. rossz jelszó),
@@ -50,6 +67,10 @@ class LoginScreenState extends State<LoginScreen> {
       // hibaüzenetet, ami ezután megjelenik a UI-n.
       setState(() {
         _errorMessage = e.message;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Hiba történt a bejelentkezés során: $e';
       });
     }
   }
@@ -152,11 +173,13 @@ class LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 24),
               // Bejelentkezés gomb
               ElevatedButton(
-                onPressed: _signIn, // A gomb lenyomásakor a `_signIn` metódus hívódik meg.
+                onPressed:
+                    _signIn, // A gomb lenyomásakor a `_signIn` metódus hívódik meg.
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1E3A8A),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(4),
                   ),

@@ -27,6 +27,12 @@ dependencies:
   excel: ^2.1.0
   html: ^0.15.4
   web: ^0.5.1
+  flutter_otp_text_field: ^1.5.1+1
+  dart_jsonwebtoken: ^3.2.0
+  otp: ^3.2.0
+  base32: ^2.2.0
+  qr_flutter: ^4.1.0
+  pinput: ^5.0.1
 
 dev_dependencies:
   flutter_test:

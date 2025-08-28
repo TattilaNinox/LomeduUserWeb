@@ -28,6 +28,8 @@ import 'screens/quiz_dual_create_screen.dart';
 import 'screens/quiz_dual_edit_screen.dart';
 import 'screens/user_list_screen.dart';
 import 'screens/science_manager_screen.dart';
+import 'screens/verify_otp_screen.dart';
+import 'screens/two_factor_auth_screen.dart';
 
 /// Az alkalmazás fő belépési pontja.
 void main() async {
@@ -223,6 +225,16 @@ final _router = GoRouter(
     GoRoute(
       path: '/users',
       builder: (context, state) => const UserListScreen(),
+    ),
+    // Kétfaktoros hitelesítési kód ellenőrzése
+    GoRoute(
+      path: '/verify-otp',
+      builder: (context, state) => const VerifyOtpScreen(),
+    ),
+    // Kétfaktoros hitelesítés beállítása
+    GoRoute(
+      path: '/two-factor-auth',
+      builder: (context, state) => const TwoFactorAuthScreen(),
     ),
   ],
 );
