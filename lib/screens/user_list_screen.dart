@@ -263,7 +263,10 @@ class _UserListScreenState extends State<UserListScreen> {
     }
 
     return StreamBuilder<QuerySnapshot>(
-      stream: query.orderBy('createdAt', descending: true).snapshots(),
+      // Nem használunk Firestore oldali rendezést, mert sok
+      // felhasználónál hiányzik a 'createdAt' mező. Helyette
+      // kliens oldalon rendezzük, így minden dokumentum látható.
+      stream: query.snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -282,6 +285,18 @@ class _UserListScreenState extends State<UserListScreen> {
         }
 
         List<QueryDocumentSnapshot> users = snapshot.data!.docs;
+
+        // Kliens oldali rendezés 'createdAt' szerint (hiányzó érték kezelése)
+        users.sort((a, b) {
+          final aTs = (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+          final bTs = (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+          final aDt = aTs?.toDate();
+          final bDt = bTs?.toDate();
+          if (aDt == null && bDt == null) return 0;
+          if (aDt == null) return 1; // null értékek a lista végére
+          if (bDt == null) return -1;
+          return bDt.compareTo(aDt); // csökkenő sorrend
+        });
 
         users = users.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
@@ -474,6 +489,10 @@ class _UserListScreenState extends State<UserListScreen> {
               value: 'extend_trial',
               child: Text('Próbaidő meghosszabbítás'),
             ),
+            const PopupMenuItem(
+              value: 'shorten_trial',
+              child: Text('Próbaidő rövidítése (napok)'),
+            ),
           ],
         ),
       ),
@@ -537,6 +556,44 @@ class _UserListScreenState extends State<UserListScreen> {
           success = true;
           message = 'Próbaidő meghosszabbítva (+7 nap)';
           break;
+
+        case 'shorten_trial':
+          final int? days = await _promptDaysDialog(
+            title: 'Próbaidő rövidítése',
+            label: 'Hány napot vonjunk le? (pozitív egész szám)',
+            initialValue: '3',
+          );
+          if (days == null || days <= 0) {
+            success = false;
+            message = 'Művelet megszakítva.';
+            break;
+          }
+
+          final userRef =
+              FirebaseFirestore.instance.collection('users').doc(userId);
+          final userSnap = await userRef.get();
+          final data = userSnap.data() as Map<String, dynamic>?;
+          final currentTs = data?['trialEndDate'] as Timestamp?;
+
+          if (currentTs == null) {
+            success = false;
+            message = 'Nincs beállított próbaidő ehhez a felhasználóhoz.';
+            break;
+          }
+
+          final now = DateTime.now();
+          DateTime newEnd = currentTs.toDate().subtract(Duration(days: days));
+          if (newEnd.isBefore(now)) {
+            newEnd = now; // azonnali lejárat
+          }
+
+          await userRef.update({
+            'trialEndDate': Timestamp.fromDate(newEnd),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+          success = true;
+          message = 'Próbaidő rövidítve (−$days nap).';
+          break;
       }
     } catch (e) {
       success = false;
@@ -551,5 +608,50 @@ class _UserListScreenState extends State<UserListScreen> {
         ),
       );
     }
+  }
+
+  /// Egyszerű párbeszédablak pozitív egész napok megadásához
+  Future<int?> _promptDaysDialog({
+    required String title,
+    required String label,
+    String initialValue = '1',
+  }) async {
+    final controller = TextEditingController(text: initialValue);
+    final result = await showDialog<int>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: label,
+              border: const OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(null),
+              child: const Text('Mégse'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final parsed = int.tryParse(controller.text.trim());
+                if (parsed == null || parsed <= 0) {
+                  Navigator.of(context).pop(null);
+                } else {
+                  Navigator.of(context).pop(parsed);
+                }
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+    controller.dispose();
+    return result;
   }
 }
