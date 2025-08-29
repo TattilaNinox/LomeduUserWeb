@@ -507,11 +507,11 @@ class _UserListScreenState extends State<UserListScreen> {
                   ? 'Felhasználó aktiválása'
                   : 'Felhasználó inaktiválása'),
             ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: Text('Felhasználó törlése',
-                  style: TextStyle(color: Colors.red)),
-            ),
+            // const PopupMenuItem(
+            //   value: 'delete',
+            //   child: Text('Felhasználó törlése',
+            //       style: TextStyle(color: Colors.red)),
+            // ),
           ],
         ),
       ),
@@ -639,39 +639,39 @@ class _UserListScreenState extends State<UserListScreen> {
           message = 'Felhasználó inaktiválva';
           break;
 
-        case 'delete':
-          final confirm = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Felhasználó törlése'),
-              content: Text(
-                  'Biztosan törölni szeretnéd a következő felhasználót?\n\n${userData['email'] ?? 'Ismeretlen email'}\n\nEz a művelet nem visszavonható!'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Mégse'),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                  child: const Text('Törlés'),
-                ),
-              ],
-            ),
-          );
+        // case 'delete':
+        //   final confirm = await showDialog<bool>(
+        //     context: context,
+        //     builder: (context) => AlertDialog(
+        //       title: const Text('Felhasználó törlése'),
+        //       content: Text(
+        //           'Biztosan törölni szeretnéd a következő felhasználót?\n\n${userData['email'] ?? 'Ismeretlen email'}\n\nEz a művelet nem visszavonható!'),
+        //       actions: [
+        //         TextButton(
+        //           onPressed: () => Navigator.of(context).pop(false),
+        //           child: const Text('Mégse'),
+        //         ),
+        //         ElevatedButton(
+        //           onPressed: () => Navigator.of(context).pop(true),
+        //           style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+        //           child: const Text('Törlés'),
+        //         ),
+        //       ],
+        //     ),
+        //   );
 
-          if (confirm == true) {
-            await FirebaseFirestore.instance
-                .collection('users')
-                .doc(userId)
-                .delete();
-            success = true;
-            message = 'Felhasználó törölve';
-          } else {
-            success = false;
-            message = 'Törlés megszakítva';
-          }
-          break;
+        //   if (confirm == true) {
+        //     await FirebaseFirestore.instance
+        //         .collection('users')
+        //         .doc(userId)
+        //         .delete();
+        //     success = true;
+        //     message = 'Felhasználó törölve';
+        //   } else {
+        //     success = false;
+        //     message = 'Törlés megszakítva';
+        //   }
+        //   break;
       }
     } catch (e) {
       success = false;
