@@ -288,8 +288,10 @@ class _UserListScreenState extends State<UserListScreen> {
 
         // Kliens oldali rendezés 'createdAt' szerint (hiányzó érték kezelése)
         users.sort((a, b) {
-          final aTs = (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
-          final bTs = (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+          final aTs =
+              (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+          final bTs =
+              (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
           final aDt = aTs?.toDate();
           final bDt = bTs?.toDate();
           if (aDt == null && bDt == null) return 0;
@@ -407,12 +409,17 @@ class _UserListScreenState extends State<UserListScreen> {
     final userType = data['userType'] as String? ?? 'normal';
     final trialEndDate = data['trialEndDate'] as Timestamp?;
     final isSubscriptionActive = data['isSubscriptionActive'] as bool? ?? false;
+    final isActive = data['isActive'] as bool? ?? true;
 
     String statusText = 'Ingyenes';
     Color statusColor = Colors.grey;
     IconData statusIcon = Icons.person;
 
-    if (userType == 'test') {
+    if (!isActive) {
+      statusText = 'Inaktív';
+      statusColor = Colors.red.shade300;
+      statusIcon = Icons.block;
+    } else if (userType == 'test') {
       statusText = 'Teszt felhasználó';
       statusColor = Colors.orange;
       statusIcon = Icons.science;
@@ -471,7 +478,7 @@ class _UserListScreenState extends State<UserListScreen> {
           ],
         ),
         trailing: PopupMenuButton<String>(
-          onSelected: (value) => _handleUserAction(doc.id, value),
+          onSelected: (value) => _handleUserAction(doc.id, value, data),
           itemBuilder: (context) => [
             const PopupMenuItem(
               value: 'make_test',
@@ -493,13 +500,26 @@ class _UserListScreenState extends State<UserListScreen> {
               value: 'shorten_trial',
               child: Text('Próbaidő rövidítése (napok)'),
             ),
+            const PopupMenuDivider(),
+            PopupMenuItem(
+              value: data['isActive'] == false ? 'activate' : 'deactivate',
+              child: Text(data['isActive'] == false
+                  ? 'Felhasználó aktiválása'
+                  : 'Felhasználó inaktiválása'),
+            ),
+            const PopupMenuItem(
+              value: 'delete',
+              child: Text('Felhasználó törlése',
+                  style: TextStyle(color: Colors.red)),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _handleUserAction(String userId, String action) async {
+  Future<void> _handleUserAction(
+      String userId, String action, Map<String, dynamic> userData) async {
     bool success = false;
     String message = '';
 
@@ -572,7 +592,7 @@ class _UserListScreenState extends State<UserListScreen> {
           final userRef =
               FirebaseFirestore.instance.collection('users').doc(userId);
           final userSnap = await userRef.get();
-          final data = userSnap.data() as Map<String, dynamic>?;
+          final data = userSnap.data();
           final currentTs = data?['trialEndDate'] as Timestamp?;
 
           if (currentTs == null) {
@@ -593,6 +613,64 @@ class _UserListScreenState extends State<UserListScreen> {
           });
           success = true;
           message = 'Próbaidő rövidítve (−$days nap).';
+          break;
+
+        case 'activate':
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .update({
+            'isActive': true,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+          success = true;
+          message = 'Felhasználó aktiválva';
+          break;
+
+        case 'deactivate':
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .update({
+            'isActive': false,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+          success = true;
+          message = 'Felhasználó inaktiválva';
+          break;
+
+        case 'delete':
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Felhasználó törlése'),
+              content: Text(
+                  'Biztosan törölni szeretnéd a következő felhasználót?\n\n${userData['email'] ?? 'Ismeretlen email'}\n\nEz a művelet nem visszavonható!'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Mégse'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  child: const Text('Törlés'),
+                ),
+              ],
+            ),
+          );
+
+          if (confirm == true) {
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(userId)
+                .delete();
+            success = true;
+            message = 'Felhasználó törölve';
+          } else {
+            success = false;
+            message = 'Törlés megszakítva';
+          }
           break;
       }
     } catch (e) {

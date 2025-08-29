@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../core/two_factor_auth.dart';
@@ -43,8 +44,25 @@ class LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text.trim(),
       );
 
-      // Ellenőrizzük, hogy a felhasználónak be van-e kapcsolva a 2FA
+      // Ellenőrizzük, hogy a felhasználó aktív-e
       if (userCredential.user != null) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .get();
+
+        final isActive = userDoc.data()?['isActive'] as bool? ?? true;
+
+        if (!isActive) {
+          // Ha a felhasználó inaktív, kijelentkeztetjük és hibaüzenetet mutatunk
+          await FirebaseAuth.instance.signOut();
+          setState(() {
+            _errorMessage =
+                'A fiókod inaktív. Kérlek, lépj kapcsolatba az adminisztrátorral.';
+          });
+          return;
+        }
+
         final has2FA =
             await TwoFactorAuth.isTwoFactorEnabled(userCredential.user!);
 
