@@ -117,7 +117,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
     final title = _titleController.text;
     final htmlDoc = '<!doctype html>'
         '<html><head><meta charset="utf-8"><title>'
-        '${title}'
+        '$title'
         '</title><style>'
         '@page { size: A4; margin: 15mm; }'
         'body{font-family:Inter,Arial,sans-serif;font-size:12pt;margin-bottom:18mm;}'

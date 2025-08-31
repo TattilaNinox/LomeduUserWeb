@@ -168,9 +168,10 @@ class _QuizDualEditScreenState extends State<QuizDualEditScreen> {
         context.go('/notes');
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Hiba: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
