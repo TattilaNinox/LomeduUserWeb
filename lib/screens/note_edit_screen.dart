@@ -11,6 +11,7 @@ import 'package:web/web.dart' as web;
 import 'dart:ui_web' as ui_web;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
+import 'package:printing/printing.dart';
 
 import '../widgets/sidebar.dart';
 import '../widgets/quiz_viewer.dart';
@@ -87,6 +88,83 @@ class _NoteEditScreenState extends State<NoteEditScreen>
       }
     }
   }
+
+  // Előnézet nyomtatása (csak WEB)
+  Future<void> _printPreview() async {
+    if (!kIsWeb) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Nyomtatás csak a webes felületen érhető el.')));
+      return;
+    }
+
+    if (_selectedType != 'text') {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Nyomtatás csak szöveges jegyzethez érhető el.')));
+      return;
+    }
+
+    // HTML -> PDF nyomtatás közvetlenül, URL-lábléc nélkül
+    final htmlContent = _htmlContentController.text;
+    if (htmlContent.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Nincs tartalom a nyomtatáshoz.')));
+      return;
+    }
+
+    final title = _titleController.text;
+    final htmlDoc = '<!doctype html>'
+        '<html><head><meta charset="utf-8"><title>'
+        '${title}'
+        '</title><style>'
+        '@page { size: A4; margin: 15mm; }'
+        'body{font-family:Inter,Arial,sans-serif;font-size:12pt;margin-bottom:18mm;}'
+        'img{max-width:100%;}'
+        'h1,h2,h3{page-break-after:avoid;}'
+        'table{border-collapse:collapse;width:100%;}'
+        'td,th{border:1px solid #ccc;padding:6px;}'
+        '.print-footer{position:fixed;left:0;bottom:0;font-size:10pt;color:#fff;}'
+        '</style></head><body>'
+        '$htmlContent'
+        '<div class="print-footer">Lomedu.hu</div>'
+        '</body></html>';
+
+    try {
+      await Printing.layoutPdf(
+        name: title.isEmpty ? 'jegyzet' : title,
+        onLayout: (format) async {
+          return await Printing.convertHtml(format: format, html: htmlDoc);
+        },
+      );
+    } catch (e) {
+      // Weben előfordulhat UnimplementedError – essünk vissza új ablakos nyomtatásra
+      final newWin = web.window.open('', '_blank');
+      if (newWin == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'A böngésző blokkolta a felugró ablakot. Engedélyezd a pop-upokat.')));
+        return;
+      }
+      final html =
+          '<!doctype html><html><head><meta charset="utf-8"><title> </title>'
+          '<style>@page { size: A4; margin: 15mm; } body{font-family:Inter,Arial,sans-serif;font-size:12pt;margin-bottom:18mm;} img{max-width:100%;} h1,h2,h3{page-break-after:avoid;} table{border-collapse:collapse;width:100%;} td,th{border:1px solid #ccc;padding:6px;} .print-footer{position:fixed;left:0;bottom:0;font-size:10pt;color:#fff;}</style>'
+          '</head><body>'
+          '$htmlContent'
+          '<div class="print-footer">Lomedu.hu</div>'
+          '<script>window.addEventListener("load",function(){setTimeout(function(){try{window.focus();window.print();}catch(e){console.error(e);} }, 50);}); window.onafterprint=function(){window.close();};</script>'
+          '</body></html>';
+      try {
+        newWin.document.open();
+        newWin.document.write(html);
+        newWin.document.close();
+      } catch (_) {}
+    }
+  }
+
+  // (nincs használatban)
 
   @override
   void initState() {
@@ -645,6 +723,18 @@ class _NoteEditScreenState extends State<NoteEditScreen>
                 ),
               ),
               const SizedBox(width: 16),
+              if (kIsWeb && _selectedType == 'text')
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: OutlinedButton.icon(
+                    onPressed:
+                        _showPreview && _htmlContentController.text.isNotEmpty
+                            ? _printPreview
+                            : null,
+                    icon: const Icon(Icons.print),
+                    label: const Text('Nyomtatás'),
+                  ),
+                ),
               ValueListenableBuilder<double>(
                 valueListenable: _editorFontSize,
                 builder: (context, fontSize, child) {
