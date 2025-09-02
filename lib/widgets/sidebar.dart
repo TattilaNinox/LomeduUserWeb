@@ -93,6 +93,12 @@ class Sidebar extends StatelessWidget {
                 selectedMenu == 'decks'),
             _buildMenuItem(
                 context, 'users', 'Felhasználók', selectedMenu == 'users'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Divider(color: const Color(0xFF1E3A8A).withAlpha(77)),
+            ),
+            _buildMenuItem(context, 'public_documents',
+                'Nyilvános Dokumentumok', selectedMenu == 'public_documents'),
             const SizedBox(height: 8),
             const Divider(height: 1),
             ListTile(
@@ -163,6 +169,9 @@ class Sidebar extends StatelessWidget {
       case 'users':
         iconData = Icons.people;
         break;
+      case 'public_documents':
+        iconData = Icons.article;
+        break;
       default:
         iconData = Icons.error;
     }
@@ -209,6 +218,8 @@ class Sidebar extends StatelessWidget {
           context.go('/decks');
         } else if (routeName == 'users') {
           context.go('/users');
+        } else if (routeName == 'public_documents') {
+          context.go('/public-documents');
         }
       },
     );

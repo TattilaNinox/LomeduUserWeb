@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
+import '../core/firebase_config.dart';
 
 import '../utils/filter_storage.dart';
 import '../widgets/sidebar.dart';
@@ -111,7 +111,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
   /// Betölti a kategóriákat a Firestore `categories` kollekciójából.
   Future<void> _loadCategories() async {
     final snapshot =
-        await FirebaseFirestore.instance.collection('categories').get();
+        await FirebaseConfig.firestore.collection('categories').get();
     // A `setState` frissíti a widget állapotát a betöltött adatokkal,
     // ami újraépíti a UI-t, és a `Filters` widget megkapja a kategóriákat.
     setState(() {
@@ -122,7 +122,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
   /// Betölti a címkéket a Firestore `tags` kollekciójából.
   Future<void> _loadSciences() async {
     final snapshot =
-        await FirebaseFirestore.instance.collection('sciences').get();
+        await FirebaseConfig.firestore.collection('sciences').get();
     setState(() {
       _sciences = snapshot.docs.map((doc) => doc['name'] as String).toList();
     });
@@ -130,7 +130,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
 
   Future<void> _loadTags() async {
     final notesSnapshot =
-        await FirebaseFirestore.instance.collection('notes').get();
+        await FirebaseConfig.firestore.collection('notes').get();
     final allTags =
         <String>{}; // Set-et használunk a duplikátumok automatikus kezelésére
 

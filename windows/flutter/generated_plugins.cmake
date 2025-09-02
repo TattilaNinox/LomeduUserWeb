@@ -9,8 +9,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   firebase_auth
   firebase_core
   firebase_storage
-  irondash_engine_context
-  super_native_extensions
+  printing
   url_launcher_windows
 )
 

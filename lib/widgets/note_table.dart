@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../core/firebase_config.dart';
 import '../theme/app_theme.dart';
 import 'video_preview_player.dart';
 import 'mini_audio_player.dart';
@@ -92,7 +93,7 @@ class _NoteTableState extends State<NoteTable> {
   @override
   Widget build(BuildContext context) {
     Query<Map<String, dynamic>> query =
-        FirebaseFirestore.instance.collection('notes');
+        FirebaseConfig.firestore.collection('notes');
 
     if (widget.selectedStatus != null && widget.selectedStatus!.isNotEmpty) {
       query = query.where('status', isEqualTo: widget.selectedStatus);
@@ -683,7 +684,7 @@ class _NoteTableState extends State<NoteTable> {
   Future<void> _updateNoteStatus(
       BuildContext context, String noteId, String newStatus) async {
     try {
-      await FirebaseFirestore.instance.collection('notes').doc(noteId).update({
+      await FirebaseConfig.firestore.collection('notes').doc(noteId).update({
         'status': newStatus,
         'modified': Timestamp.now(),
       });
@@ -697,7 +698,7 @@ class _NoteTableState extends State<NoteTable> {
   Future<void> _toggleFreeStatus(
       BuildContext context, String noteId, bool currentFree) async {
     try {
-      await FirebaseFirestore.instance.collection('notes').doc(noteId).update({
+      await FirebaseConfig.firestore.collection('notes').doc(noteId).update({
         'isFree': !currentFree,
         'modified': Timestamp.now(),
       });
@@ -736,7 +737,7 @@ class _NoteTableState extends State<NoteTable> {
 
               try {
                 // Hard delete: teljes dokumentum törlése.
-                await FirebaseFirestore.instance
+                await FirebaseConfig.firestore
                     .collection('notes')
                     .doc(docId)
                     .delete();
@@ -783,7 +784,7 @@ class _NoteTableState extends State<NoteTable> {
 
   void _showQuizPreviewDialog(BuildContext context, String bankId,
       {bool dualMode = false}) async {
-    final bankDoc = await FirebaseFirestore.instance
+    final bankDoc = await FirebaseConfig.firestore
         .collection('question_banks')
         .doc(bankId)
         .get();

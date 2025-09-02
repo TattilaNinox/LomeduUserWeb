@@ -30,6 +30,8 @@ import 'screens/user_list_screen.dart';
 import 'screens/science_manager_screen.dart';
 import 'screens/verify_otp_screen.dart';
 import 'screens/two_factor_auth_screen.dart';
+import 'screens/public_document_list_screen.dart';
+import 'screens/public_document_edit_screen.dart';
 
 /// Az alkalmazás fő belépési pontja.
 void main() async {
@@ -235,6 +237,22 @@ final _router = GoRouter(
     GoRoute(
       path: '/two-factor-auth',
       builder: (context, state) => const TwoFactorAuthScreen(),
+    ),
+    // Új útvonalak a nyilvános dokumentumok kezeléséhez
+    GoRoute(
+      path: '/public-documents',
+      builder: (context, state) => const PublicDocumentListScreen(),
+    ),
+    GoRoute(
+      path: '/public-documents/create',
+      builder: (context, state) => const PublicDocumentEditScreen(),
+    ),
+    GoRoute(
+      path: '/public-documents/edit/:docId',
+      builder: (context, state) {
+        final docId = state.pathParameters['docId']!;
+        return PublicDocumentEditScreen(documentId: docId);
+      },
     ),
   ],
 );
