@@ -65,6 +65,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ────────── Kétfaktoros hitelesítés (user_2fa) ──────────
+    // A felhasználó a saját 2FA dokumentumát olvashatja/írhatja, admin bármit.
+    match /user_2fa/{userId} {
+      allow read, write: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+    }
+
     // ────────── Források / Irodalom ──────────
     // A források már a notes-gyűjteményben tárolódnak (type == 'source'),
     // ezért külön gyűjteményre nincs szükség. A korábbi /sources útvonalat
