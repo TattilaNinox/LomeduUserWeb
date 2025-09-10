@@ -27,6 +27,7 @@ class _PublicDocumentEditScreenState extends State<PublicDocumentEditScreen>
   final _versionController = TextEditingController();
   final _htmlContentController = TextEditingController();
   String? _selectedCategory;
+  String _selectedLanguage = 'hu';
 
   late final TabController _tabController;
   late final String _previewViewId;
@@ -77,6 +78,7 @@ class _PublicDocumentEditScreenState extends State<PublicDocumentEditScreen>
           _versionController.text = data['version'] ?? '';
           _htmlContentController.text = data['content'] ?? '';
           _selectedCategory = data['category'];
+          _selectedLanguage = data['language'] ?? 'hu';
           _isLoading = false;
         });
       } else {
@@ -104,6 +106,7 @@ class _PublicDocumentEditScreenState extends State<PublicDocumentEditScreen>
       final data = {
         'title': _titleController.text,
         'category': _selectedCategory,
+        'language': _selectedLanguage,
         'version': _versionController.text,
         'content': _htmlContentController.text,
         'publishedAt': FieldValue.serverTimestamp(),
@@ -187,6 +190,8 @@ class _PublicDocumentEditScreenState extends State<PublicDocumentEditScreen>
                       const SizedBox(width: 16),
                       Expanded(flex: 1, child: _buildCategoryDropdown()),
                       const SizedBox(width: 16),
+                      Expanded(flex: 1, child: _buildLanguageDropdown()),
+                      const SizedBox(width: 16),
                       Expanded(
                           flex: 1,
                           child: _buildTextField(
@@ -227,6 +232,23 @@ class _PublicDocumentEditScreenState extends State<PublicDocumentEditScreen>
       onChanged: (newValue) => setState(() => _selectedCategory = newValue),
       decoration: const InputDecoration(
         labelText: 'Kategória',
+        border: OutlineInputBorder(),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+    );
+  }
+
+  Widget _buildLanguageDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedLanguage,
+      items: const [
+        DropdownMenuItem(value: 'hu', child: Text('Magyar')),
+        DropdownMenuItem(value: 'en', child: Text('English')),
+      ],
+      onChanged: (newValue) => setState(() => _selectedLanguage = newValue!),
+      decoration: const InputDecoration(
+        labelText: 'Nyelv',
         border: OutlineInputBorder(),
         filled: true,
         fillColor: Colors.white,

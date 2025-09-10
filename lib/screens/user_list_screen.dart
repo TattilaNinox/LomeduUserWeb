@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/sidebar.dart';
+import '../services/admin_service.dart';
 
-enum UserFilter { all, premium, trial, test, free }
+enum UserFilter { all, premium, trial, test, free, expired }
 
 class UserListScreen extends StatefulWidget {
   const UserListScreen({super.key});
@@ -18,6 +19,10 @@ class _UserListScreenState extends State<UserListScreen> {
   // science filter
   List<String> _sciences = [];
   String? _selectedScience;
+
+  // Kijelölt felhasználók tömeges műveletekhez
+  final Set<String> _selectedUsers = {};
+  bool _isSelectModeActive = false;
 
   @override
   void initState() {
@@ -48,7 +53,63 @@ class _UserListScreenState extends State<UserListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Felhasználók'),
+        title: Text(_isSelectModeActive
+            ? 'Felhasználók (${_selectedUsers.length} kijelölve)'
+            : 'Felhasználók'),
+        actions: [
+          if (_isSelectModeActive) ...[
+            IconButton(
+              icon: const Icon(Icons.select_all),
+              tooltip: 'Összes kijelölése',
+              onPressed: _selectAllVisibleUsers,
+            ),
+            IconButton(
+              icon: const Icon(Icons.clear),
+              tooltip: 'Kijelölés törlése',
+              onPressed: () {
+                setState(() {
+                  _selectedUsers.clear();
+                });
+              },
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: _handleBulkAction,
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'bulk_reset',
+                  enabled: _selectedUsers.isNotEmpty,
+                  child:
+                      Text('Alaphelyzetbe állítás (${_selectedUsers.length})'),
+                ),
+                PopupMenuItem(
+                  value: 'bulk_token_cleanup',
+                  enabled: _selectedUsers.isNotEmpty,
+                  child: Text('Token cleanup (${_selectedUsers.length})'),
+                ),
+              ],
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              tooltip: 'Kijelölés mód kilépés',
+              onPressed: () {
+                setState(() {
+                  _isSelectModeActive = false;
+                  _selectedUsers.clear();
+                });
+              },
+            ),
+          ] else
+            IconButton(
+              icon: const Icon(Icons.checklist),
+              tooltip: 'Tömeges kijelölés mód',
+              onPressed: () {
+                setState(() {
+                  _isSelectModeActive = true;
+                });
+              },
+            ),
+        ],
       ),
       body: Row(
         children: [
@@ -127,6 +188,7 @@ class _UserListScreenState extends State<UserListScreen> {
               int trialUsers = 0;
               int testUsers = 0;
               int freeUsers = 0;
+              int expiredUsers = 0;
 
               for (final doc in docs) {
                 final data = doc.data() as Map<String, dynamic>;
@@ -137,13 +199,21 @@ class _UserListScreenState extends State<UserListScreen> {
                 final isSubscriptionActive =
                     data['isSubscriptionActive'] as bool? ?? false;
 
+                final freeTrialEndDate = data['freeTrialEndDate'] as Timestamp?;
+
                 if (userType == 'test') {
                   testUsers++;
                 } else if (isSubscriptionActive &&
                     subscriptionStatus == 'premium') {
                   premiumUsers++;
-                } else if (trialEndDate != null &&
-                    DateTime.now().isBefore(trialEndDate.toDate())) {
+                } else if (subscriptionStatus == 'expired' ||
+                    (!isSubscriptionActive &&
+                        subscriptionStatus == 'premium')) {
+                  expiredUsers++;
+                } else if ((freeTrialEndDate != null &&
+                        DateTime.now().isBefore(freeTrialEndDate.toDate())) ||
+                    (trialEndDate != null &&
+                        DateTime.now().isBefore(trialEndDate.toDate()))) {
                   trialUsers++;
                 } else {
                   freeUsers++;
@@ -185,6 +255,15 @@ class _UserListScreenState extends State<UserListScreen> {
                       testUsers.toString(),
                       Colors.orange,
                       UserFilter.test,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildStatCard(
+                      'Lejárt',
+                      expiredUsers.toString(),
+                      Colors.red,
+                      UserFilter.expired,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -317,8 +396,12 @@ class _UserListScreenState extends State<UserListScreen> {
                   DateTime.now().isBefore(trialEndDate.toDate());
             case UserFilter.test:
               return userType == 'test';
+            case UserFilter.expired:
+              return subscriptionStatus == 'expired' ||
+                  (!isSubscriptionActive && subscriptionStatus == 'premium');
             case UserFilter.free:
               return !isSubscriptionActive &&
+                  subscriptionStatus == 'free' &&
                   (trialEndDate == null ||
                       DateTime.now().isAfter(trialEndDate.toDate())) &&
                   userType != 'test';
@@ -415,6 +498,11 @@ class _UserListScreenState extends State<UserListScreen> {
     Color statusColor = Colors.grey;
     IconData statusIcon = Icons.person;
 
+    // Előfizetési végdátum kezelése
+    final subscriptionEndDate = data['subscriptionEndDate'] as Timestamp?;
+    final freeTrialStartDate = data['freeTrialStartDate'] as Timestamp?;
+    final freeTrialEndDate = data['freeTrialEndDate'] as Timestamp?;
+
     if (!isActive) {
       statusText = 'Inaktív';
       statusColor = Colors.red.shade300;
@@ -427,32 +515,64 @@ class _UserListScreenState extends State<UserListScreen> {
       statusText = 'Admin';
       statusColor = Colors.red;
       statusIcon = Icons.admin_panel_settings;
+    } else if (subscriptionStatus == 'expired' ||
+        (!isSubscriptionActive && subscriptionStatus == 'premium')) {
+      statusText = 'Lejárt előfizetés';
+      statusColor = Colors.red;
+      statusIcon = Icons.error_outline;
     } else if (isSubscriptionActive && subscriptionStatus == 'premium') {
       statusText = 'Premium aktív';
+      if (subscriptionEndDate != null) {
+        final remainingDays =
+            subscriptionEndDate.toDate().difference(DateTime.now()).inDays;
+        statusText += ' ($remainingDays nap)';
+      }
       statusColor = Colors.green;
       statusIcon = Icons.star;
+    } else if (freeTrialEndDate != null &&
+        DateTime.now().isBefore(freeTrialEndDate.toDate())) {
+      final remainingDays =
+          freeTrialEndDate.toDate().difference(DateTime.now()).inDays;
+      statusText = 'Próbaidő: $remainingDays nap';
+      statusColor = Colors.purple;
+      statusIcon = Icons.schedule;
     } else if (trialEndDate != null &&
         DateTime.now().isBefore(trialEndDate.toDate())) {
       final remainingDays =
           trialEndDate.toDate().difference(DateTime.now()).inDays;
-      statusText = 'Próbaidő: $remainingDays nap';
-      statusColor = Colors.purple;
+      statusText = 'Próbaidő (legacy): $remainingDays nap';
+      statusColor = Colors.purple.shade300;
       statusIcon = Icons.schedule;
     }
+
+    final isSelected = _selectedUsers.contains(doc.id);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
         dense: true,
         minVerticalPadding: 4,
-        leading: CircleAvatar(
-          backgroundColor: statusColor,
-          child: Icon(
-            statusIcon,
-            color: Colors.white,
-            size: 16,
-          ),
-        ),
+        leading: _isSelectModeActive
+            ? Checkbox(
+                value: isSelected,
+                onChanged: (value) {
+                  setState(() {
+                    if (value == true) {
+                      _selectedUsers.add(doc.id);
+                    } else {
+                      _selectedUsers.remove(doc.id);
+                    }
+                  });
+                },
+              )
+            : CircleAvatar(
+                backgroundColor: statusColor,
+                child: Icon(
+                  statusIcon,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
         title: Text(
           email,
           style: const TextStyle(fontSize: 14),
@@ -475,6 +595,21 @@ class _UserListScreenState extends State<UserListScreen> {
               ),
               overflow: TextOverflow.ellipsis,
             ),
+            // Előfizetési részletek megjelenítése
+            if (subscriptionEndDate != null) ...[
+              Text(
+                'Előfizetés vége: ${subscriptionEndDate.toDate().toString().split(' ')[0]}',
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            if (freeTrialStartDate != null && freeTrialEndDate != null) ...[
+              Text(
+                'Próbaidő: ${freeTrialStartDate.toDate().toString().split(' ')[0]} - ${freeTrialEndDate.toDate().toString().split(' ')[0]}',
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ],
         ),
         trailing: PopupMenuButton<String>(
@@ -490,7 +625,16 @@ class _UserListScreenState extends State<UserListScreen> {
             ),
             const PopupMenuItem(
               value: 'activate_premium',
-              child: Text('Premium aktiválás'),
+              child: Text('Premium aktiválás (30 nap)'),
+            ),
+            const PopupMenuItem(
+              value: 'set_expired',
+              child: Text('Előfizetés lejáratása',
+                  style: TextStyle(color: Colors.red)),
+            ),
+            const PopupMenuItem(
+              value: 'renew_trial',
+              child: Text('5 napos próbaidő újraindítása'),
             ),
             const PopupMenuItem(
               value: 'extend_trial',
@@ -499,6 +643,21 @@ class _UserListScreenState extends State<UserListScreen> {
             const PopupMenuItem(
               value: 'shorten_trial',
               child: Text('Próbaidő rövidítése (napok)'),
+            ),
+            const PopupMenuDivider(),
+            const PopupMenuItem(
+              value: 'reset_to_default',
+              child: Text('Alaphelyzetbe állítás',
+                  style: TextStyle(
+                      color: Colors.orange, fontWeight: FontWeight.bold)),
+            ),
+            const PopupMenuItem(
+              value: 'token_cleanup',
+              child: Text('Token cleanup'),
+            ),
+            const PopupMenuItem(
+              value: 'manual_refund',
+              child: Text('Manuális refund'),
             ),
             const PopupMenuDivider(),
             PopupMenuItem(
@@ -562,6 +721,37 @@ class _UserListScreenState extends State<UserListScreen> {
           });
           success = true;
           message = 'Premium előfizetés aktiválva (30 nap)';
+          break;
+
+        case 'set_expired':
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .update({
+            'subscriptionStatus': 'expired',
+            'isSubscriptionActive': false,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+          success = true;
+          message = 'Előfizetés lejárt státuszra állítva';
+          break;
+
+        case 'renew_trial':
+          final now = DateTime.now();
+          final trialEnd = now.add(const Duration(days: 5));
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .update({
+            'subscriptionStatus': 'free',
+            'isSubscriptionActive': false,
+            'freeTrialStartDate': Timestamp.fromDate(now),
+            'freeTrialEndDate': Timestamp.fromDate(trialEnd),
+            'subscriptionEndDate': FieldValue.delete(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+          success = true;
+          message = '5 napos próbaidőszak újraindítva';
           break;
 
         case 'extend_trial':
@@ -639,6 +829,61 @@ class _UserListScreenState extends State<UserListScreen> {
           message = 'Felhasználó inaktiválva';
           break;
 
+        case 'reset_to_default':
+          final confirm = await _showConfirmDialog(
+            'Felhasználó alaphelyzetbe állítása',
+            'Biztosan alaphelyzetbe állítod ezt a felhasználót?\n\n'
+                '• Előfizetés: FREE-re állítás\n'
+                '• Próbaidőszak: 5 napos újraindítás\n'
+                '• Token cleanup: Google Play tokenek törlése\n'
+                '• Subscription: REFUNDED státuszra\n\n'
+                'Ez a művelet nem vonható vissza!',
+          );
+
+          if (confirm == true) {
+            final result = await AdminService.resetUserToDefault(userId);
+            success = result['success'];
+            message = result['message'];
+          } else {
+            success = false;
+            message = 'Alaphelyzetbe állítás megszakítva';
+          }
+          break;
+
+        case 'token_cleanup':
+          final confirm = await _showConfirmDialog(
+            'Token cleanup',
+            'Törli az összes Google Play token-t ehhez a felhasználóhoz.\n\n'
+                'Ez megszakítja az aktív előfizetés-ellenőrzési folyamatokat.',
+          );
+
+          if (confirm == true) {
+            final result = await AdminService.cleanupUserTokens(userId);
+            success = result['success'];
+            message = result['message'];
+          } else {
+            success = false;
+            message = 'Token cleanup megszakítva';
+          }
+          break;
+
+        case 'manual_refund':
+          final confirm = await _showConfirmDialog(
+            'Manuális refund',
+            'Manuális refund feldolgozása ehhez a felhasználóhoz.\n\n'
+                'Ez a subscription státuszt REFUNDED-ra állítja.',
+          );
+
+          if (confirm == true) {
+            final result = await AdminService.processManualRefund(userId);
+            success = result['success'];
+            message = result['message'];
+          } else {
+            success = false;
+            message = 'Manuális refund megszakítva';
+          }
+          break;
+
         // case 'delete':
         //   final confirm = await showDialog<bool>(
         //     context: context,
@@ -688,6 +933,31 @@ class _UserListScreenState extends State<UserListScreen> {
     }
   }
 
+  /// Megerősítő dialógus kritikus műveletek előtt
+  Future<bool?> _showConfirmDialog(String title, String content) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(content),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Mégse'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Igen, folytatás'),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Egyszerű párbeszédablak pozitív egész napok megadásához
   Future<int?> _promptDaysDialog({
     required String title,
@@ -731,5 +1001,163 @@ class _UserListScreenState extends State<UserListScreen> {
     );
     controller.dispose();
     return result;
+  }
+
+  /// Összes látható felhasználó kijelölése
+  void _selectAllVisibleUsers() {
+    // Újra lekérdezzük a látható felhasználókat ugyanazzal a szűrési logikával
+    FirebaseFirestore.instance.collection('users').get().then((snapshot) {
+      List<QueryDocumentSnapshot> users = snapshot.docs;
+
+      // Ugyanazok a szűrési kritériumok, mint a _buildUsersList-ben
+      if (_selectedScience != null && _selectedScience != 'Összes') {
+        users = users.where((d) {
+          final data = d.data() as Map<String, dynamic>;
+          return data['science'] == _selectedScience;
+        }).toList();
+      }
+
+      users = users.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final subscriptionStatus =
+            data['subscriptionStatus'] as String? ?? 'free';
+        final userType = data['userType'] as String? ?? 'normal';
+        final trialEndDate = data['trialEndDate'] as Timestamp?;
+        final isSubscriptionActive =
+            data['isSubscriptionActive'] as bool? ?? false;
+
+        switch (_selectedFilter) {
+          case UserFilter.premium:
+            return isSubscriptionActive && subscriptionStatus == 'premium';
+          case UserFilter.trial:
+            return trialEndDate != null &&
+                DateTime.now().isBefore(trialEndDate.toDate());
+          case UserFilter.test:
+            return userType == 'test';
+          case UserFilter.expired:
+            return subscriptionStatus == 'expired' ||
+                (!isSubscriptionActive && subscriptionStatus == 'premium');
+          case UserFilter.free:
+            return !isSubscriptionActive &&
+                subscriptionStatus == 'free' &&
+                (trialEndDate == null ||
+                    DateTime.now().isAfter(trialEndDate.toDate())) &&
+                userType != 'test';
+          case UserFilter.all:
+            return true;
+        }
+      }).toList();
+
+      if (_searchQuery.isNotEmpty) {
+        users = users.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final email = data['email'] as String? ?? '';
+          return email.toLowerCase().contains(_searchQuery.toLowerCase());
+        }).toList();
+      }
+
+      setState(() {
+        _selectedUsers.clear();
+        _selectedUsers.addAll(users.map((doc) => doc.id));
+      });
+    });
+  }
+
+  /// Tömeges műveletek kezelése
+  Future<void> _handleBulkAction(String action) async {
+    if (_selectedUsers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nincs kijelölt felhasználó')),
+      );
+      return;
+    }
+
+    bool confirmed = false;
+
+    switch (action) {
+      case 'bulk_reset':
+        confirmed = await _showConfirmDialog(
+              'Tömeges alaphelyzetbe állítás',
+              'Biztosan alaphelyzetbe állítod a kijelölt ${_selectedUsers.length} felhasználót?\n\n'
+                  '• Előfizetés: FREE-re állítás\n'
+                  '• Próbaidőszak: 5 napos újraindítás\n'
+                  '• Token cleanup: Google Play tokenek törlése\n'
+                  '• Subscription: REFUNDED státuszra\n\n'
+                  'Ez a művelet nem vonható vissza!',
+            ) ??
+            false;
+        break;
+
+      case 'bulk_token_cleanup':
+        confirmed = await _showConfirmDialog(
+              'Tömeges token cleanup',
+              'Törlöd az összes Google Play token-t a kijelölt ${_selectedUsers.length} felhasználónál?\n\n'
+                  'Ez megszakítja az aktív előfizetés-ellenőrzési folyamatokat.',
+            ) ??
+            false;
+        break;
+    }
+
+    if (confirmed) {
+      // Betöltő dialógus megjelenítése
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Feldolgozás...'),
+            ],
+          ),
+        ),
+      );
+
+      Map<String, dynamic> result = {};
+
+      switch (action) {
+        case 'bulk_reset':
+          result =
+              await AdminService.resetMultipleUsers(_selectedUsers.toList());
+          break;
+        case 'bulk_token_cleanup':
+          // Egyszerre hívjuk meg a token cleanup-ot minden felhasználóra
+          int successCount = 0;
+          for (final userId in _selectedUsers) {
+            final individualResult =
+                await AdminService.cleanupUserTokens(userId);
+            if (individualResult['success']) successCount++;
+          }
+          result = {
+            'success': successCount == _selectedUsers.length,
+            'message':
+                '$successCount/${_selectedUsers.length} token cleanup sikeres',
+          };
+          break;
+      }
+
+      // Betöltő dialógus bezárása
+      if (mounted) Navigator.of(context).pop();
+
+      // Eredmény megjelenítése
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Művelet befejezve'),
+            backgroundColor: result['success'] ? Colors.green : Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+
+        // Kijelölés mód kikapcsolása sikeres művelet után
+        if (result['success']) {
+          setState(() {
+            _isSelectModeActive = false;
+            _selectedUsers.clear();
+          });
+        }
+      }
+    }
   }
 }

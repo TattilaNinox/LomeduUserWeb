@@ -3,6 +3,7 @@
     "rules": "firestore.rules"
   },
   "hosting": {
+    "site": "orlomed-f8f9f",
     "public": "build/web",
     "ignore": [
       "firebase.json",

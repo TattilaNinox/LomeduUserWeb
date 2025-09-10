@@ -67,15 +67,18 @@ class _PublicDocumentListScreenState extends State<PublicDocumentListScreen> {
                           final title = data['title'] ?? 'Nincs cím';
                           final category =
                               data['category'] ?? 'Nincs kategória';
+                          final language = data['language'] ?? 'hu';
+                          final languageFlag =
+                              language == 'en' ? '🇬🇧' : '🇭🇺';
                           final version = data['version'] ?? '-';
                           final modified =
                               (data['publishedAt'] as Timestamp?)?.toDate();
 
                           return ListTile(
                             leading: const Icon(Icons.article_outlined),
-                            title: Text(title),
-                            subtitle:
-                                Text('Kategória: $category | Verzió: $version'),
+                            title: Text('$title $languageFlag'),
+                            subtitle: Text(
+                                'Kategória: $category | Nyelv: $language | Verzió: $version'),
                             trailing: Text(modified != null
                                 ? '${modified.year}-${modified.month.toString().padLeft(2, '0')}-${modified.day.toString().padLeft(2, '0')}'
                                 : 'Ismeretlen dátum'),
