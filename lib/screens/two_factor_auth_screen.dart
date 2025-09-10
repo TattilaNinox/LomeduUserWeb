@@ -368,9 +368,9 @@ class TwoFactorAuthScreenState extends State<TwoFactorAuthScreen> {
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(color: Colors.grey),
-                                boxShadow: [
+                                boxShadow: const [
                                   BoxShadow(
-                                    color: const Color.fromRGBO(0, 0, 0, 0.1),
+                                    color: Color.fromRGBO(0, 0, 0, 0.1),
                                     blurRadius: 10,
                                     spreadRadius: 1,
                                   )

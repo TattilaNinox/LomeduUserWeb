@@ -54,7 +54,11 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
     final uri = GoRouterState.of(context).uri;
     final editId = uri.queryParameters['edit'];
     if (editId != null && editId.isNotEmpty) {
-      FirebaseFirestore.instance.collection('notes').doc(editId).get().then((doc) {
+      FirebaseFirestore.instance
+          .collection('notes')
+          .doc(editId)
+          .get()
+          .then((doc) {
         if (doc.exists && mounted) {
           _startEdit(doc);
         }
@@ -63,9 +67,9 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
     _initializedFromQuery = true;
   }
 
-
   Future<void> _loadCategories() async {
-    final snap = await FirebaseFirestore.instance.collection('categories').get();
+    final snap =
+        await FirebaseFirestore.instance.collection('categories').get();
     if (mounted) {
       setState(() {
         _categories = snap.docs.map((d) => d['name'] as String).toList();
@@ -99,11 +103,11 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
       'order': int.tryParse(_orderCtrl.text.trim()) ?? 0,
       'category': _selectedCategory,
       'tags': _tags,
-      'type': 'source',              // ← Új jegyzettípus
-      'status': 'Draft',             // induláskor még nem publikus
-      'isFree': false,              // zárolt, amíg publikálva nincs
+      'type': 'source', // ← Új jegyzettípus
+      'status': 'Draft', // induláskor még nem publikus
+      'isFree': false, // zárolt, amíg publikálva nincs
       'modified': FieldValue.serverTimestamp(),
-      'pages': <String>[],          // a jelenlegi struktúra miatt üres lista
+      'pages': <String>[], // a jelenlegi struktúra miatt üres lista
     };
 
     final notesColl = FirebaseFirestore.instance.collection('notes');
@@ -180,7 +184,10 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(8),
                             boxShadow: [
-                              BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 6, offset: const Offset(0, 2)),
+                              BoxShadow(
+                                  color: Colors.black.withAlpha(20),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2)),
                             ],
                           ),
                           child: _buildSourceList(),
@@ -190,13 +197,17 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
                       Expanded(
                         flex: 1,
                         child: Container(
-                          margin: const EdgeInsets.only(top: 24, right: 24, bottom: 24),
+                          margin: const EdgeInsets.only(
+                              top: 24, right: 24, bottom: 24),
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(8),
                             boxShadow: [
-                              BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 6, offset: const Offset(0, 2)),
+                              BoxShadow(
+                                  color: Colors.black.withAlpha(20),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2)),
                             ],
                           ),
                           child: _buildForm(),
@@ -234,9 +245,18 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
           final lower = _searchText.toLowerCase();
           docs = docs.where((d) {
             final data = d.data();
-            return (data['title'] ?? '').toString().toLowerCase().contains(lower) ||
-                (data['description'] ?? '').toString().toLowerCase().contains(lower) ||
-                (data['category'] ?? '').toString().toLowerCase().contains(lower) ||
+            return (data['title'] ?? '')
+                    .toString()
+                    .toLowerCase()
+                    .contains(lower) ||
+                (data['description'] ?? '')
+                    .toString()
+                    .toLowerCase()
+                    .contains(lower) ||
+                (data['category'] ?? '')
+                    .toString()
+                    .toLowerCase()
+                    .contains(lower) ||
                 (data['tags'] ?? []).toString().toLowerCase().contains(lower);
           }).toList();
         }
@@ -252,7 +272,8 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
                 Expanded(
                   child: ListView.builder(
                     itemCount: docs.length,
-                    itemBuilder: (context, index) => _buildDataRow(index, docs[index]),
+                    itemBuilder: (context, index) =>
+                        _buildDataRow(index, docs[index]),
                   ),
                 ),
               ],
@@ -272,7 +293,8 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
 
   Widget _buildHeaderRow() {
     const style = TextStyle(fontWeight: FontWeight.bold, fontSize: 13);
-    Widget cell(String t, int flex) => Expanded(flex: flex, child: Text(t, style: style));
+    Widget cell(String t, int flex) =>
+        Expanded(flex: flex, child: Text(t, style: style));
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
@@ -298,12 +320,18 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
     const style = TextStyle(fontSize: 12);
     Widget textCell(String t, int flex) => Expanded(
           flex: flex,
-          child: Text(t, style: style, overflow: TextOverflow.ellipsis, maxLines: 1, softWrap: false),
+          child: Text(t,
+              style: style,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              softWrap: false),
         );
-    final tagsList = (d['tags'] is List) ? (d['tags'] as List).cast<String>() : <String>[];
+    final tagsList =
+        (d['tags'] is List) ? (d['tags'] as List).cast<String>() : <String>[];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB)))),
+      decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB)))),
       child: Row(
         children: [
           textCell('${index + 1}', 1),
@@ -342,12 +370,15 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(_editingDocId == null ? 'Új forrás' : 'Forrás szerkesztése', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(_editingDocId == null ? 'Új forrás' : 'Forrás szerkesztése',
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 24),
             TextFormField(
               controller: _titleCtrl,
               decoration: const InputDecoration(labelText: 'Cím *'),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Kötelező' : null,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Kötelező' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -395,8 +426,10 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
 
   Widget _buildCategoryDropdown() {
     return DropdownButtonFormField<String>(
-      value: _selectedCategory,
-      items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+      initialValue: _selectedCategory,
+      items: _categories
+          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+          .toList(),
       onChanged: (val) => setState(() => _selectedCategory = val),
       decoration: const InputDecoration(labelText: 'Kategória'),
     );
@@ -406,13 +439,16 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Címkék', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text('Címkék',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
           runSpacing: 4,
           children: _tags
-              .map((tag) => Chip(label: Text(tag), onDeleted: () => setState(() => _tags.remove(tag))))
+              .map((tag) => Chip(
+                  label: Text(tag),
+                  onDeleted: () => setState(() => _tags.remove(tag))))
               .toList(),
         ),
         const SizedBox(height: 8),
@@ -423,7 +459,8 @@ class _SourceAdminScreenState extends State<SourceAdminScreen> {
             suffixIcon: IconButton(
               icon: const Icon(Icons.add),
               onPressed: () {
-                if (_tagController.text.isNotEmpty && !_tags.contains(_tagController.text)) {
+                if (_tagController.text.isNotEmpty &&
+                    !_tags.contains(_tagController.text)) {
                   setState(() {
                     _tags.add(_tagController.text.trim());
                     _tagController.clear();

@@ -1100,6 +1100,7 @@ class _UserListScreenState extends State<UserListScreen> {
 
     if (confirmed) {
       // Betöltő dialógus megjelenítése
+      if (!mounted) return;
       showDialog(
         context: context,
         barrierDismissible: false,
