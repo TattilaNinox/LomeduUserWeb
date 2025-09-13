@@ -387,13 +387,16 @@ class _UserListScreenState extends State<UserListScreen> {
           final trialEndDate = data['trialEndDate'] as Timestamp?;
           final isSubscriptionActive =
               data['isSubscriptionActive'] as bool? ?? false;
+          final freeTrialEndDate = data['freeTrialEndDate'] as Timestamp?;
 
           switch (_selectedFilter) {
             case UserFilter.premium:
               return isSubscriptionActive && subscriptionStatus == 'premium';
             case UserFilter.trial:
-              return trialEndDate != null &&
-                  DateTime.now().isBefore(trialEndDate.toDate());
+              return (trialEndDate != null &&
+                      DateTime.now().isBefore(trialEndDate.toDate())) ||
+                  (freeTrialEndDate != null &&
+                      DateTime.now().isBefore(freeTrialEndDate.toDate()));
             case UserFilter.test:
               return userType == 'test';
             case UserFilter.expired:
@@ -755,17 +758,43 @@ class _UserListScreenState extends State<UserListScreen> {
           break;
 
         case 'extend_trial':
-          final trialEnd = DateTime.now().add(const Duration(days: 7));
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(userId)
-              .update({
-            'trialEndDate': Timestamp.fromDate(trialEnd),
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
-          success = true;
-          message = 'Próbaidő meghosszabbítva (+7 nap)';
-          break;
+          {
+            final userRef =
+                FirebaseFirestore.instance.collection('users').doc(userId);
+            final userSnap = await userRef.get();
+            final currentData = userSnap.data();
+            final now = DateTime.now();
+            final freeTrialTs = currentData?['freeTrialEndDate'] as Timestamp?;
+            final trialTs = currentData?['trialEndDate'] as Timestamp?;
+
+            if (freeTrialTs != null) {
+              final base = freeTrialTs.toDate().isAfter(now)
+                  ? freeTrialTs.toDate()
+                  : now;
+              final newEnd = base.add(const Duration(days: 7));
+              await userRef.update({
+                'freeTrialEndDate': Timestamp.fromDate(newEnd),
+                'updatedAt': FieldValue.serverTimestamp(),
+              });
+              success = true;
+              message = 'Próbaidő meghosszabbítva (+7 nap)';
+            } else if (trialTs != null) {
+              final base =
+                  trialTs.toDate().isAfter(now) ? trialTs.toDate() : now;
+              final newEnd = base.add(const Duration(days: 7));
+              await userRef.update({
+                'trialEndDate': Timestamp.fromDate(newEnd),
+                'updatedAt': FieldValue.serverTimestamp(),
+              });
+              success = true;
+              message = 'Próbaidő meghosszabbítva (+7 nap)';
+            } else {
+              success = false;
+              message =
+                  'Nincs aktív próbaidő ehhez a felhasználóhoz. Használd az "5 napos próbaidő újraindítása" opciót.';
+            }
+            break;
+          }
 
         case 'shorten_trial':
           final int? days = await _promptDaysDialog(
@@ -783,26 +812,38 @@ class _UserListScreenState extends State<UserListScreen> {
               FirebaseFirestore.instance.collection('users').doc(userId);
           final userSnap = await userRef.get();
           final data = userSnap.data();
-          final currentTs = data?['trialEndDate'] as Timestamp?;
-
-          if (currentTs == null) {
-            success = false;
-            message = 'Nincs beállított próbaidő ehhez a felhasználóhoz.';
-            break;
-          }
+          final freeTrialTs = data?['freeTrialEndDate'] as Timestamp?;
+          final trialTs = data?['trialEndDate'] as Timestamp?;
 
           final now = DateTime.now();
-          DateTime newEnd = currentTs.toDate().subtract(Duration(days: days));
-          if (newEnd.isBefore(now)) {
-            newEnd = now; // azonnali lejárat
-          }
 
-          await userRef.update({
-            'trialEndDate': Timestamp.fromDate(newEnd),
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
-          success = true;
-          message = 'Próbaidő rövidítve (−$days nap).';
+          if (freeTrialTs != null) {
+            DateTime newEnd =
+                freeTrialTs.toDate().subtract(Duration(days: days));
+            if (newEnd.isBefore(now)) {
+              newEnd = now; // azonnali lejárat
+            }
+            await userRef.update({
+              'freeTrialEndDate': Timestamp.fromDate(newEnd),
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+            success = true;
+            message = 'Próbaidő rövidítve (−$days nap).';
+          } else if (trialTs != null) {
+            DateTime newEnd = trialTs.toDate().subtract(Duration(days: days));
+            if (newEnd.isBefore(now)) {
+              newEnd = now; // azonnali lejárat
+            }
+            await userRef.update({
+              'trialEndDate': Timestamp.fromDate(newEnd),
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+            success = true;
+            message = 'Próbaidő rövidítve (−$days nap).';
+          } else {
+            success = false;
+            message = 'Nincs beállított próbaidő ehhez a felhasználóhoz.';
+          }
           break;
 
         case 'activate':
