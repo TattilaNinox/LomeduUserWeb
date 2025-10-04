@@ -250,63 +250,73 @@ class _NoteListScreenState extends State<NoteListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 249, 250, 251),
-      // A képernyő fő elrendezése egy `Row` (sor), amely két részből áll:
-      // a bal oldali `Sidebar` és a jobb oldali, `Expanded` tartalom.
-      body: Row(
+    Widget buildContent() {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Az oldalsó menüsáv. A `selectedMenu: 'notes'` paraméter jelzi,
-          // hogy melyik menüpont legyen aktív.
-          const Sidebar(selectedMenu: 'notes'),
-          // Az `Expanded` widget kitölti a rendelkezésre álló vízszintes teret.
+          Header(
+            onSearchChanged: _onSearchChanged,
+          ),
+          Filters(
+            categories: _categories,
+            sciences: _sciences,
+            tags: _tags,
+            selectedStatus: _selectedStatus,
+            selectedCategory: _selectedCategory,
+            selectedScience: _selectedScience,
+            selectedTag: _selectedTag,
+            selectedType: _selectedType,
+            onStatusChanged: _onStatusChanged,
+            onCategoryChanged: _onCategoryChanged,
+            onScienceChanged: _onScienceChanged,
+            onTagChanged: _onTagChanged,
+            onTypeChanged: _onTypeChanged,
+            onClearFilters: _onClearFilters,
+          ),
           Expanded(
-            // A jobb oldali rész egy `Column` (oszlop), amely egymás alá
-            // helyezi a fejlécet, a szűrőket és a jegyzet táblázatot.
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // A fejléc, amely a keresőmezőt tartalmazza.
-                // A `onSearchChanged` callback-en keresztül kapja meg a szülő
-                // a keresőmezőbe írt szöveget.
-                Header(
-                  onSearchChanged: _onSearchChanged,
-                ),
-                // A szűrőket tartalmazó sáv. Megkapja a betöltött kategóriákat,
-                // címkéket, az aktuálisan kiválasztott szűrőértékeket és
-                // a callback függvényeket a szűrők állapotának módosításához.
-                Filters(
-                  categories: _categories,
-                  sciences: _sciences,
-                  tags: _tags,
-                  selectedStatus: _selectedStatus,
-                  selectedCategory: _selectedCategory,
-                  selectedScience: _selectedScience,
-                  selectedTag: _selectedTag,
-                  selectedType: _selectedType,
-                  onStatusChanged: _onStatusChanged,
-                  onCategoryChanged: _onCategoryChanged,
-                  onScienceChanged: _onScienceChanged,
-                  onTagChanged: _onTagChanged,
-                  onTypeChanged: _onTypeChanged,
-                  onClearFilters: _onClearFilters,
-                ),
-                // Kártya alapú jegyzetlista
-                Expanded(
-                  child: NoteCardGrid(
-                    searchText: _searchText,
-                    selectedStatus: _selectedStatus,
-                    selectedCategory: _selectedCategory,
-                    selectedScience: _selectedScience,
-                    selectedTag: _selectedTag,
-                    selectedType: _selectedType,
-                  ),
-                ),
-              ],
+            child: NoteCardGrid(
+              searchText: _searchText,
+              selectedStatus: _selectedStatus,
+              selectedCategory: _selectedCategory,
+              selectedScience: _selectedScience,
+              selectedTag: _selectedTag,
+              selectedType: _selectedType,
             ),
           ),
         ],
-      ),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        if (width >= 1200) {
+          // Desktop: kétpaneles elrendezés
+          return Scaffold(
+            backgroundColor: const Color.fromARGB(255, 249, 250, 251),
+            body: Row(
+              children: [
+                const Sidebar(selectedMenu: 'notes'),
+                Expanded(child: buildContent()),
+              ],
+            ),
+          );
+        }
+
+        // Tablet/Mobil: Drawer + AppBar menü, tartalom teljes szélességen
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Jegyzetek'),
+          ),
+          drawer: const Drawer(
+              child: SafeArea(child: Sidebar(selectedMenu: 'notes'))),
+          body: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: buildContent(),
+          ),
+          backgroundColor: const Color.fromARGB(255, 249, 250, 251),
+        );
+      },
     );
   }
 }
