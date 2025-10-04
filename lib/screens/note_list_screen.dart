@@ -363,13 +363,45 @@ class _NoteListScreenState extends State<NoteListScreen> {
           );
         }
 
-        // Tablet/Mobil: Drawer + AppBar menü, tartalom teljes szélességen
+        // Tablet/Mobil: Drawer + AppBar menü, és a szűrők a drawer-ben
         return Scaffold(
           appBar: AppBar(
             title: const Text('Jegyzetek'),
           ),
-          drawer: const Drawer(
-              child: SafeArea(child: Sidebar(selectedMenu: 'notes'))),
+          drawer: Drawer(
+            child: SafeArea(
+              child: Sidebar(
+                selectedMenu: 'notes',
+                extraPanel: Card(
+                  elevation: 3,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Filters(
+                      categories: _categories,
+                      sciences: _sciences,
+                      tags: _tags,
+                      selectedStatus: _selectedStatus,
+                      selectedCategory: _selectedCategory,
+                      selectedScience: _selectedScience,
+                      selectedTag: _selectedTag,
+                      selectedType: _selectedType,
+                      onStatusChanged: _onStatusChanged,
+                      onCategoryChanged: _onCategoryChanged,
+                      onScienceChanged: _onScienceChanged,
+                      onTagChanged: _onTagChanged,
+                      onTypeChanged: _onTypeChanged,
+                      onClearFilters: _onClearFilters,
+                      vertical: true,
+                      showStatus: false,
+                      showType: false,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
           body: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: buildContent(showSideFilters: false),
