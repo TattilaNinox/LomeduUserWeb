@@ -71,6 +71,21 @@ class NoteCardGrid extends StatelessWidget {
           grouped.putIfAbsent(cat, () => []).add(d);
         }
 
+        // Kategórián belüli rendezés típus és cím alapján
+        grouped.forEach((key, value) {
+          value.sort((a, b) {
+            final typeA = a.data()['type'] as String? ?? '';
+            final typeB = b.data()['type'] as String? ?? '';
+            final typeCompare = typeA.compareTo(typeB);
+            if (typeCompare != 0) {
+              return typeCompare;
+            }
+            final titleA = a.data()['title'] as String? ?? '';
+            final titleB = b.data()['title'] as String? ?? '';
+            return titleA.compareTo(titleB);
+          });
+        });
+
         return ListView(
           padding: EdgeInsets.zero,
           children: grouped.entries.map((entry) {
@@ -91,13 +106,6 @@ class _CategorySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    int _columns(double width) {
-      if (width > 1200) return 4;
-      if (width > 900) return 3;
-      if (width > 600) return 2;
-      return 1;
-    }
-
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       elevation: 1,

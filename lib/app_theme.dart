@@ -7,14 +7,13 @@ class AppTheme {
   static const _bgColor = Color(0xFFF5F5F5);
   static const _textColor = Color(0xFF333333);
   static const _borderColor = Color(0xFFD1D5DB);
-  static const _success = Color(0xFF22C55E);
   static const _error = Color(0xFFE74C3C);
 
   static final ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     fontFamily: 'Inter',
     scaffoldBackgroundColor: _bgColor,
-    colorScheme: ColorScheme(
+    colorScheme: const ColorScheme(
       brightness: Brightness.light,
       primary: _primaryColor,
       onPrimary: Colors.white,
@@ -22,9 +21,7 @@ class AppTheme {
       onSecondary: Colors.white,
       error: _error,
       onError: Colors.white,
-      background: _bgColor,
-      onBackground: _textColor,
-      surface: Colors.white,
+      surface: _bgColor,
       onSurface: _textColor,
     ),
     textTheme: const TextTheme(
@@ -60,7 +57,7 @@ class AppTheme {
       surfaceTintColor: _primaryColor,
     ),
     chipTheme: ChipThemeData(
-      selectedColor: _primaryColor.withOpacity(.1),
+      selectedColor: _primaryColor.withValues(alpha: .1),
       disabledColor: _borderColor,
       backgroundColor: Colors.white,
       labelStyle: const TextStyle(color: _textColor, fontSize: 12),

@@ -400,10 +400,13 @@ class _NoteTableState extends State<NoteTable> {
                     if (noteType == 'dynamic_quiz' ||
                         noteType == 'dynamic_quiz_dual') {
                       final questionBankId = data['questionBankId'] as String?;
-                      if (questionBankId != null) {
-                        _showQuizPreviewDialog(context, questionBankId,
-                            dualMode: noteType == 'dynamic_quiz_dual');
+                      if (questionBankId == null || questionBankId.isEmpty) {
+                        _showSnackBar(context,
+                            'Hiba: Ehhez a kvízhez nincs társítva kérdésbank.');
+                        return;
                       }
+                      _showQuizPreviewDialog(context, questionBankId,
+                          dualMode: noteType == 'dynamic_quiz_dual');
                     } else if (noteType == 'interactive') {
                       context.go('/interactive-note/${doc.id}');
                     } else {

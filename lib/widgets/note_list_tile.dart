@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../core/firebase_config.dart';
+import 'quiz_viewer.dart';
+import 'quiz_viewer_dual.dart';
 
 class NoteListTile extends StatelessWidget {
   final String id;
@@ -9,6 +12,7 @@ class NoteListTile extends StatelessWidget {
   final bool hasAudio;
   final bool hasVideo;
   final int? deckCount;
+  final String? questionBankId;
 
   const NoteListTile({
     super.key,
@@ -19,6 +23,7 @@ class NoteListTile extends StatelessWidget {
     required this.hasAudio,
     required this.hasVideo,
     this.deckCount,
+    this.questionBankId,
   });
 
   IconData _typeIcon() {
@@ -37,14 +42,89 @@ class NoteListTile extends StatelessWidget {
   }
 
   void _open(BuildContext context) {
-    if (type == 'interactive' ||
-        type == 'dynamic_quiz' ||
-        type == 'dynamic_quiz_dual') {
+    if (type == 'interactive') {
       context.go('/interactive-note/$id');
+    } else if (type == 'dynamic_quiz' || type == 'dynamic_quiz_dual') {
+      _openQuiz(context, dualMode: type == 'dynamic_quiz_dual');
     } else if (type == 'deck') {
       context.go('/deck/$id/view');
     } else {
       context.go('/note/$id');
+    }
+  }
+
+  Future<void> _openQuiz(BuildContext context, {required bool dualMode}) async {
+    try {
+      String? bankId = questionBankId;
+      if (bankId == null || bankId.isEmpty) {
+        final noteDoc =
+            await FirebaseConfig.firestore.collection('notes').doc(id).get();
+        bankId = (noteDoc.data() ?? const {})['questionBankId'] as String?;
+      }
+      if (bankId == null || bankId.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Hiba: a kvízhez nincs kérdésbank társítva.')),
+          );
+        }
+        return;
+      }
+
+      final bankDoc = await FirebaseConfig.firestore
+          .collection('question_banks')
+          .doc(bankId)
+          .get();
+      if (!bankDoc.exists) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Hiba: a kérdésbank nem található.')),
+          );
+        }
+        return;
+      }
+      final bank = bankDoc.data()!;
+      final questions =
+          List<Map<String, dynamic>>.from(bank['questions'] ?? []);
+      if (questions.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Ez a kérdésbank nem tartalmaz kérdéseket.')),
+          );
+        }
+        return;
+      }
+
+      questions.shuffle();
+      final selected = questions.take(10).toList();
+
+      if (!context.mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          contentPadding: const EdgeInsets.all(8),
+          content: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.8,
+            height: MediaQuery.of(context).size.height * 0.8,
+            child: dualMode
+                ? QuizViewerDual(questions: selected)
+                : QuizViewer(questions: selected),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Bezárás'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Kvíz megnyitási hiba: $e')),
+        );
+      }
     }
   }
 

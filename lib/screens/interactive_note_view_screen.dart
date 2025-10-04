@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:web/web.dart' as web;
 import 'dart:ui_web' as ui_web;
 import 'dart:async';
+// no extra JS interop needed
 import '../widgets/audio_preview_player.dart';
 
 class InteractiveNoteViewScreen extends StatefulWidget {
@@ -26,6 +27,7 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
   late final String _viewId;
   final web.HTMLIFrameElement _iframeElement = web.HTMLIFrameElement();
   bool _hasContent = false;
+  // Using srcdoc, no object URL needed
 
   late final StreamSubscription<DocumentSnapshot> _subscription;
 
@@ -39,6 +41,12 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
       ..style.width = '100%'
       ..style.height = '100%'
       ..style.border = 'none';
+
+    // More permissive sandbox settings
+    _iframeElement.sandbox.add('allow-scripts');
+    _iframeElement.sandbox.add('allow-same-origin');
+    _iframeElement.sandbox.add('allow-forms');
+    _iframeElement.sandbox.add('allow-popups');
 
     // ignore: undefined_prefixed_name
     ui_web.platformViewRegistry
@@ -54,6 +62,8 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
   void _handleSnapshot(DocumentSnapshot snapshot) {
     if (!mounted) return;
 
+    // No object URL to revoke when using srcdoc
+
     String? htmlContentToLoad;
     final data = snapshot.data() as Map<String, dynamic>?;
     if (data != null) {
@@ -62,19 +72,19 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
         final htmlContent = pages.first as String? ?? '';
         if (htmlContent.isNotEmpty) {
           htmlContentToLoad = htmlContent;
-          }
         }
       }
+    }
 
-      setState(() {
-        _noteSnapshot = snapshot;
-      if (htmlContentToLoad != null) {
-        _iframeElement.src =
-            'data:text/html;charset=utf-8,${Uri.encodeComponent(htmlContentToLoad)}';
+    setState(() {
+      _noteSnapshot = snapshot;
+      if (htmlContentToLoad != null && htmlContentToLoad.isNotEmpty) {
+        // Use srcdoc for reliable inline HTML rendering
+        _iframeElement.srcdoc = htmlContentToLoad;
         _hasContent = true;
       } else {
         _hasContent = false;
-    }
+      }
     });
   }
 
@@ -101,7 +111,7 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
 
     final data = _noteSnapshot!.data() as Map<String, dynamic>;
     final title = data['title'] as String? ?? 'Cím nélkül';
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
@@ -148,7 +158,7 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
 
   @override
   void dispose() {
-    _subscription.cancel();
+    // Nothing to revoke when using srcdoc
     super.dispose();
   }
-} 
+}
