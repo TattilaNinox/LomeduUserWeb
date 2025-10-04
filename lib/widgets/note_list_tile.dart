@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../core/firebase_config.dart';
 import 'quiz_viewer.dart';
 import 'quiz_viewer_dual.dart';
+import 'mini_audio_player.dart';
 
 class NoteListTile extends StatelessWidget {
   final String id;
@@ -13,6 +14,7 @@ class NoteListTile extends StatelessWidget {
   final bool hasVideo;
   final int? deckCount;
   final String? questionBankId;
+  final String? audioUrl;
 
   const NoteListTile({
     super.key,
@@ -24,6 +26,7 @@ class NoteListTile extends StatelessWidget {
     required this.hasVideo,
     this.deckCount,
     this.questionBankId,
+    this.audioUrl,
   });
 
   IconData _typeIcon() {
@@ -132,9 +135,23 @@ class NoteListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(_typeIcon(), color: Theme.of(context).primaryColor),
-      title: Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.w500),
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (hasAudio && (audioUrl?.isNotEmpty ?? false)) ...[
+            const SizedBox(width: 8),
+            SizedBox(width: 180, child: MiniAudioPlayer(audioUrl: audioUrl!)),
+          ] else if (hasAudio) ...[
+            const SizedBox(width: 8),
+            const Tooltip(message: 'Hangjegyzet elérhető', child: Icon(Icons.audiotrack, size: 16, color: Colors.green)),
+          ]
+        ],
       ),
       subtitle: type == 'deck' && deckCount != null
           ? Text('$deckCount kártya')

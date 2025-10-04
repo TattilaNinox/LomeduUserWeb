@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui' show FontFeature;
 import 'package:audioplayers/audioplayers.dart';
 
 /// Egy kompakt, beágyazható audiolejátszó widget.
