@@ -66,57 +66,10 @@ class Header extends StatelessWidget {
           // A `Spacer` kitölti a rendelkezésre álló vízszintes teret,
           // így a tőle jobbra lévő elemeket a jobb szélre tolja.
           const Spacer(),
-          // Adminisztrátor nevének megjelenítése.
-          Row(
-            children: [
-              const Text(
-                'Adminisztrátor',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  color: Color(0xFF333333),
-                ),
-              ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.arrow_drop_down),
-                tooltip: 'Opciók',
-                itemBuilder: (context) {
-                  return [
-                    const PopupMenuItem(
-                      value: '2fa',
-                      child: ListTile(
-                        leading: Icon(Icons.security),
-                        title: Text('Kétfaktoros hitelesítés'),
-                      ),
-                    ),
-                    const PopupMenuDivider(),
-                    const PopupMenuItem(
-                      value: 'logout',
-                      child: ListTile(
-                        leading: Icon(Icons.logout),
-                        title: Text('Kijelentkezés'),
-                      ),
-                    ),
-                  ];
-                },
-                onSelected: (value) {
-                  if (value == '2fa') {
-                    context.go('/two-factor-auth');
-                  } else if (value == 'logout') {
-                    FirebaseAuth.instance.signOut();
-                    context.go('/login');
-                  }
-                },
-              ),
-            ],
-          ),
-          const SizedBox(width: 16),
-          // "Új jegyzet" gomb.
+          // Jobb oldali akció: "Fiók adatok" gomb (régi admin dropdownt és új jegyzet gombot kiváltja)
           ElevatedButton(
             onPressed: () {
-              // Navigáció a go_router segítségével az új, dedikált útvonalra
-              context.go('/notes/create');
+              context.go('/account');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFF97316),
@@ -127,7 +80,7 @@ class Header extends StatelessWidget {
               ),
             ),
             child: const Text(
-              'Új jegyzet',
+              'Fiók adatok',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 14,
