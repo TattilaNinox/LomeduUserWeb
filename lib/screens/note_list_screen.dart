@@ -6,7 +6,7 @@ import '../utils/filter_storage.dart';
 import '../widgets/sidebar.dart';
 import '../widgets/header.dart';
 import '../widgets/filters.dart';
-import '../widgets/note_table.dart';
+import '../widgets/note_card_grid.dart';
 
 /// A jegyzetek listáját megjelenítő főképernyő.
 ///
@@ -291,37 +291,16 @@ class _NoteListScreenState extends State<NoteListScreen> {
                   onTypeChanged: _onTypeChanged,
                   onClearFilters: _onClearFilters,
                 ),
-                // A jegyzeteket megjelenítő táblázat.
-                // Megkapja a szülő widget állapotában lévő összes keresési
-                // és szűrési feltételt, hogy azok alapján tudja megjeleníteni a
-                // megfelelő jegyzeteket.
-                NoteTable(
-                  searchText: _searchText,
-                  selectedStatus: _selectedStatus,
-                  selectedCategory: _selectedCategory,
-                  selectedScience: _selectedScience,
-                  selectedTag: _selectedTag,
-                  selectedType: _selectedType,
-                  onEmptyResults: () {
-                    // Ha nincs találat és van aktív szűrő, csak jelezzük, de ne töröljük automatikusan
-                    if (_selectedStatus != null ||
-                        _selectedCategory != null ||
-                        _selectedScience != null ||
-                        _selectedTag != null ||
-                        _selectedType != null ||
-                        _searchText.isNotEmpty) {
-                      // Üzenet megjelenítése
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                              'Nincs találat a megadott szűrési feltételekkel.'),
-                          duration: Duration(seconds: 3),
-                        ),
-                      );
-                      // NEM töröljük a szűrőket automatikusan, csak hagyjuk őket ahogy vannak
-                      // A felhasználó manuálisan törölheti a szűrőket a "szűrők törlése" gombbal
-                    }
-                  },
+                // Kártya alapú jegyzetlista
+                Expanded(
+                  child: NoteCardGrid(
+                    searchText: _searchText,
+                    selectedStatus: _selectedStatus,
+                    selectedCategory: _selectedCategory,
+                    selectedScience: _selectedScience,
+                    selectedTag: _selectedTag,
+                    selectedType: _selectedType,
+                  ),
                 ),
               ],
             ),
