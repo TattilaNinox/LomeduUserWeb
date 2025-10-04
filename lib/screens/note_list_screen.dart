@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../core/firebase_config.dart';
 
 import '../utils/filter_storage.dart';
@@ -248,81 +249,86 @@ class _NoteListScreenState extends State<NoteListScreen> {
     GoRouter.of(context).go(uri.toString());
   }
 
-  @override
-  Widget build(BuildContext context) {
-    Widget buildContent({required bool showSideFilters}) {
-      return Row(
-        children: [
-          if (showSideFilters)
-            SizedBox(
-              width: 320,
-              child: Card(
-                margin: const EdgeInsets.fromLTRB(12, 10, 8, 12),
-                elevation: 1,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Text('Szűrők',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 14)),
-                        const SizedBox(height: 8),
-                        Filters(
-                          categories: _categories,
-                          sciences: _sciences,
-                          tags: _tags,
-                          selectedStatus: _selectedStatus,
-                          selectedCategory: _selectedCategory,
-                          selectedScience: _selectedScience,
-                          selectedTag: _selectedTag,
-                          selectedType: _selectedType,
-                          onStatusChanged: _onStatusChanged,
-                          onCategoryChanged: _onCategoryChanged,
-                          onScienceChanged: _onScienceChanged,
-                          onTagChanged: _onTagChanged,
-                          onTypeChanged: _onTypeChanged,
-                          onClearFilters: _onClearFilters,
-                          vertical: true,
-                        ),
-                      ],
-                    ),
+  Widget buildContent({
+    required bool showSideFilters,
+    required bool includeHeader,
+    required bool showHeaderActions,
+  }) {
+    return Row(
+      children: [
+        if (showSideFilters)
+          SizedBox(
+            width: 320,
+            child: Card(
+              margin: const EdgeInsets.fromLTRB(12, 10, 8, 12),
+              elevation: 1,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text('Szűrők',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 14)),
+                      const SizedBox(height: 8),
+                      Filters(
+                        categories: _categories,
+                        sciences: _sciences,
+                        tags: _tags,
+                        selectedStatus: _selectedStatus,
+                        selectedCategory: _selectedCategory,
+                        selectedScience: _selectedScience,
+                        selectedTag: _selectedTag,
+                        selectedType: _selectedType,
+                        onStatusChanged: _onStatusChanged,
+                        onCategoryChanged: _onCategoryChanged,
+                        onScienceChanged: _onScienceChanged,
+                        onTagChanged: _onTagChanged,
+                        onTypeChanged: _onTypeChanged,
+                        onClearFilters: _onClearFilters,
+                        vertical: true,
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+          ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (includeHeader)
                 Header(
                   onSearchChanged: _onSearchChanged,
+                  showActions: showHeaderActions,
                 ),
-                Expanded(
-                  child: NoteCardGrid(
-                    searchText: _searchText,
-                    selectedStatus: _selectedStatus,
-                    selectedCategory: _selectedCategory,
-                    selectedScience: _selectedScience,
-                    selectedTag: _selectedTag,
-                    selectedType: _selectedType,
-                  ),
+              Expanded(
+                child: NoteCardGrid(
+                  searchText: _searchText,
+                  selectedStatus: _selectedStatus,
+                  selectedCategory: _selectedCategory,
+                  selectedScience: _selectedScience,
+                  selectedTag: _selectedTag,
+                  selectedType: _selectedType,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      );
-    }
+        ),
+      ],
+    );
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         if (width >= 1200) {
-          // Desktop: kétpaneles elrendezés
           return Scaffold(
             backgroundColor: const Color.fromARGB(255, 249, 250, 251),
             body: Row(
@@ -357,13 +363,18 @@ class _NoteListScreenState extends State<NoteListScreen> {
                     ),
                   ),
                 ),
-                Expanded(child: buildContent(showSideFilters: false)),
+                Expanded(
+                  child: buildContent(
+                    showSideFilters: false,
+                    includeHeader: true,
+                    showHeaderActions: true,
+                  ),
+                ),
               ],
             ),
           );
         }
 
-        // Tablet/Mobil: Drawer + AppBar menü, és a szűrők a drawer-ben
         return Scaffold(
           appBar: AppBar(
             title: const Text('Jegyzetek'),
@@ -372,39 +383,88 @@ class _NoteListScreenState extends State<NoteListScreen> {
             child: SafeArea(
               child: Sidebar(
                 selectedMenu: 'notes',
-                extraPanel: Card(
-                  elevation: 3,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Filters(
-                      categories: _categories,
-                      sciences: _sciences,
-                      tags: _tags,
-                      selectedStatus: _selectedStatus,
-                      selectedCategory: _selectedCategory,
-                      selectedScience: _selectedScience,
-                      selectedTag: _selectedTag,
-                      selectedType: _selectedType,
-                      onStatusChanged: _onStatusChanged,
-                      onCategoryChanged: _onCategoryChanged,
-                      onScienceChanged: _onScienceChanged,
-                      onTagChanged: _onTagChanged,
-                      onTypeChanged: _onTypeChanged,
-                      onClearFilters: _onClearFilters,
-                      vertical: true,
-                      showStatus: false,
-                      showType: false,
+                extraPanel: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Card(
+                      elevation: 3,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Filters(
+                          categories: _categories,
+                          sciences: _sciences,
+                          tags: _tags,
+                          selectedStatus: _selectedStatus,
+                          selectedCategory: _selectedCategory,
+                          selectedScience: _selectedScience,
+                          selectedTag: _selectedTag,
+                          selectedType: _selectedType,
+                          onStatusChanged: _onStatusChanged,
+                          onCategoryChanged: _onCategoryChanged,
+                          onScienceChanged: _onScienceChanged,
+                          onTagChanged: _onTagChanged,
+                          onTypeChanged: _onTypeChanged,
+                          onClearFilters: _onClearFilters,
+                          vertical: true,
+                          showStatus: false,
+                          showType: false,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                context.go('/account');
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFF97316),
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(0, 40),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: const Text('Fiók adatok',
+                                  overflow: TextOverflow.ellipsis),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () async {
+                                await FirebaseAuth.instance.signOut();
+                                if (context.mounted) context.go('/login');
+                              },
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(0, 40),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: const Text('Kijelentkezés',
+                                  overflow: TextOverflow.ellipsis),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  ],
                 ),
               ),
             ),
           ),
           body: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: buildContent(showSideFilters: false),
+            child: buildContent(
+              showSideFilters: false,
+              includeHeader: true,
+              showHeaderActions: false,
+            ),
           ),
           backgroundColor: const Color.fromARGB(255, 249, 250, 251),
         );

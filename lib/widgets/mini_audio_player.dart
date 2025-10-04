@@ -11,10 +11,12 @@ import 'package:audioplayers/audioplayers.dart';
 class MiniAudioPlayer extends StatefulWidget {
   /// A lejátszandó audiofájl URL-je.
   final String audioUrl;
+
   /// Ha igaz, a lejátszó csak interakcióra inicializál (lista teljesítményhez).
   final bool deferInit;
 
-  const MiniAudioPlayer({super.key, required this.audioUrl, this.deferInit = true});
+  const MiniAudioPlayer(
+      {super.key, required this.audioUrl, this.deferInit = true});
 
   @override
   State<MiniAudioPlayer> createState() => _MiniAudioPlayerState();
@@ -129,6 +131,9 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
 
   @override
   Widget build(BuildContext context) {
+    const double iconSize = 22; // nagyobb ikon táblagépre
+    const BoxConstraints btnSize = BoxConstraints(minWidth: 36, minHeight: 36);
+
     if (_hasError) {
       return const Tooltip(
         message: 'A hangfájl nem tölthető be vagy hibás.',
@@ -138,23 +143,25 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
 
     // Lista-optimalizált kezdeti állapot: csak egy kis Play ikon jelenik meg.
     if (widget.deferInit && !_expanded) {
-      return SizedBox(
-        height: 24,
-        child: _initializing
-            ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : IconButton(
-                icon: const Icon(Icons.play_circle_fill,
-                    size: 20, color: Color(0xFF1E3A8A)),
-                padding: EdgeInsets.zero,
-                constraints:
-                    const BoxConstraints(minWidth: 24, minHeight: 24),
-                tooltip: 'Hang lejátszása',
-                onPressed: _ensureInitAndPlay,
-              ),
+      return Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: SizedBox(
+          height: 28,
+          child: _initializing
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.play_circle_fill,
+                      size: 22, color: Color(0xFF1E3A8A)),
+                  padding: EdgeInsets.zero,
+                  constraints: btnSize,
+                  tooltip: 'Hang lejátszása',
+                  onPressed: _ensureInitAndPlay,
+                ),
+        ),
       );
     }
 
@@ -166,90 +173,74 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
       );
     }
 
-    return SizedBox(
-      height: 32,
-      width: 160,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.replay_10, size: 16),
-            onPressed: () => _seekRelative(-10),
-            color: Colors.green,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-            tooltip: 'Vissza 10 mp',
-          ),
-          IconButton(
-            icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow, size: 16),
-            onPressed: () async {
-              if (_isPlaying) {
-                await _audioPlayer.pause();
-              } else if (_playerState == PlayerState.paused) {
-                await _audioPlayer.resume();
-              } else {
-                // Ha a lejátszás befejeződött vagy le lett állítva,
-                // a play metódus újra elindítja a forrástól.
-                await _audioPlayer.play(UrlSource(widget.audioUrl));
-              }
-            },
-            color: Colors.green,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-            tooltip: _isPlaying ? 'Szünet' : 'Lejátszás',
-          ),
-          IconButton(
-            icon: const Icon(Icons.forward_10, size: 16),
-            onPressed: () => _seekRelative(10),
-            color: Colors.green,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-            tooltip: 'Előre 10 mp',
-          ),
-          IconButton(
-            icon: const Icon(Icons.stop, size: 16),
-            onPressed: () async {
-              await _audioPlayer.stop();
-              setState(() => _position = Duration.zero);
-            },
-            color: Colors.green,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-            tooltip: 'Stop',
-          ),
-          Expanded(
-            child: SliderTheme(
-              data: const SliderThemeData(
-                trackHeight: 2.0,
-                thumbShape:
-                    RoundSliderThumbShape(enabledThumbRadius: 6.0),
-                overlayShape: RoundSliderOverlayShape(overlayRadius: 12.0),
-                activeTrackColor: Color(0xFF1E3A8A),
-                inactiveTrackColor: Color(0xFFD1D5DB),
-                thumbColor: Color(0xFF1E3A8A),
-                overlayColor: Color(0x291E3A8A),
-              ),
-              child: Slider(
-                value: _position.inSeconds.toDouble(),
-                max: _duration.inSeconds.toDouble(),
-                onChanged: (value) {
-                  _audioPlayer.seek(Duration(seconds: value.toInt()));
-                },
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: SizedBox(
+        height: 36,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.replay_10, size: iconSize),
+              onPressed: () => _seekRelative(-10),
+              color: Colors.green,
+              padding: EdgeInsets.zero,
+              constraints: btnSize,
+              tooltip: 'Vissza 10 mp',
+            ),
+            IconButton(
+              icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow,
+                  size: iconSize),
+              onPressed: () async {
+                if (_isPlaying) {
+                  await _audioPlayer.pause();
+                } else if (_playerState == PlayerState.paused) {
+                  await _audioPlayer.resume();
+                } else {
+                  // Ha a lejátszás befejeződött vagy le lett állítva,
+                  // a play metódus újra elindítja a forrástól.
+                  await _audioPlayer.play(UrlSource(widget.audioUrl));
+                }
+              },
+              color: Colors.green,
+              padding: EdgeInsets.zero,
+              constraints: btnSize,
+              tooltip: _isPlaying ? 'Szünet' : 'Lejátszás',
+            ),
+            IconButton(
+              icon: const Icon(Icons.forward_10, size: iconSize),
+              onPressed: () => _seekRelative(10),
+              color: Colors.green,
+              padding: EdgeInsets.zero,
+              constraints: btnSize,
+              tooltip: 'Előre 10 mp',
+            ),
+            IconButton(
+              icon: const Icon(Icons.stop, size: iconSize),
+              onPressed: () async {
+                await _audioPlayer.stop();
+                setState(() => _position = Duration.zero);
+              },
+              color: Colors.green,
+              padding: EdgeInsets.zero,
+              constraints: btnSize,
+              tooltip: 'Stop',
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 6),
+              child: Text(
+                _formatDuration((_duration - _position).isNegative
+                    ? Duration.zero
+                    : _duration - _position),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Text(
-              _formatDuration((_duration - _position).isNegative
-                  ? Duration.zero
-                  : _duration - _position),
-              style: const TextStyle(
-                  fontSize: 10, fontFeatures: [FontFeature.tabularFigures()]),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

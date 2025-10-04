@@ -146,10 +146,15 @@ class NoteListTile extends StatelessWidget {
           ),
           if (hasAudio && (audioUrl?.isNotEmpty ?? false)) ...[
             const SizedBox(width: 8),
-            SizedBox(width: 180, child: MiniAudioPlayer(audioUrl: audioUrl!)),
+            SizedBox(
+              width: 180,
+              child: MiniAudioPlayer(audioUrl: audioUrl!),
+            ),
           ] else if (hasAudio) ...[
             const SizedBox(width: 8),
-            const Tooltip(message: 'Hangjegyzet elérhető', child: Icon(Icons.audiotrack, size: 16, color: Colors.green)),
+            const Tooltip(
+                message: 'Hangjegyzet elérhető',
+                child: Icon(Icons.audiotrack, size: 16, color: Colors.green)),
           ]
         ],
       ),
