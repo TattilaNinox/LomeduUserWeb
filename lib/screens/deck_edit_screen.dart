@@ -403,9 +403,10 @@ class _DeckEditScreenState extends State<DeckEditScreen> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          initialValue: _categories.containsKey(_selectedCategory)
-                              ? _selectedCategory
-                              : null,
+                          initialValue:
+                              _categories.containsKey(_selectedCategory)
+                                  ? _selectedCategory
+                                  : null,
                           items: _categories.entries.map((entry) {
                             return DropdownMenuItem<String>(
                               value: entry.key,

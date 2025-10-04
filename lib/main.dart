@@ -4,34 +4,18 @@ import 'core/firebase_config.dart';
 import 'screens/login_screen.dart';
 import 'core/app_messenger.dart';
 import 'screens/note_list_screen.dart';
-import 'screens/note_pages_screen.dart';
-import 'screens/interactive_note_create_screen.dart';
-import 'screens/category_manager_screen.dart';
-import 'screens/interactive_note_view_screen.dart';
-import 'screens/note_edit_screen.dart';
-import 'screens/registration_screen.dart';
-import 'screens/forgot_password_screen.dart';
-import 'screens/bundle_list_screen.dart';
-import 'screens/bundle_edit_screen.dart';
-import 'screens/bundle_view_screen.dart';
-import 'screens/note_create_screen.dart';
+// Felhasználói nézetben az admin képernyők eltávolítva
+// import 'screens/registration_screen.dart';
+// import 'screens/forgot_password_screen.dart';
+// importok eltávolítva: bundle, create/edit képernyők
 import 'theme/app_theme.dart'; // <-- AppTheme importálása
-import 'screens/flashcard_card_edit_screen.dart';
-import 'screens/question_bank_list_screen.dart';
-import 'screens/question_bank_edit_screen.dart';
-import 'screens/quiz_create_screen.dart';
-import 'screens/quiz_edit_screen.dart';
-import 'screens/deck_list_screen.dart';
-import 'screens/deck_edit_screen.dart';
-import 'screens/flashcard_deck_view_screen.dart';
-import 'screens/quiz_dual_create_screen.dart';
-import 'screens/quiz_dual_edit_screen.dart';
-import 'screens/user_list_screen.dart';
-import 'screens/science_manager_screen.dart';
+// flashcard/kvíz admin képernyők eltávolítva
 import 'screens/verify_otp_screen.dart';
-import 'screens/two_factor_auth_screen.dart';
-import 'screens/public_document_list_screen.dart';
-import 'screens/public_document_edit_screen.dart';
+// import 'screens/two_factor_auth_screen.dart';
+// public doc admin képernyők eltávolítva
+import 'screens/note_read_screen.dart';
+import 'screens/flashcard_deck_view_screen.dart';
+import 'screens/interactive_note_view_screen.dart';
 
 /// Az alkalmazás fő belépési pontja.
 void main() async {
@@ -59,16 +43,7 @@ final _router = GoRouter(
       path: '/login',
       builder: (context, state) => const LoginScreen(),
     ),
-    // Regisztrációs képernyő útvonala.
-    GoRoute(
-      path: '/register',
-      builder: (context, state) => const RegistrationScreen(),
-    ),
-    // Elfelejtett jelszó képernyő útvonala.
-    GoRoute(
-      path: '/forgot-password',
-      builder: (context, state) => const ForgotPasswordScreen(),
-    ),
+    // Felhasználói appban a regisztráció/jelszó elfelejtése elrejtve (ha nem kell)
     // Jegyzetek listájának képernyője.
     GoRoute(
       path: '/notes',
@@ -84,174 +59,48 @@ final _router = GoRouter(
         );
       },
     ),
-    // Új útvonalak a létrehozó képernyőkhöz
+    // Létrehozó/szerkesztő útvonalak eltávolítva
+    // Kvíz admin útvonalak eltávolítva
+    // Admin listák/kezelők eltávolítva
+    // Admin note pages nézet eltávolítva
+    // Felhasználói, csak olvasási nézet a szöveges jegyzethez (admin funkciók nélkül)
     GoRoute(
-      path: '/notes/create',
-      builder: (context, state) => const NoteCreateScreen(),
-    ),
-    GoRoute(
-      path: '/interactive-notes/create',
-      builder: (context, state) => const InteractiveNoteCreateScreen(),
-    ),
-    GoRoute(
-      path: '/dynamic-quiz/create',
-      builder: (context, state) => const QuizCreateScreen(),
-    ),
-    GoRoute(
-      path: '/dynamic-quiz-dual/create',
-      builder: (context, state) => const QuizDualCreateScreen(),
-    ),
-    // Új útvonal a kvíz szerkesztéséhez
-    GoRoute(
-      path: '/quiz/edit/:noteId',
+      path: '/read/note/:noteId',
       builder: (context, state) {
         final noteId = state.pathParameters['noteId']!;
-        return QuizEditScreen(noteId: noteId);
+        return NoteReadScreen(noteId: noteId);
       },
     ),
-    // Új útvonal a kvíz szerkesztéséhez
-    GoRoute(
-      path: '/quiz-dual/edit/:noteId',
-      builder: (context, state) {
-        final noteId = state.pathParameters['noteId']!;
-        return QuizDualEditScreen(noteId: noteId);
-      },
-    ),
-    // Kategóriakezelő képernyő.
-    GoRoute(
-      path: '/categories',
-      builder: (context, state) => const CategoryManagerScreen(),
-    ),
-    // Kötegek listája képernyő.
-    GoRoute(
-      path: '/bundles',
-      builder: (context, state) => const BundleListScreen(),
-    ),
-    // Új köteg létrehozása képernyő.
-    GoRoute(
-      path: '/bundles/create',
-      builder: (context, state) => const BundleEditScreen(),
-    ),
-    // Köteg szerkesztése képernyő.
-    GoRoute(
-      path: '/bundles/edit/:bundleId',
-      builder: (context, state) {
-        final bundleId = state.pathParameters['bundleId']!;
-        return BundleEditScreen(bundleId: bundleId);
-      },
-    ),
-    // Köteg megtekintése prezentáció módban.
-    GoRoute(
-      path: '/bundles/view/:bundleId',
-      builder: (context, state) {
-        final bundleId = state.pathParameters['bundleId']!;
-        return BundleViewScreen(bundleId: bundleId);
-      },
-    ),
-    // Egy konkrét jegyzet oldalainak megjelenítése.
-    // A `:noteId` egy dinamikus paraméter, ami az adott jegyzet azonosítóját jelöli.
+    // Kompatibilitási útvonal: /note/:noteId -> felhasználói olvasó nézet
     GoRoute(
       path: '/note/:noteId',
       builder: (context, state) {
         final noteId = state.pathParameters['noteId']!;
-        // A 'from' query paraméter kiolvasása
-        final from = state.uri.queryParameters['from'];
-        return NotePagesScreen(noteId: noteId, from: from);
+        return NoteReadScreen(noteId: noteId);
       },
     ),
-    // Egy konkrét interaktív jegyzet megtekintése.
+    // Interaktív jegyzet megtekintése
     GoRoute(
       path: '/interactive-note/:noteId',
       builder: (context, state) {
         final noteId = state.pathParameters['noteId']!;
-        // A 'from' query paraméter kiolvasása
-        final from = state.uri.queryParameters['from'];
-        return InteractiveNoteViewScreen(noteId: noteId, from: from);
+        return InteractiveNoteViewScreen(noteId: noteId, from: null);
       },
     ),
-    // Egy konkrét jegyzet szerkesztése.
-    GoRoute(
-      path: '/note/edit/:noteId',
-      builder: (context, state) {
-        final noteId = state.pathParameters['noteId']!;
-        final from = state.uri.queryParameters['from'];
-        return NoteEditScreen(noteId: noteId, from: from);
-      },
-    ),
-    // Flashcard Card Edit
-    GoRoute(
-      path: '/flashcard-card/edit/:cardId',
-      builder: (context, state) {
-        final cardId = state.pathParameters['cardId']!;
-        return FlashcardCardEditScreen(cardId: cardId);
-      },
-    ),
-    // Question Bank List
-    GoRoute(
-      path: '/question-banks',
-      builder: (context, state) => const QuestionBankListScreen(),
-    ),
-    // Question Bank Edit
-    GoRoute(
-      path: '/question-banks/edit/:bankId',
-      builder: (context, state) {
-        final bankId = state.pathParameters['bankId']!;
-        return QuestionBankEditScreen(bankId: bankId);
-      },
-    ),
-    // Decks List
-    GoRoute(
-      path: '/decks',
-      builder: (context, state) => const DeckListScreen(),
-    ),
-    // Deck Edit
-    GoRoute(
-      path: '/decks/edit/:deckId',
-      builder: (context, state) {
-        final deckId = state.pathParameters['deckId']!;
-        return DeckEditScreen(deckId: deckId);
-      },
-    ),
-    // Deck View (flashcard flip)
-    GoRoute(
-      path: '/deck/:deckId/view',
-      builder: (context, state) {
-        final deckId = state.pathParameters['deckId']!;
-        return FlashcardDeckViewScreen(deckId: deckId);
-      },
-    ),
-    GoRoute(
-      path: '/sciences',
-      builder: (context, state) => const ScienceManagerScreen(),
-    ),
-    GoRoute(
-      path: '/users',
-      builder: (context, state) => const UserListScreen(),
-    ),
+    // Interaktív jegyzet megtekintés megmaradhat, ha kell – külön request esetén visszahozzuk
+    // Szerkesztés útvonal eltávolítva
+    // További admin útvonalak eltávolítva
     // Kétfaktoros hitelesítési kód ellenőrzése
     GoRoute(
       path: '/verify-otp',
       builder: (context, state) => const VerifyOtpScreen(),
     ),
-    // Kétfaktoros hitelesítés beállítása
+    // Flashcard deck megtekintés útvonal (csak olvasás)
     GoRoute(
-      path: '/two-factor-auth',
-      builder: (context, state) => const TwoFactorAuthScreen(),
-    ),
-    // Új útvonalak a nyilvános dokumentumok kezeléséhez
-    GoRoute(
-      path: '/public-documents',
-      builder: (context, state) => const PublicDocumentListScreen(),
-    ),
-    GoRoute(
-      path: '/public-documents/create',
-      builder: (context, state) => const PublicDocumentEditScreen(),
-    ),
-    GoRoute(
-      path: '/public-documents/edit/:docId',
+      path: '/deck/:deckId/view',
       builder: (context, state) {
-        final docId = state.pathParameters['docId']!;
-        return PublicDocumentEditScreen(documentId: docId);
+        final deckId = state.pathParameters['deckId']!;
+        return FlashcardDeckViewScreen(deckId: deckId);
       },
     ),
   ],

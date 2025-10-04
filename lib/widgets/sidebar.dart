@@ -63,42 +63,7 @@ class Sidebar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Divider(color: const Color(0xFF1E3A8A).withAlpha(77)),
             ),
-            _buildMenuItem(context, 'note_create', 'Új Szöveges Jegyzet',
-                selectedMenu == 'note_create'),
-            _buildMenuItem(
-                context,
-                'interactive_note_create',
-                'Új Interaktív Jegyzet',
-                selectedMenu == 'interactive_note_create'),
-            _buildMenuItem(context, 'dynamic_quiz_create', 'Új Dinamikus Kvíz',
-                selectedMenu == 'dynamic_quiz_create'),
-            _buildMenuItem(
-                context,
-                'dynamic_quiz_dual_create',
-                'Új 2-válaszos Dinamikus Kvíz',
-                selectedMenu == 'dynamic_quiz_dual_create'),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Divider(color: const Color(0xFF1E3A8A).withAlpha(77)),
-            ),
-            _buildMenuItem(
-                context, 'bundles', 'Kötegek', selectedMenu == 'bundles'),
-            _buildMenuItem(context, 'question_banks', 'Kérdésbankok',
-                selectedMenu == 'question_banks'),
-            _buildMenuItem(context, 'categories', 'Kategóriák',
-                selectedMenu == 'categories'),
-            _buildMenuItem(
-                context, 'sciences', 'Tudományok', selectedMenu == 'sciences'),
-            _buildMenuItem(context, 'decks', 'Tanulókártya Paklik',
-                selectedMenu == 'decks'),
-            _buildMenuItem(
-                context, 'users', 'Felhasználók', selectedMenu == 'users'),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Divider(color: const Color(0xFF1E3A8A).withAlpha(77)),
-            ),
-            _buildMenuItem(context, 'public_documents',
-                'Nyilvános Dokumentumok', selectedMenu == 'public_documents'),
+            // Felhasználói nézet: admin menük eltávolítva
             const SizedBox(height: 8),
             const Divider(height: 1),
             ListTile(

@@ -416,6 +416,7 @@ class _NoteTableState extends State<NoteTable> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Szerkesztés, státusz-módosítás és törlés ikonok eltávolítva felhasználói nézetben.
                   _buildIconButton(
                       context, Icons.visibility, AppTheme.primaryColor, () {
                     if (noteType == 'dynamic_quiz' ||
@@ -431,27 +432,6 @@ class _NoteTableState extends State<NoteTable> {
                       context.go('/note/${doc.id}');
                     }
                   }),
-                  _buildIconButton(context, Icons.edit, AppTheme.primaryColor,
-                      () {
-                    // Build return URL with active filters
-                    final currentUri = GoRouter.of(context)
-                        .routeInformationProvider
-                        .value
-                        .uri
-                        .toString();
-                    final from = Uri.encodeComponent(currentUri);
-                    if (noteType == 'dynamic_quiz' ||
-                        noteType == 'dynamic_quiz_dual') {
-                      context.go(noteType == 'dynamic_quiz'
-                          ? '/quiz/edit/${doc.id}?from=$from'
-                          : '/quiz-dual/edit/${doc.id}?from=$from');
-                    } else {
-                      context.go('/note/edit/${doc.id}?from=$from');
-                    }
-                  }),
-                  _buildStatusMenu(context, doc.id, status),
-                  _buildIconButton(context, Icons.delete_forever, Colors.black,
-                      () => _showDeleteAllDialog(context, doc.id)),
                 ],
               ),
             ),
@@ -603,13 +583,6 @@ class _NoteTableState extends State<NoteTable> {
                       context, Icons.visibility, AppTheme.primaryColor, () {
                     context.go('/deck/${doc.id}/view');
                   }),
-                  _buildIconButton(context, Icons.edit, AppTheme.primaryColor,
-                      () {
-                    context.go('/decks/edit/${doc.id}');
-                  }),
-                  _buildStatusMenu(context, doc.id, status),
-                  _buildIconButton(context, Icons.delete_forever, Colors.black,
-                      () => _showDeleteAllDialog(context, doc.id)),
                 ],
               ),
             ),

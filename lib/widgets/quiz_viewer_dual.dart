@@ -28,7 +28,8 @@ class OptionCardDual extends StatefulWidget {
   State<OptionCardDual> createState() => _OptionCardDualState();
 }
 
-class _OptionCardDualState extends State<OptionCardDual> with SingleTickerProviderStateMixin {
+class _OptionCardDualState extends State<OptionCardDual>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -138,7 +139,9 @@ class _OptionCardDualState extends State<OptionCardDual> with SingleTickerProvid
       ),
       child: Row(
         children: [
-          Expanded(child: Text(widget.option['text'] ?? '', style: const TextStyle(fontSize: 16))),
+          Expanded(
+              child: Text(widget.option['text'] ?? '',
+                  style: const TextStyle(fontSize: 16))),
           if (showResult && widget.isSelected)
             Row(
               children: [
@@ -177,7 +180,8 @@ class _OptionCardDualState extends State<OptionCardDual> with SingleTickerProvid
   }
 }
 
-class _QuizViewerDualState extends State<QuizViewerDual> with TickerProviderStateMixin {
+class _QuizViewerDualState extends State<QuizViewerDual>
+    with TickerProviderStateMixin {
   int _currentIndex = 0;
   int _score = 0;
   final Set<int> _selectedOptionIndices = {};
@@ -221,7 +225,8 @@ class _QuizViewerDualState extends State<QuizViewerDual> with TickerProviderStat
 
     setState(() {
       _answerChecked = true;
-      final options = widget.questions[_currentIndex]['options'] as List<dynamic>;
+      final options =
+          widget.questions[_currentIndex]['options'] as List<dynamic>;
       final correctIndices = <int>[];
       for (int i = 0; i < options.length; i++) {
         if (options[i]['isCorrect'] == true) correctIndices.add(i);
@@ -263,7 +268,10 @@ class _QuizViewerDualState extends State<QuizViewerDual> with TickerProviderStat
             Text('Eredményed:', style: Theme.of(context).textTheme.bodyLarge),
             const SizedBox(height: 16),
             Text('$_score / ${widget.questions.length}',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineMedium
+                    ?.copyWith(fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [
@@ -315,7 +323,8 @@ class _QuizViewerDualState extends State<QuizViewerDual> with TickerProviderStat
               itemCount: widget.questions.length,
               itemBuilder: (context, index) {
                 final question = widget.questions[index];
-                final options = (question['options'] as List).cast<Map<String, dynamic>>();
+                final options =
+                    (question['options'] as List).cast<Map<String, dynamic>>();
                 return _buildQuestionPage(question, options);
               },
             ),
@@ -326,7 +335,8 @@ class _QuizViewerDualState extends State<QuizViewerDual> with TickerProviderStat
     );
   }
 
-  Widget _buildQuestionPage(Map<String, dynamic> question, List<Map<String, dynamic>> options) {
+  Widget _buildQuestionPage(
+      Map<String, dynamic> question, List<Map<String, dynamic>> options) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -334,17 +344,24 @@ class _QuizViewerDualState extends State<QuizViewerDual> with TickerProviderStat
         children: [
           const Text(
             'Jelöld ki a KÉT helyes választ!',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.blueGrey),
+            style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.blueGrey),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           Text(
             question['question'],
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w500),
+            style: Theme.of(context)
+                .textTheme
+                .headlineSmall
+                ?.copyWith(fontWeight: FontWeight.w500),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
-          ...List.generate(options.length, (i) => _buildAnswerOption(options[i], i)),
+          ...List.generate(
+              options.length, (i) => _buildAnswerOption(options[i], i)),
         ],
       ),
     );
@@ -374,7 +391,9 @@ class _QuizViewerDualState extends State<QuizViewerDual> with TickerProviderStat
           ),
           ElevatedButton(
             onPressed: _answerChecked ? _nextQuestion : null,
-            child: Text(_currentIndex < widget.questions.length - 1 ? 'Következő' : 'Eredmény'),
+            child: Text(_currentIndex < widget.questions.length - 1
+                ? 'Következő'
+                : 'Eredmény'),
           ),
         ],
       ),

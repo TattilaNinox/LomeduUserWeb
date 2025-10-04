@@ -6,7 +6,7 @@ import '../widgets/sidebar.dart';
 import '../widgets/header.dart';
 
 /// A jegyzet kötegek (bundle) listáját megjelenítő képernyő.
-/// 
+///
 /// Ez a képernyő megjeleníti az összes létrehozott köteget, ahol minden köteg
 /// azonos kategóriájú és címkéjű jegyzetek gyűjteménye. A felhasználó innen
 /// tudja kezelni a kötegeket: új létrehozása, meglévő szerkesztése, törlése
@@ -71,7 +71,7 @@ class _BundleListScreenState extends State<BundleListScreen> {
           .collection('bundles')
           .doc(bundleId)
           .delete();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Köteg sikeresen törölve!')),
@@ -147,11 +147,14 @@ class _BundleListScreenState extends State<BundleListScreen> {
                       if (_searchText.isNotEmpty) {
                         bundles = bundles.where((bundle) {
                           final data = bundle.data() as Map<String, dynamic>;
-                          final name = data['name']?.toString().toLowerCase() ?? '';
-                          final description = data['description']?.toString().toLowerCase() ?? '';
+                          final name =
+                              data['name']?.toString().toLowerCase() ?? '';
+                          final description =
+                              data['description']?.toString().toLowerCase() ??
+                                  '';
                           final searchLower = _searchText.toLowerCase();
-                          return name.contains(searchLower) || 
-                                 description.contains(searchLower);
+                          return name.contains(searchLower) ||
+                              description.contains(searchLower);
                         }).toList();
                       }
 
@@ -216,19 +219,22 @@ class _BundleListScreenState extends State<BundleListScreen> {
                               DataColumn(label: Text('Műveletek')),
                             ],
                             rows: bundles.map((bundle) {
-                              final data = bundle.data() as Map<String, dynamic>;
+                              final data =
+                                  bundle.data() as Map<String, dynamic>;
                               final name = data['name'] ?? 'Névtelen';
                               final description = data['description'] ?? '';
                               final category = data['category'] ?? '';
                               final tags = (data['tags'] as List<dynamic>?)
-                                  ?.join(', ') ?? '';
-                              final noteIds = (data['noteIds'] as List<dynamic>?) ?? [];
+                                      ?.join(', ') ??
+                                  '';
+                              final noteIds =
+                                  (data['noteIds'] as List<dynamic>?) ?? [];
                               final noteCount = noteIds.length;
                               final createdAt = data['createdAt'] as Timestamp?;
                               final createdDate = createdAt != null
                                   ? '${createdAt.toDate().year}.'
-                                    '${createdAt.toDate().month.toString().padLeft(2, '0')}.'
-                                    '${createdAt.toDate().day.toString().padLeft(2, '0')}.'
+                                      '${createdAt.toDate().month.toString().padLeft(2, '0')}.'
+                                      '${createdAt.toDate().day.toString().padLeft(2, '0')}.'
                                   : '';
 
                               return DataRow(
@@ -236,7 +242,8 @@ class _BundleListScreenState extends State<BundleListScreen> {
                                   DataCell(Text(name)),
                                   DataCell(
                                     ConstrainedBox(
-                                      constraints: const BoxConstraints(maxWidth: 200),
+                                      constraints:
+                                          const BoxConstraints(maxWidth: 200),
                                       child: Text(
                                         description,
                                         overflow: TextOverflow.ellipsis,
@@ -246,7 +253,8 @@ class _BundleListScreenState extends State<BundleListScreen> {
                                   DataCell(Text(category)),
                                   DataCell(
                                     ConstrainedBox(
-                                      constraints: const BoxConstraints(maxWidth: 150),
+                                      constraints:
+                                          const BoxConstraints(maxWidth: 150),
                                       child: Text(
                                         tags,
                                         overflow: TextOverflow.ellipsis,
@@ -261,13 +269,17 @@ class _BundleListScreenState extends State<BundleListScreen> {
                                           vertical: 4,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Theme.of(context).primaryColor.withAlpha(26),
-                                          borderRadius: BorderRadius.circular(12),
+                                          color: Theme.of(context)
+                                              .primaryColor
+                                              .withAlpha(26),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
                                         ),
                                         child: Text(
                                           noteCount.toString(),
                                           style: TextStyle(
-                                            color: Theme.of(context).primaryColor,
+                                            color:
+                                                Theme.of(context).primaryColor,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
@@ -287,12 +299,14 @@ class _BundleListScreenState extends State<BundleListScreen> {
                                         ),
                                         IconButton(
                                           icon: const Icon(Icons.edit),
-                                          onPressed: () => _editBundle(bundle.id),
+                                          onPressed: () =>
+                                              _editBundle(bundle.id),
                                           tooltip: 'Szerkesztés',
                                         ),
                                         IconButton(
                                           icon: const Icon(Icons.delete),
-                                          onPressed: () => _deleteBundle(bundle.id, name),
+                                          onPressed: () =>
+                                              _deleteBundle(bundle.id, name),
                                           tooltip: 'Törlés',
                                           color: Colors.red,
                                         ),
@@ -315,4 +329,4 @@ class _BundleListScreenState extends State<BundleListScreen> {
       ),
     );
   }
-} 
+}

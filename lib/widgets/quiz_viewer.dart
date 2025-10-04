@@ -55,7 +55,8 @@ class _QuizViewerState extends State<QuizViewer> with TickerProviderStateMixin {
     setState(() {
       _selectedOptionIndex = optionIndex;
       _answerChecked = true;
-      final isCorrect = widget.questions[_currentIndex]['options'][optionIndex]['isCorrect'] as bool;
+      final isCorrect = widget.questions[_currentIndex]['options'][optionIndex]
+          ['isCorrect'] as bool;
       if (isCorrect) {
         _score++;
       }
@@ -73,7 +74,7 @@ class _QuizViewerState extends State<QuizViewer> with TickerProviderStateMixin {
       _showResultDialog();
     }
   }
-  
+
   void _onPageChanged(int index) {
     setState(() {
       _currentIndex = index;
@@ -100,7 +101,10 @@ class _QuizViewerState extends State<QuizViewer> with TickerProviderStateMixin {
             const SizedBox(height: 16),
             Text(
               '$_score / ${widget.questions.length}',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -140,7 +144,8 @@ class _QuizViewerState extends State<QuizViewer> with TickerProviderStateMixin {
               onPageChanged: _onPageChanged,
               itemBuilder: (context, index) {
                 final question = widget.questions[index];
-                final options = (question['options'] as List).cast<Map<String, dynamic>>();
+                final options =
+                    (question['options'] as List).cast<Map<String, dynamic>>();
                 return _buildQuestionPage(question, options);
               },
             ),
@@ -150,20 +155,25 @@ class _QuizViewerState extends State<QuizViewer> with TickerProviderStateMixin {
       ),
     );
   }
-  
-  Widget _buildQuestionPage(Map<String, dynamic> question, List<Map<String, dynamic>> options) {
-     return SingleChildScrollView(
+
+  Widget _buildQuestionPage(
+      Map<String, dynamic> question, List<Map<String, dynamic>> options) {
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             question['question'],
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w500),
+            style: Theme.of(context)
+                .textTheme
+                .headlineSmall
+                ?.copyWith(fontWeight: FontWeight.w500),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
-          ...List.generate(options.length, (i) => _buildAnswerOption(options[i], i)),
+          ...List.generate(
+              options.length, (i) => _buildAnswerOption(options[i], i)),
         ],
       ),
     );
@@ -171,13 +181,14 @@ class _QuizViewerState extends State<QuizViewer> with TickerProviderStateMixin {
 
   Widget _buildAnswerOption(Map<String, dynamic> option, int index) {
     bool isSelected = _selectedOptionIndex == index;
-    
+
     return GestureDetector(
       onTap: () => _handleAnswer(index),
       child: AnimatedBuilder(
         animation: _cardFlipAnimation,
         builder: (context, child) {
-          final rotation = isSelected ? _cardFlipAnimation.value * math.pi : 0.0;
+          final rotation =
+              isSelected ? _cardFlipAnimation.value * math.pi : 0.0;
           final isFlipped = isSelected && _cardFlipController.value > 0.5;
 
           return Transform(
@@ -194,7 +205,8 @@ class _QuizViewerState extends State<QuizViewer> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildCardFront(Map<String, dynamic> option, int index, bool isSelected) {
+  Widget _buildCardFront(
+      Map<String, dynamic> option, int index, bool isSelected) {
     final bool isCorrect = option['isCorrect'] as bool;
     Color borderColor = Colors.grey.shade300;
     Color? iconColor;
@@ -229,7 +241,9 @@ class _QuizViewerState extends State<QuizViewer> with TickerProviderStateMixin {
       ),
       child: Row(
         children: [
-          Expanded(child: Text(option['text'], style: const TextStyle(fontSize: 16))),
+          Expanded(
+              child:
+                  Text(option['text'], style: const TextStyle(fontSize: 16))),
           if (_answerChecked && isSelected)
             Row(
               children: [
@@ -266,25 +280,31 @@ class _QuizViewerState extends State<QuizViewer> with TickerProviderStateMixin {
       ),
     );
   }
-  
+
   Widget _buildBottomNavBar() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))
+        ],
       ),
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           minimumSize: const Size(double.infinity, 50),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         onPressed: _answerChecked ? _nextQuestion : null,
         child: Text(
-          _currentIndex < widget.questions.length - 1 ? 'Következő' : 'Befejezés',
+          _currentIndex < widget.questions.length - 1
+              ? 'Következő'
+              : 'Befejezés',
           style: const TextStyle(fontSize: 18),
         ),
       ),
     );
   }
-} 
+}
