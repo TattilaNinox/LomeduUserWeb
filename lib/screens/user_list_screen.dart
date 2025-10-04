@@ -299,10 +299,10 @@ class _UserListScreenState extends State<UserListScreen> {
         padding: const EdgeInsets.all(8),
         constraints: const BoxConstraints(minHeight: 80, maxHeight: 80),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: selected ? color : color.withOpacity(0.3),
+            color: selected ? color : color.withValues(alpha: 0.3),
             width: selected ? 2 : 1,
           ),
         ),
@@ -324,7 +324,7 @@ class _UserListScreenState extends State<UserListScreen> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 11,
-                color: color.withOpacity(0.8),
+                color: color.withValues(alpha: 0.8),
               ),
               textAlign: TextAlign.center,
             ),

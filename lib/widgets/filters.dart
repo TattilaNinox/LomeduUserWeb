@@ -73,15 +73,21 @@ class _FiltersState extends State<Filters> {
   @override
   void didUpdateWidget(covariant Filters oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.selectedStatus != oldWidget.selectedStatus)
+    if (widget.selectedStatus != oldWidget.selectedStatus) {
       _status = widget.selectedStatus;
-    if (widget.selectedCategory != oldWidget.selectedCategory)
+    }
+    if (widget.selectedCategory != oldWidget.selectedCategory) {
       _category = widget.selectedCategory;
-    if (widget.selectedTag != oldWidget.selectedTag) _tag = widget.selectedTag;
-    if (widget.selectedScience != oldWidget.selectedScience)
+    }
+    if (widget.selectedTag != oldWidget.selectedTag) {
+      _tag = widget.selectedTag;
+    }
+    if (widget.selectedScience != oldWidget.selectedScience) {
       _science = widget.selectedScience;
-    if (widget.selectedType != oldWidget.selectedType)
+    }
+    if (widget.selectedType != oldWidget.selectedType) {
       _type = widget.selectedType;
+    }
   }
 
   @override
@@ -100,15 +106,15 @@ class _FiltersState extends State<Filters> {
 
     if (widget.showType) {
       add(_buildDropdown<String>(
-          hint: 'Típus',
-          value: _type,
-          items: _noteTypes,
-          onChanged: (v) {
-            setState(() => _type = v);
-            widget.onTypeChanged(v);
-          },
-          isExpanded: widget.vertical,
-        ));
+        hint: 'Típus',
+        value: _type,
+        items: _noteTypes,
+        onChanged: (v) {
+          setState(() => _type = v);
+          widget.onTypeChanged(v);
+        },
+        isExpanded: widget.vertical,
+      ));
     }
 
     if (widget.showStatus) {

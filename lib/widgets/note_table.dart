@@ -646,6 +646,8 @@ class _NoteTableState extends State<NoteTable> {
     }
   }
 
+  // Nem használt a felhasználói buildben – megtartjuk a későbbi admin funkciókhoz.
+  // ignore: unused_element
   void _showDeleteAllDialog(BuildContext context, String docId) {
     showDialog(
       context: context,
