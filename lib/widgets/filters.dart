@@ -17,6 +17,7 @@ class Filters extends StatefulWidget {
   final VoidCallback onClearFilters;
   final bool vertical;
   final bool showStatus;
+  final bool showType;
 
   const Filters({
     super.key,
@@ -36,6 +37,7 @@ class Filters extends StatefulWidget {
     required this.onClearFilters,
     this.vertical = false,
     this.showStatus = false,
+    this.showType = true,
   });
 
   @override
@@ -96,16 +98,18 @@ class _FiltersState extends State<Filters> {
       children.add(w);
     }
 
-    add(_buildDropdown<String>(
-        hint: 'Típus',
-        value: _type,
-        items: _noteTypes,
-        onChanged: (v) {
-          setState(() => _type = v);
-          widget.onTypeChanged(v);
-        },
-        isExpanded: widget.vertical,
-      ));
+    if (widget.showType) {
+      add(_buildDropdown<String>(
+          hint: 'Típus',
+          value: _type,
+          items: _noteTypes,
+          onChanged: (v) {
+            setState(() => _type = v);
+            widget.onTypeChanged(v);
+          },
+          isExpanded: widget.vertical,
+        ));
+    }
 
     if (widget.showStatus) {
       add(_buildDropdown<String>(
@@ -121,56 +125,56 @@ class _FiltersState extends State<Filters> {
     }
 
     add(_buildDropdown<String>(
-        hint: 'Kategória',
-        value: _category,
-        items: widget.categories,
-        onChanged: (v) {
-          setState(() => _category = v);
-          widget.onCategoryChanged(v);
-        },
-        isExpanded: widget.vertical,
-      ));
+      hint: 'Kategória',
+      value: _category,
+      items: widget.categories,
+      onChanged: (v) {
+        setState(() => _category = v);
+        widget.onCategoryChanged(v);
+      },
+      isExpanded: widget.vertical,
+    ));
 
     add(_buildDropdown<String>(
-        hint: 'Tudomány',
-        value: _science,
-        items: widget.sciences,
-        onChanged: (v) {
-          setState(() => _science = v);
-          widget.onScienceChanged(v);
-        },
-        isExpanded: widget.vertical,
-      ));
+      hint: 'Tudomány',
+      value: _science,
+      items: widget.sciences,
+      onChanged: (v) {
+        setState(() => _science = v);
+        widget.onScienceChanged(v);
+      },
+      isExpanded: widget.vertical,
+    ));
 
     add(_buildDropdown<String>(
-        hint: 'Címke',
-        value: _tag,
-        items: widget.tags,
-        onChanged: (v) {
-          setState(() => _tag = v);
-          widget.onTagChanged(v);
-        },
-        isExpanded: widget.vertical,
-      ));
+      hint: 'Címke',
+      value: _tag,
+      items: widget.tags,
+      onChanged: (v) {
+        setState(() => _tag = v);
+        widget.onTagChanged(v);
+      },
+      isExpanded: widget.vertical,
+    ));
 
     add(Align(
-        alignment: Alignment.centerLeft,
-        child: TextButton(
-          onPressed: () {
-            setState(() {
-              _status = null;
-              _category = null;
-              _tag = null;
-              _science = null;
-              _type = null;
-            });
-            widget.onClearFilters();
-            widget.onTypeChanged(null);
-            widget.onScienceChanged(null);
-          },
-          child: const Text('Szűrők törlése'),
-        ),
-      ));
+      alignment: Alignment.centerLeft,
+      child: TextButton(
+        onPressed: () {
+          setState(() {
+            _status = null;
+            _category = null;
+            _tag = null;
+            _science = null;
+            _type = null;
+          });
+          widget.onClearFilters();
+          widget.onTypeChanged(null);
+          widget.onScienceChanged(null);
+        },
+        child: const Text('Szűrők törlése'),
+      ),
+    ));
 
     return Padding(
       padding: outerPadding,
