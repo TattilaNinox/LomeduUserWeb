@@ -15,6 +15,7 @@ class Filters extends StatefulWidget {
   final ValueChanged<String?> onTagChanged;
   final ValueChanged<String?> onTypeChanged;
   final VoidCallback onClearFilters;
+  final bool vertical;
 
   const Filters({
     super.key,
@@ -32,6 +33,7 @@ class Filters extends StatefulWidget {
     required this.onTagChanged,
     required this.onTypeChanged,
     required this.onClearFilters,
+    this.vertical = false,
   });
 
   @override
@@ -69,63 +71,71 @@ class _FiltersState extends State<Filters> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Row(
-        children: [
-          // Type filter
-          _buildDropdown<String>(
-            hint: 'Típus',
-            value: _type,
-            items: _noteTypes,
-            onChanged: (v) {
-              setState(() => _type = v);
-              widget.onTypeChanged(v);
-            },
-          ),
-          const SizedBox(width: 16),
-          // Status filter
-          _buildDropdown<String>(
-            hint: 'Státusz',
-            value: _status,
-            items: ['Draft', 'Published', 'Archived'],
-            onChanged: (v) {
-              setState(() => _status = v);
-              widget.onStatusChanged(v);
-            },
-          ),
-          const SizedBox(width: 16),
-          _buildDropdown<String>(
-            hint: 'Kategória',
-            value: _category,
-            items: widget.categories,
-            onChanged: (v) {
-              setState(() => _category = v);
-              widget.onCategoryChanged(v);
-            },
-          ),
-          const SizedBox(width: 16),
-          _buildDropdown<String>(
-            hint: 'Tudomány',
-            value: _science,
-            items: widget.sciences,
-            onChanged: (v) {
-              setState(() => _science = v);
-              widget.onScienceChanged(v);
-            },
-          ),
-          const SizedBox(width: 16),
-          _buildDropdown<String>(
-            hint: 'Címke',
-            value: _tag,
-            items: widget.tags,
-            onChanged: (v) {
-              setState(() => _tag = v);
-              widget.onTagChanged(v);
-            },
-          ),
-          const SizedBox(width: 16),
-          TextButton(onPressed: () {
+    final outerPadding = widget.vertical
+        ? const EdgeInsets.all(8.0)
+        : const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0);
+    final gap = widget.vertical ? const SizedBox(height: 8) : const SizedBox(width: 16);
+
+    final children = <Widget>[
+      _buildDropdown<String>(
+        hint: 'Típus',
+        value: _type,
+        items: _noteTypes,
+        onChanged: (v) {
+          setState(() => _type = v);
+          widget.onTypeChanged(v);
+        },
+        isExpanded: widget.vertical,
+      ),
+      gap,
+      _buildDropdown<String>(
+        hint: 'Státusz',
+        value: _status,
+        items: const ['Draft', 'Published', 'Archived'],
+        onChanged: (v) {
+          setState(() => _status = v);
+          widget.onStatusChanged(v);
+        },
+        isExpanded: widget.vertical,
+      ),
+      gap,
+      _buildDropdown<String>(
+        hint: 'Kategória',
+        value: _category,
+        items: widget.categories,
+        onChanged: (v) {
+          setState(() => _category = v);
+          widget.onCategoryChanged(v);
+        },
+        isExpanded: widget.vertical,
+      ),
+      gap,
+      _buildDropdown<String>(
+        hint: 'Tudomány',
+        value: _science,
+        items: widget.sciences,
+        onChanged: (v) {
+          setState(() => _science = v);
+          widget.onScienceChanged(v);
+        },
+        isExpanded: widget.vertical,
+      ),
+      gap,
+      _buildDropdown<String>(
+        hint: 'Címke',
+        value: _tag,
+        items: widget.tags,
+        onChanged: (v) {
+          setState(() => _tag = v);
+          widget.onTagChanged(v);
+        },
+        isExpanded: widget.vertical,
+      ),
+      gap,
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton(
+          onPressed: () {
             setState(() {
               _status = null;
               _category = null;
@@ -136,9 +146,17 @@ class _FiltersState extends State<Filters> {
             widget.onClearFilters();
             widget.onTypeChanged(null);
             widget.onScienceChanged(null);
-          }, child: const Text('Szűrők törlése')),
-        ],
+          },
+          child: const Text('Szűrők törlése'),
+        ),
       ),
+    ];
+
+    return Padding(
+      padding: outerPadding,
+      child: widget.vertical
+          ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children)
+          : Row(children: children),
     );
   }
 
@@ -147,6 +165,7 @@ class _FiltersState extends State<Filters> {
     required T? value,
     required List<T> items,
     required ValueChanged<T?> onChanged,
+    bool isExpanded = false,
   }) {
     return Theme(
       data: Theme.of(context).copyWith(
@@ -155,8 +174,16 @@ class _FiltersState extends State<Filters> {
         splashColor: Colors.transparent,
       ),
       child: DropdownButton<T>(
-        hint: Text(hint, style: const TextStyle(fontSize: 12, color: Color(0xFF9CA3AF))),
+        hint: Text(
+          hint,
+          style: TextStyle(
+            fontSize: 12,
+            color: Theme.of(context).colorScheme.primary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         value: value,
+        isExpanded: isExpanded,
         items: items
             .map((e) => DropdownMenuItem<T>(
                   value: e,

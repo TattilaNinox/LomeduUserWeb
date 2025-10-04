@@ -250,37 +250,68 @@ class _NoteListScreenState extends State<NoteListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    Widget buildContent() {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    Widget buildContent({required bool showSideFilters}) {
+      return Row(
         children: [
-          Header(
-            onSearchChanged: _onSearchChanged,
-          ),
-          Filters(
-            categories: _categories,
-            sciences: _sciences,
-            tags: _tags,
-            selectedStatus: _selectedStatus,
-            selectedCategory: _selectedCategory,
-            selectedScience: _selectedScience,
-            selectedTag: _selectedTag,
-            selectedType: _selectedType,
-            onStatusChanged: _onStatusChanged,
-            onCategoryChanged: _onCategoryChanged,
-            onScienceChanged: _onScienceChanged,
-            onTagChanged: _onTagChanged,
-            onTypeChanged: _onTypeChanged,
-            onClearFilters: _onClearFilters,
-          ),
+          if (showSideFilters)
+            SizedBox(
+              width: 320,
+              child: Card(
+                margin: const EdgeInsets.fromLTRB(12, 10, 8, 12),
+                elevation: 1,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text('Szűrők',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 14)),
+                        const SizedBox(height: 8),
+                        Filters(
+                          categories: _categories,
+                          sciences: _sciences,
+                          tags: _tags,
+                          selectedStatus: _selectedStatus,
+                          selectedCategory: _selectedCategory,
+                          selectedScience: _selectedScience,
+                          selectedTag: _selectedTag,
+                          selectedType: _selectedType,
+                          onStatusChanged: _onStatusChanged,
+                          onCategoryChanged: _onCategoryChanged,
+                          onScienceChanged: _onScienceChanged,
+                          onTagChanged: _onTagChanged,
+                          onTypeChanged: _onTypeChanged,
+                          onClearFilters: _onClearFilters,
+                          vertical: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           Expanded(
-            child: NoteCardGrid(
-              searchText: _searchText,
-              selectedStatus: _selectedStatus,
-              selectedCategory: _selectedCategory,
-              selectedScience: _selectedScience,
-              selectedTag: _selectedTag,
-              selectedType: _selectedType,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Header(
+                  onSearchChanged: _onSearchChanged,
+                ),
+                Expanded(
+                  child: NoteCardGrid(
+                    searchText: _searchText,
+                    selectedStatus: _selectedStatus,
+                    selectedCategory: _selectedCategory,
+                    selectedScience: _selectedScience,
+                    selectedTag: _selectedTag,
+                    selectedType: _selectedType,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -296,8 +327,35 @@ class _NoteListScreenState extends State<NoteListScreen> {
             backgroundColor: const Color.fromARGB(255, 249, 250, 251),
             body: Row(
               children: [
-                const Sidebar(selectedMenu: 'notes'),
-                Expanded(child: buildContent()),
+                Sidebar(
+                  selectedMenu: 'notes',
+                  extraPanel: Card(
+                    elevation: 3,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Filters(
+                        categories: _categories,
+                        sciences: _sciences,
+                        tags: _tags,
+                        selectedStatus: _selectedStatus,
+                        selectedCategory: _selectedCategory,
+                        selectedScience: _selectedScience,
+                        selectedTag: _selectedTag,
+                        selectedType: _selectedType,
+                        onStatusChanged: _onStatusChanged,
+                        onCategoryChanged: _onCategoryChanged,
+                        onScienceChanged: _onScienceChanged,
+                        onTagChanged: _onTagChanged,
+                        onTypeChanged: _onTypeChanged,
+                        onClearFilters: _onClearFilters,
+                        vertical: true,
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(child: buildContent(showSideFilters: false)),
               ],
             ),
           );
@@ -312,7 +370,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
               child: SafeArea(child: Sidebar(selectedMenu: 'notes'))),
           body: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: buildContent(),
+            child: buildContent(showSideFilters: false),
           ),
           backgroundColor: const Color.fromARGB(255, 249, 250, 251),
         );
