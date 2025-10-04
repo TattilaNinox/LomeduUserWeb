@@ -428,11 +428,11 @@ class _NoteTableState extends State<NoteTable> {
     final title = data['title'] as String? ?? 'Névtelen pakli';
     final flashcards = data['flashcards'] as List<dynamic>? ?? [];
     final category = (data['category'] ?? '');
-    final status = (data['status'] ?? '');
-    final displayStatus = status == 'Public' ? 'Published' : status;
-    final modified = (data['modified'] is Timestamp)
-        ? (data['modified'] as Timestamp).toDate()
-        : DateTime.now();
+    // final status = (data['status'] ?? '');
+    // final displayStatus = status == 'Public' ? 'Published' : status;
+    // final modified = (data['modified'] is Timestamp)
+    //     ? (data['modified'] as Timestamp).toDate()
+    //     : DateTime.now();
     final hasDocx =
         data['docxUrl'] != null && data['docxUrl'].toString().isNotEmpty;
     final hasAudio =
