@@ -142,6 +142,7 @@ class _CategorySection extends StatelessWidget {
                 type: type,
                 hasDoc: (data['docxUrl'] ?? '').toString().isNotEmpty,
                 hasAudio: (data['audioUrl'] ?? '').toString().isNotEmpty,
+                audioUrl: (data['audioUrl'] ?? '').toString(),
                 hasVideo: (data['videoUrl'] ?? '').toString().isNotEmpty,
                 deckCount: type == 'deck'
                     ? (data['flashcards'] as List<dynamic>? ?? []).length

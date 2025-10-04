@@ -60,10 +60,22 @@ class Sidebar extends StatelessWidget {
                       builder: (context, snapshot) {
                         String text = 'Felhasználó';
                         if (snapshot.hasData && snapshot.data!.exists) {
-                          final data = (snapshot.data!.data() as Map<String, dynamic>);
-                          final first = (data['firstName'] ?? data['first_name'] ?? data['givenName'] ?? data['given_name'])?.toString();
-                          final last = (data['lastName'] ?? data['last_name'] ?? data['familyName'] ?? data['family_name'])?.toString();
-                          if (first != null && first.isNotEmpty && last != null && last.isNotEmpty) {
+                          final data =
+                              (snapshot.data!.data() as Map<String, dynamic>);
+                          final first = (data['firstName'] ??
+                                  data['first_name'] ??
+                                  data['givenName'] ??
+                                  data['given_name'])
+                              ?.toString();
+                          final last = (data['lastName'] ??
+                                  data['last_name'] ??
+                                  data['familyName'] ??
+                                  data['family_name'])
+                              ?.toString();
+                          if (first != null &&
+                              first.isNotEmpty &&
+                              last != null &&
+                              last.isNotEmpty) {
                             text = '$last $first'; // HU: Vezetéknév Keresztnév
                           }
                         }

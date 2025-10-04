@@ -11,8 +11,10 @@ import 'package:audioplayers/audioplayers.dart';
 class MiniAudioPlayer extends StatefulWidget {
   /// A lejátszandó audiofájl URL-je.
   final String audioUrl;
+  /// Ha igaz, a lejátszó csak interakcióra inicializál (lista teljesítményhez).
+  final bool deferInit;
 
-  const MiniAudioPlayer({super.key, required this.audioUrl});
+  const MiniAudioPlayer({super.key, required this.audioUrl, this.deferInit = true});
 
   @override
   State<MiniAudioPlayer> createState() => _MiniAudioPlayerState();
@@ -29,6 +31,8 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
   Duration _position = Duration.zero;
   bool _isInitialized = false;
   bool _hasError = false;
+  bool _initializing = false;
+  bool _expanded = false; // Ha igaz, a teljes kezelőfelület látszik
 
   bool get _isPlaying => _playerState == PlayerState.playing;
 
@@ -36,7 +40,9 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
   void initState() {
     super.initState();
     _audioPlayer = AudioPlayer();
-    _initAudioPlayer();
+    if (!widget.deferInit) {
+      _initAudioPlayer();
+    }
   }
 
   /// A lejátszó inicializálását és a listenerekre való feliratkozást végző metódus.
@@ -83,6 +89,22 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
     }
   }
 
+  Future<void> _ensureInitAndPlay() async {
+    if (_isInitialized) {
+      setState(() => _expanded = true);
+      await _audioPlayer.play(UrlSource(widget.audioUrl));
+      return;
+    }
+    setState(() => _initializing = true);
+    await _initAudioPlayer();
+    if (!mounted) return;
+    setState(() {
+      _initializing = false;
+      _expanded = true;
+    });
+    await _audioPlayer.play(UrlSource(widget.audioUrl));
+  }
+
   @override
   void dispose() {
     // A dispose() metódus automatikusan meghívja a stop() metódust is.
@@ -113,10 +135,33 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
         child: Icon(Icons.error, color: Colors.red),
       );
     }
+
+    // Lista-optimalizált kezdeti állapot: csak egy kis Play ikon jelenik meg.
+    if (widget.deferInit && !_expanded) {
+      return SizedBox(
+        height: 24,
+        child: _initializing
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : IconButton(
+                icon: const Icon(Icons.play_circle_fill,
+                    size: 20, color: Color(0xFF1E3A8A)),
+                padding: EdgeInsets.zero,
+                constraints:
+                    const BoxConstraints(minWidth: 24, minHeight: 24),
+                tooltip: 'Hang lejátszása',
+                onPressed: _ensureInitAndPlay,
+              ),
+      );
+    }
+
     if (!_isInitialized) {
       return const SizedBox(
-        width: 24,
-        height: 24,
+        width: 16,
+        height: 16,
         child: CircularProgressIndicator(strokeWidth: 2),
       );
     }
@@ -177,7 +222,8 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
             child: SliderTheme(
               data: const SliderThemeData(
                 trackHeight: 2.0,
-                thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6.0),
+                thumbShape:
+                    RoundSliderThumbShape(enabledThumbRadius: 6.0),
                 overlayShape: RoundSliderOverlayShape(overlayRadius: 12.0),
                 activeTrackColor: Color(0xFF1E3A8A),
                 inactiveTrackColor: Color(0xFFD1D5DB),
