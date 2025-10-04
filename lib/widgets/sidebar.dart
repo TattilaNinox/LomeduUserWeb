@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../core/firebase_config.dart';
 
 /// Az alkalmazás oldalsó menüsávját (sidebar) megvalósító widget.
 ///
@@ -14,19 +15,12 @@ class Sidebar extends StatelessWidget {
   /// menüpont lesz vizuálisan kiemelve.
   final String selectedMenu;
 
-  /// A `Sidebar` widget konstruktora.
-  const Sidebar({super.key, required this.selectedMenu});
+  /// Opcionális extra panel, amely a menüpontok alatt jelenik meg
+  /// (pl. szűrő űrlap a jegyzetek oldalon).
+  final Widget? extraPanel;
 
-  /// A kijelentkezési logikát kezelő privát metódus.
-  Future<void> _signOut(BuildContext context) async {
-    // Kijelentkezteti a felhasználót a Firebase Authentication szolgáltatásból.
-    await FirebaseAuth.instance.signOut();
-    if (!context.mounted) return;
-    // A `go_router` segítségével a bejelentkezési képernyőre navigál.
-    // A `go` metódus törli a navigációs vermet, így a felhasználó
-    // nem tud visszalépni az előző oldalra a böngésző "vissza" gombjával.
-    context.go('/login');
-  }
+  /// A `Sidebar` widget konstruktora.
+  const Sidebar({super.key, required this.selectedMenu, this.extraPanel});
 
   @override
   Widget build(BuildContext context) {
@@ -43,41 +37,73 @@ class Sidebar extends StatelessWidget {
               child: InkWell(
                 onTap: () => context.go('/notes'),
                 borderRadius: BorderRadius.circular(8),
-                child: const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Text(
-                    'Lomedu Admin',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1E3A8A),
-                    ),
-                  ),
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Builder(builder: (context) {
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user == null) {
+                      return const Text(
+                        'Felhasználó',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1E3A8A),
+                        ),
+                      );
+                    }
+                    return StreamBuilder(
+                      stream: FirebaseConfig.firestore
+                          .collection('users')
+                          .doc(user.uid)
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        String text = 'Felhasználó';
+                        if (snapshot.hasData && snapshot.data!.exists) {
+                          final data = (snapshot.data!.data() as Map<String, dynamic>);
+                          final first = (data['firstName'] ?? data['first_name'] ?? data['givenName'] ?? data['given_name'])?.toString();
+                          final last = (data['lastName'] ?? data['last_name'] ?? data['familyName'] ?? data['family_name'])?.toString();
+                          if (first != null && first.isNotEmpty && last != null && last.isNotEmpty) {
+                            text = '$last $first'; // HU: Vezetéknév Keresztnév
+                          }
+                        }
+                        if (text == 'Felhasználó') {
+                          final dn = user.displayName;
+                          if (dn != null && dn.isNotEmpty) {
+                            final parts = dn.trim().split(RegExp(r"\s+"));
+                            if (parts.length == 2) {
+                              text = '${parts[1]} ${parts[0]}'; // HU sorrend
+                            } else {
+                              text = dn;
+                            }
+                          } else if (user.email != null) {
+                            text = user.email!;
+                          }
+                        }
+                        return Text(
+                          text,
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1E3A8A),
+                          ),
+                        );
+                      },
+                    );
+                  }),
                 ),
               ),
             ),
             _buildMenuItem(
                 context, 'notes', 'Jegyzetek Listája', selectedMenu == 'notes'),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Divider(color: const Color(0xFF1E3A8A).withAlpha(77)),
-            ),
-            // Felhasználói nézet: admin menük eltávolítva
-            const SizedBox(height: 8),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.logout, color: Color(0xFF6B7280)),
-              title: const Text(
-                'Kijelentkezés',
-                style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF6B7280)),
+            if (extraPanel != null) ...[
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                child: extraPanel!,
               ),
-              onTap: () => _signOut(context),
-            ),
+            ],
           ],
         ),
       ),
