@@ -351,6 +351,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
                         onTypeChanged: _onTypeChanged,
                         onClearFilters: _onClearFilters,
                         vertical: true,
+                        showStatus: false,
                       ),
                     ),
                   ),
