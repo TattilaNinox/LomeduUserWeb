@@ -259,8 +259,6 @@ class _NoteTableState extends State<NoteTable> {
           buildCell('Cím', SortColumn.title, 3),
           buildCell('Kategória', SortColumn.category, 1),
           buildCell('Címkék', SortColumn.tags, 1),
-          buildCell('Státusz', SortColumn.status, 1),
-          buildCell('Módosítva', SortColumn.modified, 1),
           const Expanded(flex: 3, child: Text('Fájlok', style: headerStyle)),
           const Expanded(flex: 2, child: Text('Műveletek', style: headerStyle)),
         ],
@@ -317,20 +315,7 @@ class _NoteTableState extends State<NoteTable> {
                 Icon(getIconForNoteType(noteType),
                     color: AppTheme.primaryColor),
                 const SizedBox(width: 8),
-                IconButton(
-                  icon: Icon(
-                    data['isFree'] == true ? Icons.lock_open : Icons.lock,
-                    color: data['isFree'] == true ? Colors.green : Colors.grey,
-                    size: 16,
-                  ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  tooltip: data['isFree'] == true
-                      ? 'Ingyenes jegyzet'
-                      : 'Fizetős jegyzet',
-                  onPressed: () => _toggleFreeStatus(
-                      context, doc.id, data['isFree'] == true),
-                ),
+                // Lakat ikonok eltávolítva felhasználói nézetben.
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(
@@ -371,13 +356,6 @@ class _NoteTableState extends State<NoteTable> {
                 ]
               ],
             ),
-          ),
-          Expanded(flex: 1, child: Text(displayStatus, style: cellStyle)),
-          Expanded(
-            flex: 1,
-            child: Text(
-                '${modified.year}-${modified.month.toString().padLeft(2, '0')}-${modified.day.toString().padLeft(2, '0')}',
-                style: cellStyle),
           ),
           Expanded(
             flex: 3,
@@ -475,20 +453,7 @@ class _NoteTableState extends State<NoteTable> {
               children: [
                 const Icon(Icons.style, color: AppTheme.primaryColor),
                 const SizedBox(width: 8),
-                IconButton(
-                  icon: Icon(
-                    data['isFree'] == true ? Icons.lock_open : Icons.lock,
-                    color: data['isFree'] == true ? Colors.green : Colors.grey,
-                    size: 16,
-                  ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  tooltip: data['isFree'] == true
-                      ? 'Ingyenes jegyzet'
-                      : 'Fizetős jegyzet',
-                  onPressed: () => _toggleFreeStatus(
-                      context, doc.id, data['isFree'] == true),
-                ),
+                // Lakat ikonok eltávolítva.
                 const SizedBox(width: 16),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -532,14 +497,6 @@ class _NoteTableState extends State<NoteTable> {
                   if (i != tags.length - 1) const SizedBox(width: 12),
                 ]
               ],
-            ),
-          ),
-          Expanded(flex: 1, child: Text(displayStatus, style: cellStyle)),
-          Expanded(
-            flex: 1,
-            child: Text(
-              '${modified.year}-${modified.month.toString().padLeft(2, '0')}-${modified.day.toString().padLeft(2, '0')}',
-              style: cellStyle,
             ),
           ),
           Expanded(
