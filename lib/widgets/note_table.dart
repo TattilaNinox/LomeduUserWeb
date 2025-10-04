@@ -271,11 +271,11 @@ class _NoteTableState extends State<NoteTable> {
     final data = doc.data() ?? <String, dynamic>{};
     final title = (data['title'] ?? '');
     final category = (data['category'] ?? '');
-    final status = (data['status'] ?? '');
-    final displayStatus = status == 'Public' ? 'Published' : status;
-    final modified = (data['modified'] is Timestamp)
-        ? (data['modified'] as Timestamp).toDate()
-        : DateTime.now();
+    // final status = (data['status'] ?? '');
+    // final displayStatus = status == 'Public' ? 'Published' : status;
+    // final modified = (data['modified'] is Timestamp)
+    //     ? (data['modified'] as Timestamp).toDate()
+    //     : DateTime.now();
     final hasDocx =
         data['docxUrl'] != null && data['docxUrl'].toString().isNotEmpty;
     final hasAudio =
@@ -583,6 +583,7 @@ class _NoteTableState extends State<NoteTable> {
   }
 
   // A státusz menü ikon méretének csökkentése is, hogy illeszkedjen a kisebb ikonmérethez.
+  // ignore: unused_element
   Widget _buildStatusMenu(
       BuildContext context, String noteId, String currentStatus) {
     const statuses = ['Published', 'Draft', 'Archived'];
@@ -628,6 +629,7 @@ class _NoteTableState extends State<NoteTable> {
     }
   }
 
+  // ignore: unused_element
   Future<void> _toggleFreeStatus(
       BuildContext context, String noteId, bool currentFree) async {
     try {

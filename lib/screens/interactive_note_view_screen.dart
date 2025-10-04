@@ -158,7 +158,8 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
 
   @override
   void dispose() {
-    // Nothing to revoke when using srcdoc
+    // Cancel Firestore subscription
+    _subscription.cancel();
     super.dispose();
   }
 }
