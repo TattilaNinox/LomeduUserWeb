@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 
 class QuizViewer extends StatefulWidget {
   final List<Map<String, dynamic>> questions;
@@ -17,37 +16,27 @@ class _QuizViewerState extends State<QuizViewer> with TickerProviderStateMixin {
   bool _answerChecked = false;
 
   late PageController _pageController;
-  late AnimationController _cardFlipController;
-  late Animation<double> _cardFlipAnimation;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
-    _cardFlipController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _cardFlipAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _cardFlipController, curve: Curves.easeInOut),
-    );
   }
 
   @override
   void dispose() {
     _pageController.dispose();
-    _cardFlipController.dispose();
     super.dispose();
   }
 
   void _handleAnswer(int optionIndex) {
     if (_answerChecked) {
+      // If the already selected option is tapped after checking, show rationale bubble
       if (_selectedOptionIndex == optionIndex) {
-        if (_cardFlipController.isCompleted) {
-          _cardFlipController.reverse();
-        } else {
-          _cardFlipController.forward();
-        }
+        final options = (widget.questions[_currentIndex]['options'] as List)
+            .cast<Map<String, dynamic>>();
+        final rationale = options[optionIndex]['rationale'] as String?;
+        _showRationalePopup(rationale ?? 'Nincs indoklás.');
       }
       return;
     }
@@ -63,13 +52,33 @@ class _QuizViewerState extends State<QuizViewer> with TickerProviderStateMixin {
     });
   }
 
+  void _showRationalePopup(String text) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        content: Text(
+          text,
+          style: const TextStyle(fontSize: 16, height: 1.4),
+          textAlign: TextAlign.left,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Bezárás'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _nextQuestion() {
     if (_currentIndex < widget.questions.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeIn,
       );
-      _cardFlipController.reverse();
     } else {
       _showResultDialog();
     }
@@ -80,7 +89,6 @@ class _QuizViewerState extends State<QuizViewer> with TickerProviderStateMixin {
       _currentIndex = index;
       _selectedOptionIndex = null;
       _answerChecked = false;
-      _cardFlipController.reverse();
     });
   }
 
@@ -184,30 +192,16 @@ class _QuizViewerState extends State<QuizViewer> with TickerProviderStateMixin {
 
     return GestureDetector(
       onTap: () => _handleAnswer(index),
-      child: AnimatedBuilder(
-        animation: _cardFlipAnimation,
-        builder: (context, child) {
-          final rotation =
-              isSelected ? _cardFlipAnimation.value * math.pi : 0.0;
-          final isFlipped = isSelected && _cardFlipController.value > 0.5;
-
-          return Transform(
-            alignment: Alignment.center,
-            transform: Matrix4.identity()
-              ..setEntry(3, 2, 0.001)
-              ..rotateX(rotation),
-            child: isFlipped
-                ? _buildCardBack(option)
-                : _buildCardFront(option, index, isSelected),
-          );
-        },
-      ),
+      child: _buildCardFront(option, index, isSelected),
     );
   }
 
   Widget _buildCardFront(
       Map<String, dynamic> option, int index, bool isSelected) {
     final bool isCorrect = option['isCorrect'] as bool;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final bool isMobile = screenWidth < 600;
+
     Color borderColor = Colors.grey.shade300;
     Color? iconColor;
     IconData? resultIcon;
@@ -225,11 +219,11 @@ class _QuizViewerState extends State<QuizViewer> with TickerProviderStateMixin {
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.all(isMobile ? 14 : 16),
+      margin: EdgeInsets.only(bottom: isMobile ? 24 : 28),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isMobile ? 14 : 12),
         border: Border.all(color: borderColor, width: 2),
         boxShadow: [
           BoxShadow(
@@ -242,41 +236,25 @@ class _QuizViewerState extends State<QuizViewer> with TickerProviderStateMixin {
       child: Row(
         children: [
           Expanded(
-              child:
-                  Text(option['text'], style: const TextStyle(fontSize: 16))),
+            child: Text(
+              option['text'],
+              style: const TextStyle(fontSize: 16),
+            ),
+          ),
           if (_answerChecked && isSelected)
             Row(
               children: [
-                const SizedBox(width: 8),
-                const Icon(Icons.threesixty, color: Colors.grey, size: 20),
-                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.info_outline, color: Colors.grey),
+                  tooltip: 'Magyarázat',
+                  onPressed: () => _showRationalePopup(
+                      (option['rationale'] as String?) ?? 'Nincs indoklás.'),
+                ),
+                const SizedBox(width: 4),
                 Icon(resultIcon, color: iconColor),
               ],
-            )
+            ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildCardBack(Map<String, dynamic> option) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondary,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300, width: 2),
-      ),
-      child: Transform(
-        alignment: Alignment.center,
-        transform: Matrix4.rotationX(math.pi),
-        child: Center(
-          child: Text(
-            option['rationale'] ?? 'Nincs indoklás.',
-            style: const TextStyle(color: Colors.white, fontSize: 16),
-            textAlign: TextAlign.center,
-          ),
-        ),
       ),
     );
   }

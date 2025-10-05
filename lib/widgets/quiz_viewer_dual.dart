@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 
 class QuizViewerDual extends StatefulWidget {
   final List<Map<String, dynamic>> questions;
@@ -28,85 +27,36 @@ class OptionCardDual extends StatefulWidget {
   State<OptionCardDual> createState() => _OptionCardDualState();
 }
 
-class _OptionCardDualState extends State<OptionCardDual>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _animation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  void didUpdateWidget(covariant OptionCardDual oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Reset flip when navigating to next question or reselecting
-    if (!widget.answerChecked && oldWidget.answerChecked) {
-      _controller.reset();
-    }
-    if (!widget.isSelected && oldWidget.isSelected) {
-      _controller.reset();
-    }
-  }
-
-  void _handleTap() {
-    if (!widget.answerChecked) {
-      widget.onSelect();
-    } else {
-      if (!widget.isSelected) return; // Flip only selected option
-      if (_controller.isCompleted) {
-        _controller.reverse();
-      } else {
-        _controller.forward();
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    bool isCorrect = widget.option['isCorrect'] as bool? ?? false;
-    bool showResult = widget.answerChecked;
-
-    return GestureDetector(
-      onTap: _handleTap,
-      child: AnimatedBuilder(
-        animation: _animation,
-        builder: (context, child) {
-          final rotation = widget.isSelected ? _animation.value * math.pi : 0.0;
-          final isFlipped = widget.isSelected && _controller.value > 0.5;
-
-          return Transform(
-            alignment: Alignment.center,
-            transform: Matrix4.identity()
-              ..setEntry(3, 2, 0.001)
-              ..rotateX(rotation),
-            child: isFlipped
-                ? _buildCardBack()
-                : _buildCardFront(isCorrect, showResult),
-          );
-        },
+class _OptionCardDualState extends State<OptionCardDual> {
+  void _showRationalePopup(String text) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        content: Text(
+          text,
+          style: const TextStyle(fontSize: 16, height: 1.4),
+          textAlign: TextAlign.left,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Bezárás'),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildCardFront(bool isCorrect, bool showResult) {
+  @override
+  Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
-    
+
+    final bool isCorrect = widget.option['isCorrect'] as bool? ?? false;
+    final bool showResult = widget.answerChecked;
+
     Color borderColor = Colors.grey.shade300;
     Color? iconColor;
     IconData? resultIcon;
@@ -125,94 +75,58 @@ class _OptionCardDualState extends State<OptionCardDual>
       borderColor = Theme.of(context).primaryColor;
     }
 
-    return Container(
-      padding: EdgeInsets.all(isMobile ? 14 : 16),
-      margin: EdgeInsets.only(bottom: isMobile ? 10 : 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(isMobile ? 14 : 16),
-        border: Border.all(
-          color: borderColor, 
-          width: isMobile ? 2.5 : 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: isMobile ? 8 : 10,
-            offset: const Offset(0, 3),
+    return GestureDetector(
+      onTap: () {
+        if (!widget.answerChecked) {
+          widget.onSelect();
+        }
+      },
+      child: Container(
+        padding: EdgeInsets.all(isMobile ? 14 : 16),
+        margin: EdgeInsets.only(bottom: isMobile ? 24 : 28),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(isMobile ? 14 : 16),
+          border: Border.all(
+            color: borderColor,
+            width: isMobile ? 2.5 : 2,
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              widget.option['text'] ?? '',
-              style: TextStyle(
-                fontSize: isMobile ? 15 : 16,
-                fontWeight: FontWeight.w500,
-                height: 1.4,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: isMobile ? 8 : 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                widget.option['text'] ?? '',
+                style: TextStyle(
+                  fontSize: isMobile ? 15 : 16,
+                  fontWeight: FontWeight.w500,
+                  height: 1.4,
+                ),
               ),
             ),
-          ),
-          if (showResult && widget.isSelected)
-            Row(
-              children: [
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.threesixty, 
-                  color: Colors.grey, 
-                  size: isMobile ? 18 : 20,
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  resultIcon, 
-                  color: iconColor,
-                  size: isMobile ? 20 : 24,
-                ),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCardBack() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 600;
-
-    return Container(
-      padding: EdgeInsets.all(isMobile ? 14 : 16),
-      margin: EdgeInsets.only(bottom: isMobile ? 10 : 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor,
-        borderRadius: BorderRadius.circular(isMobile ? 14 : 16),
-        border: Border.all(
-          color: Theme.of(context).primaryColor.withValues(alpha: 0.3), 
-          width: isMobile ? 2.5 : 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: isMobile ? 8 : 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Transform(
-        alignment: Alignment.center,
-        transform: Matrix4.rotationX(math.pi),
-        child: Center(
-          child: Text(
-            widget.option['rationale'] ?? 'Nincs indoklás.',
-            style: TextStyle(
-              color: Colors.white, 
-              fontSize: isMobile ? 15 : 16,
-              fontWeight: FontWeight.w500,
-              height: 1.4,
-            ),
-            textAlign: TextAlign.center,
-          ),
+            if (showResult && widget.isSelected)
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.info_outline, color: Colors.grey),
+                    tooltip: 'Magyarázat',
+                    onPressed: () => _showRationalePopup(
+                      (widget.option['rationale'] as String?) ??
+                          'Nincs indoklás.',
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(resultIcon, color: iconColor, size: isMobile ? 20 : 24),
+                ],
+              ),
+          ],
         ),
       ),
     );
@@ -227,22 +141,16 @@ class _QuizViewerDualState extends State<QuizViewerDual>
   bool _answerChecked = false;
 
   late PageController _pageController;
-  late AnimationController _cardFlipController;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
-    _cardFlipController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
   }
 
   @override
   void dispose() {
     _pageController.dispose();
-    _cardFlipController.dispose();
     super.dispose();
   }
 
@@ -287,7 +195,6 @@ class _QuizViewerDualState extends State<QuizViewerDual>
       setState(() {
         _selectedOptionIndices.clear();
         _answerChecked = false;
-        _cardFlipController.reset();
       });
     } else {
       _showResultDialog();
@@ -419,10 +326,10 @@ class _QuizViewerDualState extends State<QuizViewerDual>
           Text(
             question['question'],
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              fontSize: isMobile ? 18 : 22,
-              height: 1.3,
-            ),
+                  fontWeight: FontWeight.w600,
+                  fontSize: isMobile ? 18 : 22,
+                  height: 1.3,
+                ),
             textAlign: TextAlign.center,
           ),
           SizedBox(height: spacing * 1.5),
@@ -447,10 +354,10 @@ class _QuizViewerDualState extends State<QuizViewerDual>
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
     final canCheck = !_answerChecked && _selectedOptionIndices.length == 2;
-    
+
     return Container(
       padding: EdgeInsets.symmetric(
-        vertical: isMobile ? 16 : 12, 
+        vertical: isMobile ? 16 : 12,
         horizontal: isMobile ? 16 : 24,
       ),
       decoration: BoxDecoration(
@@ -473,18 +380,19 @@ class _QuizViewerDualState extends State<QuizViewerDual>
                   child: ElevatedButton(
                     onPressed: canCheck ? _checkAnswer : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: canCheck 
-                          ? Theme.of(context).primaryColor 
+                      backgroundColor: canCheck
+                          ? Theme.of(context).primaryColor
                           : Colors.grey.shade300,
-                      foregroundColor: canCheck ? Colors.white : Colors.grey.shade600,
+                      foregroundColor:
+                          canCheck ? Colors.white : Colors.grey.shade600,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       elevation: canCheck ? 2 : 0,
                     ),
-                    child: Text(
+                    child: const Text(
                       'Válasz ellenőrzése',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -526,11 +434,13 @@ class _QuizViewerDualState extends State<QuizViewerDual>
                 ElevatedButton(
                   onPressed: canCheck ? _checkAnswer : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: canCheck 
-                        ? Theme.of(context).primaryColor 
+                    backgroundColor: canCheck
+                        ? Theme.of(context).primaryColor
                         : Colors.grey.shade300,
-                    foregroundColor: canCheck ? Colors.white : Colors.grey.shade600,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    foregroundColor:
+                        canCheck ? Colors.white : Colors.grey.shade600,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -540,11 +450,13 @@ class _QuizViewerDualState extends State<QuizViewerDual>
                 ElevatedButton(
                   onPressed: _answerChecked ? _nextQuestion : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _answerChecked 
-                        ? Theme.of(context).primaryColor 
+                    backgroundColor: _answerChecked
+                        ? Theme.of(context).primaryColor
                         : Colors.grey.shade300,
-                    foregroundColor: _answerChecked ? Colors.white : Colors.grey.shade600,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    foregroundColor:
+                        _answerChecked ? Colors.white : Colors.grey.shade600,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
