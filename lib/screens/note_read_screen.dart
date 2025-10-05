@@ -50,35 +50,7 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
     }
   }
 
-  void _updatePageContent() {
-    final data = _noteSnapshot!.data() as Map<String, dynamic>;
-    final pages = data['pages'] as List<dynamic>? ?? [];
-    final currentPage =
-        pages.isNotEmpty ? pages[_currentPageIndex] as String : '';
-    if (currentPage.contains('<script')) {
-      _webViewController = WebViewController()..loadHtmlString(currentPage);
-    } else {
-      _webViewController = null;
-    }
-  }
 
-  void _goToPreviousPage() {
-    if (_currentPageIndex > 0) {
-      setState(() {
-        _currentPageIndex--;
-        _updatePageContent();
-      });
-    }
-  }
-
-  void _goToNextPage(List<dynamic> pages) {
-    if (_currentPageIndex < pages.length - 1) {
-      setState(() {
-        _currentPageIndex++;
-        _updatePageContent();
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -96,56 +68,136 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
         : 'Ez a jegyzet nem tartalmaz tartalmat.';
 
     final bool isWebView = _webViewController != null;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: isMobile ? 16 : 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        centerTitle: true,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: Container(
+        color: const Color(0xFFF8F9FA),
         child: Column(
           children: [
-            if (pages.isNotEmpty)
-              Text(
-                'Oldal ${_currentPageIndex + 1} / ${pages.length}',
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            const SizedBox(height: 16),
             Expanded(
-              child: isWebView
-                  ? WebViewWidget(controller: _webViewController!)
-                  : SingleChildScrollView(
-                      child: Html(
-                        data: currentPage,
-                      ),
+              child: Container(
+                margin: EdgeInsets.all(isMobile ? 12 : 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: _currentPageIndex > 0 ? _goToPreviousPage : null,
-                  child: const Text('Előző oldal'),
+                  ],
                 ),
-                const SizedBox(width: 16),
-                ElevatedButton(
-                  onPressed: _currentPageIndex < pages.length - 1
-                      ? () => _goToNextPage(pages)
-                      : null,
-                  child: const Text('Következő oldal'),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
+                  child: Padding(
+                    padding: EdgeInsets.all(isMobile ? 16 : 20),
+                    child: isWebView
+                        ? WebViewWidget(controller: _webViewController!)
+                        : SingleChildScrollView(
+                            child: Html(
+                              data: currentPage,
+                              style: {
+                                "body": Style(
+                                  fontSize: FontSize(isMobile ? 16 : 18),
+                                  lineHeight: const LineHeight(1.6),
+                                  color: const Color(0xFF2D3748),
+                                  fontFamily: 'Inter',
+                                ),
+                                "h1": Style(
+                                  fontSize: FontSize(isMobile ? 20 : 24),
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF1A202C),
+                                  margin: Margins.only(bottom: 16),
+                                ),
+                                "h2": Style(
+                                  fontSize: FontSize(isMobile ? 18 : 22),
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF2D3748),
+                                  margin: Margins.only(bottom: 12),
+                                ),
+                                "h3": Style(
+                                  fontSize: FontSize(isMobile ? 16 : 20),
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF4A5568),
+                                  margin: Margins.only(bottom: 10),
+                                ),
+                                "p": Style(
+                                  fontSize: FontSize(isMobile ? 15 : 17),
+                                  lineHeight: const LineHeight(1.6),
+                                  color: const Color(0xFF2D3748),
+                                  margin: Margins.only(bottom: 12),
+                                ),
+                                "ul": Style(
+                                  margin: Margins.only(bottom: 12),
+                                ),
+                                "ol": Style(
+                                  margin: Margins.only(bottom: 12),
+                                ),
+                                "li": Style(
+                                  fontSize: FontSize(isMobile ? 15 : 17),
+                                  lineHeight: const LineHeight(1.5),
+                                  color: const Color(0xFF2D3748),
+                                  margin: Margins.only(bottom: 6),
+                                ),
+                                "blockquote": Style(
+                                  fontSize: FontSize(isMobile ? 15 : 17),
+                                  fontStyle: FontStyle.italic,
+                                  color: const Color(0xFF4A5568),
+                                  backgroundColor: const Color(0xFFF7FAFC),
+                                  border: Border(
+                                    left: BorderSide(
+                                      color: const Color(0xFFE2E8F0),
+                                      width: 4,
+                                    ),
+                                  ),
+                                  padding: HtmlPaddings.only(left: 16, top: 12, bottom: 12, right: 16),
+                                  margin: Margins.only(bottom: 16),
+                                ),
+                                "code": Style(
+                                  backgroundColor: const Color(0xFFF7FAFC),
+                                  color: const Color(0xFFE53E3E),
+                                  fontFamily: 'monospace',
+                                  fontSize: FontSize(isMobile ? 13 : 15),
+                                  padding: HtmlPaddings.symmetric(horizontal: 4, vertical: 2),
+                                ),
+                                "pre": Style(
+                                  backgroundColor: const Color(0xFFF7FAFC),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  padding: HtmlPaddings.all(12),
+                                  margin: Margins.only(bottom: 16),
+                                ),
+                              },
+                            ),
+                          ),
+                  ),
                 ),
-              ],
+              ),
             ),
-            const SizedBox(height: 16),
             if (data['audioUrl'] != null &&
                 data['audioUrl'].toString().isNotEmpty)
-              AudioPreviewPlayer(audioUrl: data['audioUrl'])
-            else
-              const Padding(
-                padding: EdgeInsets.only(top: 20.0),
-                child: Text('Nincs hanganyag elérhető.'),
+              Container(
+                margin: EdgeInsets.fromLTRB(
+                  isMobile ? 12 : 16,
+                  0,
+                  isMobile ? 12 : 16,
+                  isMobile ? 12 : 16,
+                ),
+                child: AudioPreviewPlayer(audioUrl: data['audioUrl']),
               ),
           ],
         ),
