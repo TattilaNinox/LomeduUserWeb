@@ -2,7 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:go_router/go_router.dart';
 import '../widgets/audio_preview_player.dart';
+import '../utils/filter_storage.dart';
 
 /// Felhasználói (csak olvasás) nézet szöveges jegyzetekhez.
 ///
@@ -50,8 +52,6 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     if (_noteSnapshot == null) {
@@ -89,22 +89,27 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
             color: Theme.of(context).primaryColor,
             size: isMobile ? 20 : 22,
           ),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            // URL paraméterekkel vissza navigálás a szűrők megőrzéséhez
+            final uri = Uri(
+              path: '/notes',
+              queryParameters: {
+                if (FilterStorage.searchText != null &&
+                    FilterStorage.searchText!.isNotEmpty)
+                  'q': FilterStorage.searchText!,
+                if (FilterStorage.status != null)
+                  'status': FilterStorage.status!,
+                if (FilterStorage.category != null)
+                  'category': FilterStorage.category!,
+                if (FilterStorage.science != null)
+                  'science': FilterStorage.science!,
+                if (FilterStorage.tag != null) 'tag': FilterStorage.tag!,
+                if (FilterStorage.type != null) 'type': FilterStorage.type!,
+              },
+            );
+            context.go(uri.toString());
+          },
         ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.home,
-              color: Theme.of(context).primaryColor,
-              size: isMobile ? 20 : 22,
-            ),
-            onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil(
-              '/notes',
-              (route) => false,
-            ),
-            tooltip: 'Vissza a jegyzetek listájához',
-          ),
-        ],
       ),
       body: Container(
         color: const Color(0xFFF8F9FA),
@@ -187,7 +192,8 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
                                       width: 4,
                                     ),
                                   ),
-                                  padding: HtmlPaddings.only(left: 16, top: 12, bottom: 12, right: 16),
+                                  padding: HtmlPaddings.only(
+                                      left: 16, top: 12, bottom: 12, right: 16),
                                   margin: Margins.only(bottom: 16),
                                 ),
                                 "code": Style(
@@ -195,11 +201,13 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
                                   color: const Color(0xFFE53E3E),
                                   fontFamily: 'monospace',
                                   fontSize: FontSize(isMobile ? 13 : 15),
-                                  padding: HtmlPaddings.symmetric(horizontal: 4, vertical: 2),
+                                  padding: HtmlPaddings.symmetric(
+                                      horizontal: 4, vertical: 2),
                                 ),
                                 "pre": Style(
                                   backgroundColor: const Color(0xFFF7FAFC),
-                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  border: Border.all(
+                                      color: const Color(0xFFE2E8F0)),
                                   padding: HtmlPaddings.all(12),
                                   margin: Margins.only(bottom: 16),
                                 ),

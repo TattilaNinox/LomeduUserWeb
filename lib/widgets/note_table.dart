@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/firebase_config.dart';
 import '../theme/app_theme.dart';
+import '../utils/filter_storage.dart';
 import 'video_preview_player.dart';
 import 'mini_audio_player.dart';
 import 'quiz_viewer.dart';
@@ -397,6 +398,16 @@ class _NoteTableState extends State<NoteTable> {
                   // Szerkesztés, státusz-módosítás és törlés ikonok eltávolítva felhasználói nézetben.
                   _buildIconButton(
                       context, Icons.visibility, AppTheme.primaryColor, () {
+                    // Menteni a szűrők állapotát navigáció előtt
+                    FilterStorage.saveFilters(
+                      searchText: widget.searchText,
+                      status: widget.selectedStatus,
+                      category: widget.selectedCategory,
+                      science: widget.selectedScience,
+                      tag: widget.selectedTag,
+                      type: widget.selectedType,
+                    );
+
                     if (noteType == 'dynamic_quiz' ||
                         noteType == 'dynamic_quiz_dual') {
                       final questionBankId = data['questionBankId'] as String?;
@@ -541,6 +552,15 @@ class _NoteTableState extends State<NoteTable> {
                 children: [
                   _buildIconButton(
                       context, Icons.visibility, AppTheme.primaryColor, () {
+                    // Menteni a szűrők állapotát navigáció előtt
+                    FilterStorage.saveFilters(
+                      searchText: widget.searchText,
+                      status: widget.selectedStatus,
+                      category: widget.selectedCategory,
+                      science: widget.selectedScience,
+                      tag: widget.selectedTag,
+                      type: widget.selectedType,
+                    );
                     context.go('/deck/${doc.id}/view');
                   }),
                 ],

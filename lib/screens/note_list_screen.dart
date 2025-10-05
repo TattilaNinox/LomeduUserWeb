@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../core/firebase_config.dart';
 
 import '../utils/filter_storage.dart';
+import '../utils/category_state.dart';
 import '../widgets/sidebar.dart';
 import '../widgets/header.dart';
 import '../widgets/filters.dart';
@@ -70,27 +71,24 @@ class _NoteListScreenState extends State<NoteListScreen> {
     _loadTags();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Minden alkalommal, amikor a widget újraépül, ellenőrizzük a mentett szűrőket
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadSavedFilters();
+    });
+  }
+
   /// Betölti a mentett szűrőket vagy az URL paraméterekből származó kezdeti szűrőket.
   void _loadSavedFilters() {
-    // Először megnézzük, hogy vannak-e mentett szűrők a FilterStorage-ban
-    if (FilterStorage.searchText != null ||
-        FilterStorage.status != null ||
-        FilterStorage.category != null ||
-        FilterStorage.science != null ||
-        FilterStorage.tag != null ||
-        FilterStorage.type != null) {
-      // Ha vannak mentett szűrők, akkor azokat használjuk
-      setState(() {
-        _searchText = FilterStorage.searchText ?? '';
-        _searchController.text = _searchText;
-        _selectedStatus = FilterStorage.status;
-        _selectedCategory = FilterStorage.category;
-        _selectedScience = FilterStorage.science;
-        _selectedTag = FilterStorage.tag;
-        _selectedType = FilterStorage.type;
-      });
-    } else {
-      // Ha nincsenek mentett szűrők, akkor az URL paramétereket használjuk
+    // Egyszerű megoldás: mindig használjuk az URL paramétereket, ha vannak
+    if (widget.initialSearch != null ||
+        widget.initialStatus != null ||
+        widget.initialCategory != null ||
+        widget.initialScience != null ||
+        widget.initialTag != null ||
+        widget.initialType != null) {
       setState(() {
         _searchText = widget.initialSearch ?? '';
         _searchController.text = _searchText;
@@ -166,6 +164,14 @@ class _NoteListScreenState extends State<NoteListScreen> {
     }
     // Menti a keresési feltételt a FilterStorage-ba
     FilterStorage.searchText = value.isNotEmpty ? value : null;
+    // Menti a CategoryState-be is
+    CategoryState.setCategoryState(
+      searchText: value.isNotEmpty ? value : null,
+      category: _selectedCategory,
+      science: _selectedScience,
+      tag: _selectedTag,
+      type: _selectedType,
+    );
     _pushFiltersToUrl();
   }
 
@@ -186,6 +192,14 @@ class _NoteListScreenState extends State<NoteListScreen> {
     });
     // Menti a kategória szűrőt a FilterStorage-ba
     FilterStorage.category = value;
+    // Menti a CategoryState-be is
+    CategoryState.setCategoryState(
+      searchText: _searchText.isNotEmpty ? _searchText : null,
+      category: value,
+      science: _selectedScience,
+      tag: _selectedTag,
+      type: _selectedType,
+    );
     _pushFiltersToUrl();
   }
 
@@ -196,6 +210,14 @@ class _NoteListScreenState extends State<NoteListScreen> {
     });
     // Menti a tudomány szűrőt a FilterStorage-ba
     FilterStorage.science = value;
+    // Menti a CategoryState-be is
+    CategoryState.setCategoryState(
+      searchText: _searchText.isNotEmpty ? _searchText : null,
+      category: _selectedCategory,
+      science: value,
+      tag: _selectedTag,
+      type: _selectedType,
+    );
     _pushFiltersToUrl();
   }
 
@@ -204,6 +226,14 @@ class _NoteListScreenState extends State<NoteListScreen> {
     setState(() => _selectedTag = value);
     // Menti a címke szűrőt a FilterStorage-ba
     FilterStorage.tag = value;
+    // Menti a CategoryState-be is
+    CategoryState.setCategoryState(
+      searchText: _searchText.isNotEmpty ? _searchText : null,
+      category: _selectedCategory,
+      science: _selectedScience,
+      tag: value,
+      type: _selectedType,
+    );
     _pushFiltersToUrl();
   }
 
@@ -212,6 +242,14 @@ class _NoteListScreenState extends State<NoteListScreen> {
     setState(() => _selectedType = value);
     // Menti a típus szűrőt a FilterStorage-ba
     FilterStorage.type = value;
+    // Menti a CategoryState-be is
+    CategoryState.setCategoryState(
+      searchText: _searchText.isNotEmpty ? _searchText : null,
+      category: _selectedCategory,
+      science: _selectedScience,
+      tag: _selectedTag,
+      type: value,
+    );
     _pushFiltersToUrl();
   }
 
@@ -228,6 +266,8 @@ class _NoteListScreenState extends State<NoteListScreen> {
     });
     // Törli a szűrőket a FilterStorage-ból is
     FilterStorage.clearFilters();
+    // Törli a CategoryState-et is
+    CategoryState.clearState();
     _pushFiltersToUrl();
   }
 

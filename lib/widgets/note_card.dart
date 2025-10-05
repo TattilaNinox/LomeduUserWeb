@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../utils/filter_storage.dart';
 
 class NoteCard extends StatelessWidget {
   final String id;
@@ -44,6 +45,16 @@ class NoteCard extends StatelessWidget {
       elevation: 1,
       child: InkWell(
         onTap: () {
+          // Menteni a szűrők állapotát navigáció előtt
+          FilterStorage.saveFilters(
+            searchText: FilterStorage.searchText ?? '',
+            status: FilterStorage.status,
+            category: FilterStorage.category,
+            science: FilterStorage.science,
+            tag: FilterStorage.tag,
+            type: FilterStorage.type,
+          );
+
           if (type == 'interactive' ||
               type == 'dynamic_quiz' ||
               type == 'dynamic_quiz_dual') {
@@ -112,5 +123,3 @@ class NoteCard extends StatelessWidget {
     );
   }
 }
-
-

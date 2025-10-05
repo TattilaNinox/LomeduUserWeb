@@ -90,7 +90,11 @@ class NoteCardGrid extends StatelessWidget {
           padding: EdgeInsets.zero,
           children: grouped.entries.map((entry) {
             final items = entry.value;
-            return _CategorySection(category: entry.key, docs: items);
+            return _CategorySection(
+              category: entry.key,
+              docs: items,
+              selectedCategory: selectedCategory,
+            );
           }).toList(),
         );
       },
@@ -101,15 +105,27 @@ class NoteCardGrid extends StatelessWidget {
 class _CategorySection extends StatefulWidget {
   final String category;
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> docs;
+  final String? selectedCategory;
 
-  const _CategorySection({required this.category, required this.docs});
+  const _CategorySection({
+    required this.category,
+    required this.docs,
+    this.selectedCategory,
+  });
 
   @override
   State<_CategorySection> createState() => _CategorySectionState();
 }
 
 class _CategorySectionState extends State<_CategorySection> {
-  bool _isExpanded = false; // Alapértelmezetten összecsukva
+  late bool _isExpanded; // Alapértelmezetten összecsukva
+
+  @override
+  void initState() {
+    super.initState();
+    // Ha ez a kategória van kiválasztva a szűrőben, akkor kibontva legyen
+    _isExpanded = widget.category == widget.selectedCategory;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -119,8 +135,8 @@ class _CategorySectionState extends State<_CategorySection> {
         color: Colors.white,
         borderRadius:
             _isExpanded ? BorderRadius.circular(20) : BorderRadius.circular(16),
-        border: _isExpanded 
-            ? null 
+        border: _isExpanded
+            ? null
             : Border.all(
                 color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
                 width: 1.5,
@@ -190,7 +206,9 @@ class _CategorySectionState extends State<_CategorySection> {
                     Text(
                       '${widget.docs.length} jegyzet',
                       style: TextStyle(
-                        color: Theme.of(context).primaryColor.withValues(alpha: 0.7),
+                        color: Theme.of(context)
+                            .primaryColor
+                            .withValues(alpha: 0.7),
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),

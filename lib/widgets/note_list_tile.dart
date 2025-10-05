@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../core/firebase_config.dart';
+import '../utils/filter_storage.dart';
 import 'quiz_viewer.dart';
 import 'quiz_viewer_dual.dart';
 import 'mini_audio_player.dart';
@@ -45,6 +46,16 @@ class NoteListTile extends StatelessWidget {
   }
 
   void _open(BuildContext context) {
+    // Menteni a szűrők állapotát navigáció előtt
+    FilterStorage.saveFilters(
+      searchText: FilterStorage.searchText ?? '',
+      status: FilterStorage.status,
+      category: FilterStorage.category,
+      science: FilterStorage.science,
+      tag: FilterStorage.tag,
+      type: FilterStorage.type,
+    );
+
     if (type == 'interactive') {
       context.go('/interactive-note/$id');
     } else if (type == 'dynamic_quiz' || type == 'dynamic_quiz_dual') {
@@ -133,9 +144,12 @@ class NoteListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color cardColor = Color(0xFFF5F7F6); // elegáns zöldesbarna árnyalatú szürke
-    const Color borderColor = Color(0xFFE8EDE9); // finomabb zöldesbarna keret szín
-    final Color shadowColor = Colors.black.withValues(alpha: 0.05); // finom árnyék
+    const Color cardColor =
+        Color(0xFFF5F7F6); // elegáns zöldesbarna árnyalatú szürke
+    const Color borderColor =
+        Color(0xFFE8EDE9); // finomabb zöldesbarna keret szín
+    final Color shadowColor =
+        Colors.black.withValues(alpha: 0.05); // finom árnyék
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -158,7 +172,8 @@ class NoteListTile extends StatelessWidget {
             onTap: () => _open(context),
             borderRadius: BorderRadius.circular(16),
             splashColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-            highlightColor: Theme.of(context).primaryColor.withValues(alpha: 0.05),
+            highlightColor:
+                Theme.of(context).primaryColor.withValues(alpha: 0.05),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: LayoutBuilder(
@@ -238,8 +253,9 @@ class NoteListTile extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color:
-                              Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                          color: Theme.of(context)
+                              .primaryColor
+                              .withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
