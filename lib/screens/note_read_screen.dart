@@ -117,7 +117,7 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
           children: [
             Expanded(
               child: Container(
-                margin: EdgeInsets.all(isMobile ? 12 : 16),
+                margin: EdgeInsets.all(isMobile ? 0 : 16),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
@@ -132,7 +132,7 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
                   child: Padding(
-                    padding: EdgeInsets.all(isMobile ? 16 : 20),
+                    padding: EdgeInsets.all(isMobile ? 0 : 20),
                     child: isWebView
                         ? WebViewWidget(controller: _webViewController!)
                         : SingleChildScrollView(
@@ -140,31 +140,31 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
                               data: currentPage,
                               style: {
                                 "body": Style(
-                                  fontSize: FontSize(isMobile ? 16 : 18),
+                                  fontSize: FontSize(isMobile ? 14 : 18),
                                   lineHeight: const LineHeight(1.6),
                                   color: const Color(0xFF2D3748),
                                   fontFamily: 'Inter',
                                 ),
                                 "h1": Style(
-                                  fontSize: FontSize(isMobile ? 20 : 24),
+                                  fontSize: FontSize(isMobile ? 18 : 24),
                                   fontWeight: FontWeight.bold,
                                   color: const Color(0xFF1A202C),
                                   margin: Margins.only(bottom: 16),
                                 ),
                                 "h2": Style(
-                                  fontSize: FontSize(isMobile ? 18 : 22),
+                                  fontSize: FontSize(isMobile ? 16 : 22),
                                   fontWeight: FontWeight.w600,
                                   color: const Color(0xFF2D3748),
                                   margin: Margins.only(bottom: 12),
                                 ),
                                 "h3": Style(
-                                  fontSize: FontSize(isMobile ? 16 : 20),
+                                  fontSize: FontSize(isMobile ? 14 : 20),
                                   fontWeight: FontWeight.w600,
                                   color: const Color(0xFF4A5568),
                                   margin: Margins.only(bottom: 10),
                                 ),
                                 "p": Style(
-                                  fontSize: FontSize(isMobile ? 15 : 17),
+                                  fontSize: FontSize(isMobile ? 13 : 17),
                                   lineHeight: const LineHeight(1.6),
                                   color: const Color(0xFF2D3748),
                                   margin: Margins.only(bottom: 12),
@@ -176,13 +176,13 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
                                   margin: Margins.only(bottom: 12),
                                 ),
                                 "li": Style(
-                                  fontSize: FontSize(isMobile ? 15 : 17),
+                                  fontSize: FontSize(isMobile ? 13 : 17),
                                   lineHeight: const LineHeight(1.5),
                                   color: const Color(0xFF2D3748),
                                   margin: Margins.only(bottom: 6),
                                 ),
                                 "blockquote": Style(
-                                  fontSize: FontSize(isMobile ? 15 : 17),
+                                  fontSize: FontSize(isMobile ? 13 : 17),
                                   fontStyle: FontStyle.italic,
                                   color: const Color(0xFF4A5568),
                                   backgroundColor: const Color(0xFFF7FAFC),
@@ -200,7 +200,7 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
                                   backgroundColor: const Color(0xFFF7FAFC),
                                   color: const Color(0xFFE53E3E),
                                   fontFamily: 'monospace',
-                                  fontSize: FontSize(isMobile ? 13 : 15),
+                                  fontSize: FontSize(isMobile ? 11 : 15),
                                   padding: HtmlPaddings.symmetric(
                                       horizontal: 4, vertical: 2),
                                 ),
@@ -222,10 +222,10 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
                 data['audioUrl'].toString().isNotEmpty)
               Container(
                 margin: EdgeInsets.fromLTRB(
-                  isMobile ? 12 : 16,
+                  isMobile ? 0 : 16,
                   0,
-                  isMobile ? 12 : 16,
-                  isMobile ? 12 : 16,
+                  isMobile ? 0 : 16,
+                  isMobile ? 0 : 16,
                 ),
                 child: AudioPreviewPlayer(audioUrl: data['audioUrl']),
               ),
