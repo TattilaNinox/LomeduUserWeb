@@ -106,50 +106,92 @@ class _CategorySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Theme.of(context).dividerColor),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Text(
-              category,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor.withOpacity(0.05),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.folder_outlined,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  category,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: Theme.of(context).primaryColor,
+                        fontSize: 16,
+                      ),
+                ),
+                const Spacer(),
+                Text(
+                  '${docs.length} jegyzet',
+                  style: TextStyle(
+                    color: Theme.of(context).primaryColor.withOpacity(0.7),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: docs.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final doc = docs[index];
-              final data = doc.data();
-              final type = data['type'] as String? ?? 'standard';
-              return NoteListTile(
-                id: doc.id,
-                title: data['title'] ?? '',
-                type: type,
-                hasDoc: (data['docxUrl'] ?? '').toString().isNotEmpty,
-                hasAudio: (data['audioUrl'] ?? '').toString().isNotEmpty,
-                audioUrl: (data['audioUrl'] ?? '').toString(),
-                hasVideo: (data['videoUrl'] ?? '').toString().isNotEmpty,
-                deckCount: type == 'deck'
-                    ? (data['flashcards'] as List<dynamic>? ?? []).length
-                    : null,
-              );
-            },
-          )
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: docs.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 4),
+              itemBuilder: (context, index) {
+                final doc = docs[index];
+                final data = doc.data();
+                final type = data['type'] as String? ?? 'standard';
+                return NoteListTile(
+                  id: doc.id,
+                  title: data['title'] ?? '',
+                  type: type,
+                  hasDoc: (data['docxUrl'] ?? '').toString().isNotEmpty,
+                  hasAudio: (data['audioUrl'] ?? '').toString().isNotEmpty,
+                  audioUrl: (data['audioUrl'] ?? '').toString(),
+                  hasVideo: (data['videoUrl'] ?? '').toString().isNotEmpty,
+                  deckCount: type == 'deck'
+                      ? (data['flashcards'] as List<dynamic>? ?? []).length
+                      : null,
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
