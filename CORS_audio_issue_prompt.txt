@@ -1,0 +1,87 @@
+Cím
+Webes audiolejátszás hibák prod környezetben (Firebase Hosting + Storage) – CORS és Storage URL normalizálás
+
+Környezet
+- Projekt: Flutter webapp (build/web), Firebase Hosting (új site: lomedu-user-web), Firestore + Firebase Storage
+- Prod domain: https://lomedu-user-web.web.app
+- Storage bucket: orlomed-f8f9f.appspot.com
+- Audiofájlok: Storage-ban, fájlokra mutató publikus (tokenes) URL-eket a Firestore-ban tároljuk; a webapp ezeket játssza le
+- Mobil app: natív SDK-val működik, ott audiolejátszás ok (nincs CORS)
+
+Tünetek
+- A prod weboldalon audiolejátszáskor böngésző konzol:
+  - Access to audio at 'https://firebasestorage.googleapis.com/v0/b/orlomed-f8f9f.firebasestorage.app/…' from origin 'https://lomedu-user-web.web.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present.
+  - MEDIA_ELEMENT_ERROR: Format error (Code: 4)
+  - Időnként 206 (Partial Content) + net::ERR_FAILED
+- Debug/dev környezetben működik (CORS kikapcsolva; mobil natív esetén nincs CORS)
+
+Meglevő fejlesztői változtatások
+- lib/widgets/mini_audio_player.dart:
+  - URL normalizálás:
+    - http → https (mixed content elkerülése)
+    - …firebasestorage.app → …appspot.com (hibás bucket host javítása)
+  - Explicit MIME típus beállítás `UrlSource(..., mimeType: ...)` segítségével (mp3 → audio/mpeg, m4a/mp4 → audio/mp4, wav → audio/wav, ogg → audio/ogg)
+  - Lazy init és komplett vezérlők (play/pause/±10s/stop + hátralévő idő)
+
+Feltételezett okok
+1) CORS hiány a Storage bucketnél az új Hosting site domain(je)ihez (lomedu-user-web.web.app és .firebaseapp.com)
+2) Bizonyos audio URL-eknél hibás host-rész (origi fájloknál .firebasestorage.app szerepel a bucket paraméterben)
+3) Esetenként rossz Content-Type Storage metaadat (application/octet-stream)
+
+Feladatok
+1) CORS konfiguráció (kötelező)
+- A Storage bucket (orlomed-f8f9f.appspot.com) CORS listájába vedd fel:
+  - https://lomedu-user-web.web.app
+  - https://lomedu-user-web.firebaseapp.com
+  - (ha szükséges: admin site-ok is)
+- JSON minta:
+[
+  {
+    "origin": [
+      "https://lomedu-user-web.web.app",
+      "https://lomedu-user-web.firebaseapp.com"
+    ],
+    "method": ["GET", "HEAD"],
+    "responseHeader": ["Content-Type"],
+    "maxAgeSeconds": 3600
+  }
+]
+- Alkalmazás gsutil-lal:
+  - gsutil cors set cors.json gs://orlomed-f8f9f.appspot.com
+- Alternatíva: Cloud Console → Storage → bucket → Configuration → CORS → Edit CORS (ha a UI megjeleníti)
+
+2) Storage URL-ek auditálása
+- Ellenőrizd, hogy a Firestore-ban tárolt audio URL-ek a következő mintát követik:
+  - https://firebasestorage.googleapis.com/v0/b/orlomed-f8f9f.appspot.com/o/…?alt=media&token=…
+- Ha a b= paraméterben .firebasestorage.app szerepel, át kell írni .appspot.com-ra. Kódban már normalizáljuk, de az adatok forrásban is célszerű korrigálni.
+
+3) Content-Type metaadat ellenőrzése a problémás fájlokra
+- mp3 → audio/mpeg
+- m4a/mp4 → audio/mp4
+- wav → audio/wav
+- ogg → audio/ogg
+- Ha eltér (pl. application/octet-stream), Storage konzolban Edit metadata → Content-Type javítása
+
+4) Validáció
+- Build + deploy:
+  - flutter clean && flutter build web
+  - firebase deploy --only hosting:lomedu-user-web
+- Böngészőben hard reload (Ctrl+F5)
+- DevTools → Network:
+  - A Storage válaszban ellenőrizd az Access-Control-Allow-Origin fejlécek jelenlétét és a Content-Type-ot
+- Audio lejátszás több böngészőben (Chrome/Edge/Firefox): nem jelenhet meg többé CORS vagy MEDIA_ELEMENT_ERROR Code:4
+
+Elfogadási kritériumok
+- Prod domainen minden audiofájl lejátszható CORS hiba nélkül.
+- DevTools-ban a Storage válaszoknál látszik az Access-Control-Allow-Origin a webapp domainre.
+- Nem jelenik meg MEDIA_ELEMENT_ERROR Code:4.
+- Nincs 206/ERR_FAILED hibajelzés a konzolban audiolejátszás során.
+
+Opcionális fejlesztések
+- Külön környezeti változó bevezetése az origin listákhoz (ha több site is lesz).
+- Konzisztens URL normalizálás központi utilban (ha több helyen használunk URL-eket).
+- Egyedi domain (CNAME) esetén annak felvétele CORS origin listába.
+
+Megjegyzés
+- Mobilon működik, mert natív SDK → nincs CORS. Weben kötelező a Storage oldali CORS és a helyes Content-Type. A kódbeli MIME-tippelés csak segít, nem helyettesíti a Storage metaadatot/CORS fejléceket.
+

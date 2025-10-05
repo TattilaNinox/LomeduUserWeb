@@ -117,18 +117,17 @@ class _CategorySectionState extends State<_CategorySection> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: _isExpanded 
-            ? BorderRadius.circular(20) 
-            : BorderRadius.circular(16),
+        borderRadius:
+            _isExpanded ? BorderRadius.circular(20) : BorderRadius.circular(16),
         border: _isExpanded 
             ? null 
             : Border.all(
-                color: Theme.of(context).primaryColor.withOpacity(0.2),
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
                 width: 1.5,
               ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(_isExpanded ? 0.08 : 0.12),
+            color: Colors.black.withValues(alpha: _isExpanded ? 0.08 : 0.12),
             blurRadius: _isExpanded ? 12 : 8,
             offset: const Offset(0, 4),
           ),
@@ -154,7 +153,7 @@ class _CategorySectionState extends State<_CategorySection> {
               child: Container(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.05),
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
                   borderRadius: _isExpanded
                       ? const BorderRadius.only(
                           topLeft: Radius.circular(20),
@@ -191,7 +190,7 @@ class _CategorySectionState extends State<_CategorySection> {
                     Text(
                       '${widget.docs.length} jegyzet',
                       style: TextStyle(
-                        color: Theme.of(context).primaryColor.withOpacity(0.7),
+                        color: Theme.of(context).primaryColor.withValues(alpha: 0.7),
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),

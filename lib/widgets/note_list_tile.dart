@@ -133,11 +133,9 @@ class NoteListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color cardColor =
-        const Color(0xFFF5F7F6); // elegáns zöldesbarna árnyalatú szürke
-    final Color borderColor =
-        const Color(0xFFE8EDE9); // finomabb zöldesbarna keret szín
-    final Color shadowColor = Colors.black.withOpacity(0.05); // finom árnyék
+    const Color cardColor = Color(0xFFF5F7F6); // elegáns zöldesbarna árnyalatú szürke
+    const Color borderColor = Color(0xFFE8EDE9); // finomabb zöldesbarna keret szín
+    final Color shadowColor = Colors.black.withValues(alpha: 0.05); // finom árnyék
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -159,8 +157,8 @@ class NoteListTile extends StatelessWidget {
           child: InkWell(
             onTap: () => _open(context),
             borderRadius: BorderRadius.circular(16),
-            splashColor: Theme.of(context).primaryColor.withOpacity(0.1),
-            highlightColor: Theme.of(context).primaryColor.withOpacity(0.05),
+            splashColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+            highlightColor: Theme.of(context).primaryColor.withValues(alpha: 0.05),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: LayoutBuilder(
@@ -213,7 +211,7 @@ class NoteListTile extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: Theme.of(context)
                                     .primaryColor
-                                    .withOpacity(0.1),
+                                    .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(
@@ -241,7 +239,7 @@ class NoteListTile extends StatelessWidget {
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color:
-                              Theme.of(context).primaryColor.withOpacity(0.1),
+                              Theme.of(context).primaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(

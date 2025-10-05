@@ -111,121 +111,132 @@ class LoginScreenState extends State<LoginScreen> {
     // A `Scaffold` egy alapvető Material Design vizuális elrendezési struktúra.
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
-      // A `Center` widget a gyermekét (a bejelentkezési panelt) középre igazítja.
-      body: Center(
-        // A bejelentkezési panel konténere.
-        child: Container(
-          width: 500,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(25),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          // A `Column` widget a gyermekeit függőlegesen rendezi el.
-          child: Column(
-            // A `mainAxisSize: MainAxisSize.min` biztosítja, hogy a `Column`
-            // csak annyi helyet foglaljon, amennyi a tartalmához szükséges.
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Cím
-              const Text(
-                'Lomedu Admin',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF1E3A8A),
+      // Görgethető, biztonságos terület a kisebb kijelzők és a billentyűzet miatt.
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Center(
+            // A bejelentkezési panel konténere.
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(25),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                // A `Column` widget a gyermekeit függőlegesen rendezi el.
+                child: Column(
+                  // A `mainAxisSize: MainAxisSize.min` biztosítja, hogy a `Column`
+                  // csak annyi helyet foglaljon, amennyi a tartalmához szükséges.
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Cím
+                    const Text(
+                      'Lomedu Admin',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1E3A8A),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // E-mail beviteli mező
+                    TextField(
+                      controller: _emailController,
+                      decoration: InputDecoration(
+                        labelText: 'E-mail',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(4),
+                          borderSide:
+                              const BorderSide(color: Color(0xFF6B7280)),
+                        ),
+                        prefixIcon:
+                            const Icon(Icons.email, color: Color(0xFF6B7280)),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                      autofillHints: const [AutofillHints.email],
+                    ),
+                    const SizedBox(height: 16),
+                    // Jelszó beviteli mező
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: true, // Elrejti a beírt karaktereket
+                      decoration: InputDecoration(
+                        labelText: 'Jelszó',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(4),
+                          borderSide:
+                              const BorderSide(color: Color(0xFF6B7280)),
+                        ),
+                        prefixIcon:
+                            const Icon(Icons.lock, color: Color(0xFF6B7280)),
+                      ),
+                      autofillHints: const [AutofillHints.password],
+                    ),
+                    // Hibaüzenet megjelenítése, ha van.
+                    // A feltételes `if` a collection-ön belül csak akkor adja hozzá
+                    // a `SizedBox`-ot és a `Text`-et a widget-listához, ha az
+                    // `_errorMessage` nem `null`.
+                    if (_errorMessage != null) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        _errorMessage!, // A `!` jelzi, hogy biztosak vagyunk benne, itt már nem `null`.
+                        style: const TextStyle(
+                          color: Color(0xFFE74C3C),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 24),
+                    // Bejelentkezés gomb
+                    ElevatedButton(
+                      onPressed:
+                          _signIn, // A gomb lenyomásakor a `_signIn` metódus hívódik meg.
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1E3A8A),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      child: const Text(
+                        'Bejelentkezés',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: () => context.go('/forgot-password'),
+                          child: const Text('Elfelejtett jelszó?'),
+                        ),
+                        TextButton(
+                          onPressed: () => context.go('/register'),
+                          child: const Text('Regisztráció'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 24),
-              // E-mail beviteli mező
-              TextField(
-                controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'E-mail',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(4),
-                    borderSide: const BorderSide(color: Color(0xFF6B7280)),
-                  ),
-                  prefixIcon: const Icon(Icons.email, color: Color(0xFF6B7280)),
-                ),
-                keyboardType: TextInputType.emailAddress,
-                autofillHints: const [AutofillHints.email],
-              ),
-              const SizedBox(height: 16),
-              // Jelszó beviteli mező
-              TextField(
-                controller: _passwordController,
-                obscureText: true, // Elrejti a beírt karaktereket
-                decoration: InputDecoration(
-                  labelText: 'Jelszó',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(4),
-                    borderSide: const BorderSide(color: Color(0xFF6B7280)),
-                  ),
-                  prefixIcon: const Icon(Icons.lock, color: Color(0xFF6B7280)),
-                ),
-                autofillHints: const [AutofillHints.password],
-              ),
-              // Hibaüzenet megjelenítése, ha van.
-              // A feltételes `if` a collection-ön belül csak akkor adja hozzá
-              // a `SizedBox`-ot és a `Text`-et a widget-listához, ha az
-              // `_errorMessage` nem `null`.
-              if (_errorMessage != null) ...[
-                const SizedBox(height: 16),
-                Text(
-                  _errorMessage!, // A `!` jelzi, hogy biztosak vagyunk benne, itt már nem `null`.
-                  style: const TextStyle(
-                    color: Color(0xFFE74C3C),
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 24),
-              // Bejelentkezés gomb
-              ElevatedButton(
-                onPressed:
-                    _signIn, // A gomb lenyomásakor a `_signIn` metódus hívódik meg.
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E3A8A),
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                child: const Text(
-                  'Bejelentkezés',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: () => context.go('/forgot-password'),
-                    child: const Text('Elfelejtett jelszó?'),
-                  ),
-                  TextButton(
-                    onPressed: () => context.go('/register'),
-                    child: const Text('Regisztráció'),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
         ),
       ),

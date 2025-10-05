@@ -137,7 +137,7 @@ class _OptionCardDualState extends State<OptionCardDual>
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: isMobile ? 8 : 10,
             offset: const Offset(0, 3),
           ),
@@ -188,12 +188,12 @@ class _OptionCardDualState extends State<OptionCardDual>
         color: Theme.of(context).primaryColor,
         borderRadius: BorderRadius.circular(isMobile ? 14 : 16),
         border: Border.all(
-          color: Theme.of(context).primaryColor.withOpacity(0.3), 
+          color: Theme.of(context).primaryColor.withValues(alpha: 0.3), 
           width: isMobile ? 2.5 : 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: isMobile ? 8 : 10,
             offset: const Offset(0, 3),
           ),
@@ -402,7 +402,7 @@ class _QuizViewerDualState extends State<QuizViewerDual>
               vertical: isMobile ? 8 : 12,
             ),
             decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.1),
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -457,7 +457,7 @@ class _QuizViewerDualState extends State<QuizViewerDual>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -484,7 +484,7 @@ class _QuizViewerDualState extends State<QuizViewerDual>
                     ),
                     child: Text(
                       'Válasz ellenőrzése',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -510,7 +510,7 @@ class _QuizViewerDualState extends State<QuizViewerDual>
                         _currentIndex < widget.questions.length - 1
                             ? 'Következő'
                             : 'Eredmény',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),

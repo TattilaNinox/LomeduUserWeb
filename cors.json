@@ -2,9 +2,19 @@
   {
     "origin": [
       "http://localhost:*",
-      "https://orlomed-f8f9f.web.app"
+      "https://orlomed-f8f9f.web.app",
+      "https://lomedu-user-web.web.app",
+      "https://lomedu-user-web.firebaseapp.com"
     ],
-    "method": ["GET"],
+    "method": ["GET", "HEAD"],
+    "responseHeader": [
+      "Content-Type",
+      "Content-Length",
+      "Accept-Ranges",
+      "Content-Range",
+      "Origin",
+      "Range"
+    ],
     "maxAgeSeconds": 3600
   }
-] 
+]  
