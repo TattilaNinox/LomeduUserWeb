@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'core/firebase_config.dart';
 import 'screens/login_screen.dart';
+import 'screens/registration_screen.dart';
 import 'core/app_messenger.dart';
 import 'screens/note_list_screen.dart';
 // Felhasználói nézetben az admin képernyők eltávolítva
@@ -11,6 +12,7 @@ import 'screens/note_list_screen.dart';
 import 'theme/app_theme.dart'; // <-- AppTheme importálása
 // flashcard/kvíz admin képernyők eltávolítva
 import 'screens/verify_otp_screen.dart';
+import 'screens/verify_email_screen.dart';
 // import 'screens/two_factor_auth_screen.dart';
 // public doc admin képernyők eltávolítva
 import 'screens/note_read_screen.dart';
@@ -43,6 +45,16 @@ final _router = GoRouter(
     GoRoute(
       path: '/login',
       builder: (context, state) => const LoginScreen(),
+    ),
+    // Regisztrációs képernyő útvonala.
+    GoRoute(
+      path: '/register',
+      builder: (context, state) => const RegistrationScreen(),
+    ),
+    // Verify email képernyő
+    GoRoute(
+      path: '/verify-email',
+      builder: (context, state) => const VerifyEmailScreen(),
     ),
     // Felhasználói appban a regisztráció/jelszó elfelejtése elrejtve (ha nem kell)
     // Jegyzetek listájának képernyője.

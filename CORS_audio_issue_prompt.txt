@@ -85,3 +85,6 @@ Opcionális fejlesztések
 Megjegyzés
 - Mobilon működik, mert natív SDK → nincs CORS. Weben kötelező a Storage oldali CORS és a helyes Content-Type. A kódbeli MIME-tippelés csak segít, nem helyettesíti a Storage metaadatot/CORS fejléceket.
 
+
+
+
