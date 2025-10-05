@@ -104,6 +104,9 @@ class _OptionCardDualState extends State<OptionCardDual>
   }
 
   Widget _buildCardFront(bool isCorrect, bool showResult) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+    
     Color borderColor = Colors.grey.shade300;
     Color? iconColor;
     IconData? resultIcon;
@@ -119,36 +122,54 @@ class _OptionCardDualState extends State<OptionCardDual>
         resultIcon = Icons.cancel;
       }
     } else if (widget.isSelected) {
-      borderColor = Colors.blue;
+      borderColor = Theme.of(context).primaryColor;
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.all(isMobile ? 14 : 16),
+      margin: EdgeInsets.only(bottom: isMobile ? 10 : 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor, width: 2),
+        borderRadius: BorderRadius.circular(isMobile ? 14 : 16),
+        border: Border.all(
+          color: borderColor, 
+          width: isMobile ? 2.5 : 2,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: isMobile ? 8 : 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Row(
         children: [
           Expanded(
-              child: Text(widget.option['text'] ?? '',
-                  style: const TextStyle(fontSize: 16))),
+            child: Text(
+              widget.option['text'] ?? '',
+              style: TextStyle(
+                fontSize: isMobile ? 15 : 16,
+                fontWeight: FontWeight.w500,
+                height: 1.4,
+              ),
+            ),
+          ),
           if (showResult && widget.isSelected)
             Row(
               children: [
                 const SizedBox(width: 8),
-                const Icon(Icons.threesixty, color: Colors.grey, size: 20),
+                Icon(
+                  Icons.threesixty, 
+                  color: Colors.grey, 
+                  size: isMobile ? 18 : 20,
+                ),
                 const SizedBox(width: 8),
-                Icon(resultIcon, color: iconColor),
+                Icon(
+                  resultIcon, 
+                  color: iconColor,
+                  size: isMobile ? 20 : 24,
+                ),
               ],
             ),
         ],
@@ -157,13 +178,26 @@ class _OptionCardDualState extends State<OptionCardDual>
   }
 
   Widget _buildCardBack() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.all(isMobile ? 14 : 16),
+      margin: EdgeInsets.only(bottom: isMobile ? 10 : 12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondary,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300, width: 2),
+        color: Theme.of(context).primaryColor,
+        borderRadius: BorderRadius.circular(isMobile ? 14 : 16),
+        border: Border.all(
+          color: Theme.of(context).primaryColor.withOpacity(0.3), 
+          width: isMobile ? 2.5 : 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: isMobile ? 8 : 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Transform(
         alignment: Alignment.center,
@@ -171,7 +205,12 @@ class _OptionCardDualState extends State<OptionCardDual>
         child: Center(
           child: Text(
             widget.option['rationale'] ?? 'Nincs indoklás.',
-            style: const TextStyle(color: Colors.white, fontSize: 16),
+            style: TextStyle(
+              color: Colors.white, 
+              fontSize: isMobile ? 15 : 16,
+              fontWeight: FontWeight.w500,
+              height: 1.4,
+            ),
             textAlign: TextAlign.center,
           ),
         ),
@@ -299,17 +338,27 @@ class _QuizViewerDualState extends State<QuizViewerDual>
       return const Center(child: Text('Nincsenek kérdések a kvízben.'));
     }
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF0F2F5),
       appBar: AppBar(
-        title: Text('Kvíz (${_currentIndex + 1}/${widget.questions.length})'),
+        title: Text(
+          'Kvíz (${_currentIndex + 1}/${widget.questions.length})',
+          style: TextStyle(
+            fontSize: isMobile ? 16 : 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         backgroundColor: Colors.white,
         elevation: 1,
+        centerTitle: true,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(4),
           child: LinearProgressIndicator(
             value: (_currentIndex + 1) / widget.questions.length,
-            color: Colors.blue,
+            color: Theme.of(context).primaryColor,
             backgroundColor: Colors.grey.shade300,
           ),
         ),
@@ -337,29 +386,46 @@ class _QuizViewerDualState extends State<QuizViewerDual>
 
   Widget _buildQuestionPage(
       Map<String, dynamic> question, List<Map<String, dynamic>> options) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+    final padding = isMobile ? 16.0 : 24.0;
+    final spacing = isMobile ? 16.0 : 24.0;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
+      padding: EdgeInsets.all(padding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'Jelöld ki a KÉT helyes választ!',
-            style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.blueGrey),
-            textAlign: TextAlign.center,
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 12 : 16,
+              vertical: isMobile ? 8 : 12,
+            ),
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'Jelöld ki a KÉT helyes választ!',
+              style: TextStyle(
+                fontSize: isMobile ? 13 : 14,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).primaryColor,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: spacing),
           Text(
             question['question'],
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w500),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              fontSize: isMobile ? 18 : 22,
+              height: 1.3,
+            ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 32),
+          SizedBox(height: spacing * 1.5),
           ...List.generate(
               options.length, (i) => _buildAnswerOption(options[i], i)),
         ],
@@ -378,25 +444,117 @@ class _QuizViewerDualState extends State<QuizViewerDual>
   }
 
   Widget _buildBottomNavBar() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
     final canCheck = !_answerChecked && _selectedOptionIndices.length == 2;
+    
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-      color: Colors.white,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          ElevatedButton(
-            onPressed: canCheck ? _checkAnswer : null,
-            child: const Text('Válasz ellenőrzése'),
-          ),
-          ElevatedButton(
-            onPressed: _answerChecked ? _nextQuestion : null,
-            child: Text(_currentIndex < widget.questions.length - 1
-                ? 'Következő'
-                : 'Eredmény'),
+      padding: EdgeInsets.symmetric(
+        vertical: isMobile ? 16 : 12, 
+        horizontal: isMobile ? 16 : 24,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
           ),
         ],
       ),
+      child: isMobile
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: canCheck ? _checkAnswer : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: canCheck 
+                          ? Theme.of(context).primaryColor 
+                          : Colors.grey.shade300,
+                      foregroundColor: canCheck ? Colors.white : Colors.grey.shade600,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: canCheck ? 2 : 0,
+                    ),
+                    child: Text(
+                      'Válasz ellenőrzése',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                if (_answerChecked) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: _nextQuestion,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).primaryColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: Text(
+                        _currentIndex < widget.questions.length - 1
+                            ? 'Következő'
+                            : 'Eredmény',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton(
+                  onPressed: canCheck ? _checkAnswer : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: canCheck 
+                        ? Theme.of(context).primaryColor 
+                        : Colors.grey.shade300,
+                    foregroundColor: canCheck ? Colors.white : Colors.grey.shade600,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text('Válasz ellenőrzése'),
+                ),
+                ElevatedButton(
+                  onPressed: _answerChecked ? _nextQuestion : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _answerChecked 
+                        ? Theme.of(context).primaryColor 
+                        : Colors.grey.shade300,
+                    foregroundColor: _answerChecked ? Colors.white : Colors.grey.shade600,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(_currentIndex < widget.questions.length - 1
+                      ? 'Következő'
+                      : 'Eredmény'),
+                ),
+              ],
+            ),
     );
   }
 }
