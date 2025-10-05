@@ -56,10 +56,16 @@ class NoteListTile extends StatelessWidget {
       type: FilterStorage.type,
     );
 
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     if (type == 'interactive') {
       context.go('/interactive-note/$id');
     } else if (type == 'dynamic_quiz' || type == 'dynamic_quiz_dual') {
-      _openQuiz(context, dualMode: type == 'dynamic_quiz_dual');
+      if (isMobile) {
+        context.go('/quiz/$id');
+      } else {
+        _openQuiz(context, dualMode: type == 'dynamic_quiz_dual');
+      }
     } else if (type == 'deck') {
       context.go('/deck/$id/view');
     } else {

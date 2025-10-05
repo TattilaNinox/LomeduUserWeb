@@ -16,6 +16,7 @@ import 'screens/verify_otp_screen.dart';
 import 'screens/note_read_screen.dart';
 import 'screens/flashcard_deck_view_screen.dart';
 import 'screens/interactive_note_view_screen.dart';
+import 'screens/dynamic_quiz_view_screen.dart';
 
 /// Az alkalmazás fő belépési pontja.
 void main() async {
@@ -85,6 +86,13 @@ final _router = GoRouter(
       builder: (context, state) {
         final noteId = state.pathParameters['noteId']!;
         return InteractiveNoteViewScreen(noteId: noteId, from: null);
+      },
+    ),
+    GoRoute(
+      path: '/quiz/:noteId',
+      builder: (context, state) {
+        final noteId = state.pathParameters['noteId']!;
+        return DynamicQuizViewScreen(noteId: noteId);
       },
     ),
     // Interaktív jegyzet megtekintés megmaradhat, ha kell – külön request esetén visszahozzuk
