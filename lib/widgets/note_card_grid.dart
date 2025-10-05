@@ -117,11 +117,19 @@ class _CategorySectionState extends State<_CategorySection> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: _isExpanded 
+            ? BorderRadius.circular(20) 
+            : BorderRadius.circular(16),
+        border: _isExpanded 
+            ? null 
+            : Border.all(
+                color: Theme.of(context).primaryColor.withOpacity(0.2),
+                width: 1.5,
+              ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 12,
+            color: Colors.black.withOpacity(_isExpanded ? 0.08 : 0.12),
+            blurRadius: _isExpanded ? 12 : 8,
             offset: const Offset(0, 4),
           ),
         ],
@@ -137,18 +145,22 @@ class _CategorySectionState extends State<_CategorySection> {
                   _isExpanded = !_isExpanded;
                 });
               },
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
+              borderRadius: _isExpanded
+                  ? const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    )
+                  : BorderRadius.circular(16),
               child: Container(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                 decoration: BoxDecoration(
                   color: Theme.of(context).primaryColor.withOpacity(0.05),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
+                  borderRadius: _isExpanded
+                      ? const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        )
+                      : BorderRadius.circular(16),
                 ),
                 child: Row(
                   children: [
@@ -168,11 +180,12 @@ class _CategorySectionState extends State<_CategorySection> {
                     Expanded(
                       child: Text(
                         widget.category,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: Theme.of(context).primaryColor,
-                              fontSize: 16,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: Theme.of(context).primaryColor,
+                                  fontSize: 16,
+                                ),
                       ),
                     ),
                     Text(
@@ -218,11 +231,14 @@ class _CategorySectionState extends State<_CategorySection> {
                           title: data['title'] ?? '',
                           type: type,
                           hasDoc: (data['docxUrl'] ?? '').toString().isNotEmpty,
-                          hasAudio: (data['audioUrl'] ?? '').toString().isNotEmpty,
+                          hasAudio:
+                              (data['audioUrl'] ?? '').toString().isNotEmpty,
                           audioUrl: (data['audioUrl'] ?? '').toString(),
-                          hasVideo: (data['videoUrl'] ?? '').toString().isNotEmpty,
+                          hasVideo:
+                              (data['videoUrl'] ?? '').toString().isNotEmpty,
                           deckCount: type == 'deck'
-                              ? (data['flashcards'] as List<dynamic>? ?? []).length
+                              ? (data['flashcards'] as List<dynamic>? ?? [])
+                                  .length
                               : null,
                         );
                       },
