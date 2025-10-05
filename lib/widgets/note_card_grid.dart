@@ -98,11 +98,18 @@ class NoteCardGrid extends StatelessWidget {
   }
 }
 
-class _CategorySection extends StatelessWidget {
+class _CategorySection extends StatefulWidget {
   final String category;
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> docs;
 
   const _CategorySection({required this.category, required this.docs});
+
+  @override
+  State<_CategorySection> createState() => _CategorySectionState();
+}
+
+class _CategorySectionState extends State<_CategorySection> {
+  bool _isExpanded = false; // Alapértelmezetten összecsukva
 
   @override
   Widget build(BuildContext context) {
@@ -122,75 +129,106 @@ class _CategorySection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.05),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  _isExpanded = !_isExpanded;
+                });
+              },
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
               ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.folder_outlined,
-                    color: Colors.white,
-                    size: 16,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.05),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  category,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
                         color: Theme.of(context).primaryColor,
-                        fontSize: 16,
+                        borderRadius: BorderRadius.circular(8),
                       ),
+                      child: Icon(
+                        _isExpanded ? Icons.folder_open : Icons.folder_outlined,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        widget.category,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).primaryColor,
+                              fontSize: 16,
+                            ),
+                      ),
+                    ),
+                    Text(
+                      '${widget.docs.length} jegyzet',
+                      style: TextStyle(
+                        color: Theme.of(context).primaryColor.withOpacity(0.7),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    AnimatedRotation(
+                      turns: _isExpanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(
+                        Icons.keyboard_arrow_down,
+                        color: Theme.of(context).primaryColor,
+                        size: 20,
+                      ),
+                    ),
+                  ],
                 ),
-                const Spacer(),
-                Text(
-                  '${docs.length} jegyzet',
-                  style: TextStyle(
-                    color: Theme.of(context).primaryColor.withOpacity(0.7),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: docs.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 4),
-              itemBuilder: (context, index) {
-                final doc = docs[index];
-                final data = doc.data();
-                final type = data['type'] as String? ?? 'standard';
-                return NoteListTile(
-                  id: doc.id,
-                  title: data['title'] ?? '',
-                  type: type,
-                  hasDoc: (data['docxUrl'] ?? '').toString().isNotEmpty,
-                  hasAudio: (data['audioUrl'] ?? '').toString().isNotEmpty,
-                  audioUrl: (data['audioUrl'] ?? '').toString(),
-                  hasVideo: (data['videoUrl'] ?? '').toString().isNotEmpty,
-                  deckCount: type == 'deck'
-                      ? (data['flashcards'] as List<dynamic>? ?? []).length
-                      : null,
-                );
-              },
-            ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child: _isExpanded
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: widget.docs.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 4),
+                      itemBuilder: (context, index) {
+                        final doc = widget.docs[index];
+                        final data = doc.data();
+                        final type = data['type'] as String? ?? 'standard';
+                        return NoteListTile(
+                          id: doc.id,
+                          title: data['title'] ?? '',
+                          type: type,
+                          hasDoc: (data['docxUrl'] ?? '').toString().isNotEmpty,
+                          hasAudio: (data['audioUrl'] ?? '').toString().isNotEmpty,
+                          audioUrl: (data['audioUrl'] ?? '').toString(),
+                          hasVideo: (data['videoUrl'] ?? '').toString().isNotEmpty,
+                          deckCount: type == 'deck'
+                              ? (data['flashcards'] as List<dynamic>? ?? []).length
+                              : null,
+                        );
+                      },
+                    ),
+                  )
+                : const SizedBox.shrink(),
           ),
         ],
       ),
