@@ -91,11 +91,27 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
   @override
   Widget build(BuildContext context) {
     if (_noteSnapshot == null) {
+      final screenWidth = MediaQuery.of(context).size.width;
+      final isMobile = screenWidth < 600;
+      
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Betöltés...'),
+          title: Text(
+            'Betöltés...',
+            style: TextStyle(
+              fontSize: isMobile ? 16 : 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: Colors.white,
+          elevation: 1,
+          centerTitle: true,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: Icon(
+              Icons.arrow_back_ios,
+              color: Theme.of(context).primaryColor,
+              size: isMobile ? 20 : 22,
+            ),
             onPressed: () {
               if (widget.from != null && widget.from!.isNotEmpty) {
                 context.go(widget.from!);
@@ -104,6 +120,17 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
               }
             },
           ),
+          actions: [
+            IconButton(
+              icon: Icon(
+                Icons.home,
+                color: Theme.of(context).primaryColor,
+                size: isMobile ? 20 : 22,
+              ),
+              onPressed: () => context.go('/notes'),
+              tooltip: 'Vissza a jegyzetek listájához',
+            ),
+          ],
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -112,11 +139,27 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
     final data = _noteSnapshot!.data() as Map<String, dynamic>;
     final title = data['title'] as String? ?? 'Cím nélkül';
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: isMobile ? 16 : 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: Theme.of(context).primaryColor,
+            size: isMobile ? 20 : 22,
+          ),
           onPressed: () {
             if (widget.from != null && widget.from!.isNotEmpty) {
               context.go(widget.from!);
@@ -125,6 +168,17 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
             }
           },
         ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              Icons.home,
+              color: Theme.of(context).primaryColor,
+              size: isMobile ? 20 : 22,
+            ),
+            onPressed: () => context.go('/notes'),
+            tooltip: 'Vissza a jegyzetek listájához',
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

@@ -52,9 +52,43 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     if (_deckData == null || !_deckData!.exists) {
+      final screenWidth = MediaQuery.of(context).size.width;
+      final isMobile = screenWidth < 600;
+      
       return Scaffold(
-          appBar: AppBar(title: const Text('Hiba')),
-          body: const Center(child: Text('A pakli nem található.')));
+        appBar: AppBar(
+          title: Text(
+            'Hiba',
+            style: TextStyle(
+              fontSize: isMobile ? 16 : 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: Colors.white,
+          elevation: 1,
+          centerTitle: true,
+          leading: IconButton(
+            icon: Icon(
+              Icons.arrow_back_ios,
+              color: Theme.of(context).primaryColor,
+              size: isMobile ? 20 : 22,
+            ),
+            onPressed: () => context.go('/notes'),
+          ),
+          actions: [
+            IconButton(
+              icon: Icon(
+                Icons.home,
+                color: Theme.of(context).primaryColor,
+                size: isMobile ? 20 : 22,
+              ),
+              onPressed: () => context.go('/notes'),
+              tooltip: 'Vissza a jegyzetek listájához',
+            ),
+          ],
+        ),
+        body: const Center(child: Text('A pakli nem található.')),
+      );
     }
 
     final data = _deckData!.data() as Map<String, dynamic>;
@@ -113,14 +147,39 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
                 );
 
       if (isWide) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isMobile = screenWidth < 600;
+        
         return Scaffold(
           appBar: AppBar(
-            title: Text(title),
+            title: Text(
+              title,
+              style: TextStyle(
+                fontSize: isMobile ? 16 : 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            backgroundColor: Colors.white,
+            elevation: 1,
+            centerTitle: true,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
+              icon: Icon(
+                Icons.arrow_back_ios,
+                color: Theme.of(context).primaryColor,
+                size: isMobile ? 20 : 22,
+              ),
               onPressed: () => context.go('/notes'),
             ),
             actions: [
+              IconButton(
+                icon: Icon(
+                  Icons.home,
+                  color: Theme.of(context).primaryColor,
+                  size: isMobile ? 20 : 22,
+                ),
+                onPressed: () => context.go('/notes'),
+                tooltip: 'Vissza a jegyzetek listájához',
+              ),
               IconButton(
                 icon: Icon(_reorderMode ? Icons.check : Icons.swap_vert),
                 tooltip: _reorderMode ? 'Rendezés mentése' : 'Átrendezés',
@@ -145,14 +204,39 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
         );
       }
 
+      final screenWidth = MediaQuery.of(context).size.width;
+      final isMobile = screenWidth < 600;
+      
       return Scaffold(
         appBar: AppBar(
-          title: Text(title),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontSize: isMobile ? 16 : 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: Colors.white,
+          elevation: 1,
+          centerTitle: true,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: Icon(
+              Icons.arrow_back_ios,
+              color: Theme.of(context).primaryColor,
+              size: isMobile ? 20 : 22,
+            ),
             onPressed: () => context.go('/notes'),
           ),
           actions: [
+            IconButton(
+              icon: Icon(
+                Icons.home,
+                color: Theme.of(context).primaryColor,
+                size: isMobile ? 20 : 22,
+              ),
+              onPressed: () => context.go('/notes'),
+              tooltip: 'Vissza a jegyzetek listájához',
+            ),
             IconButton(
               icon: Icon(_reorderMode ? Icons.check : Icons.swap_vert),
               tooltip: _reorderMode ? 'Rendezés mentése' : 'Átrendezés',

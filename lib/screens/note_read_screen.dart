@@ -83,6 +83,28 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
         backgroundColor: Colors.white,
         elevation: 1,
         centerTitle: true,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: Theme.of(context).primaryColor,
+            size: isMobile ? 20 : 22,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              Icons.home,
+              color: Theme.of(context).primaryColor,
+              size: isMobile ? 20 : 22,
+            ),
+            onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil(
+              '/notes',
+              (route) => false,
+            ),
+            tooltip: 'Vissza a jegyzetek listájához',
+          ),
+        ],
       ),
       body: Container(
         color: const Color(0xFFF8F9FA),
