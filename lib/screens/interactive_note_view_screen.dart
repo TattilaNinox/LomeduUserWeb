@@ -93,7 +93,7 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
     if (_noteSnapshot == null) {
       final screenWidth = MediaQuery.of(context).size.width;
       final isMobile = screenWidth < 600;
-      
+
       return Scaffold(
         appBar: AppBar(
           title: Text(
@@ -120,17 +120,6 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
               }
             },
           ),
-          actions: [
-            IconButton(
-              icon: Icon(
-                Icons.home,
-                color: Theme.of(context).primaryColor,
-                size: isMobile ? 20 : 22,
-              ),
-              onPressed: () => context.go('/notes'),
-              tooltip: 'Vissza a jegyzetek listájához',
-            ),
-          ],
         ),
         body: const Center(child: CircularProgressIndicator()),
       );

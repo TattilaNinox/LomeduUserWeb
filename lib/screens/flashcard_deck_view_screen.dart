@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/sidebar.dart';
+import '../utils/filter_storage.dart';
 import 'package:orlomed_admin_web/widgets/flippable_card.dart';
 
 class FlashcardDeckViewScreen extends StatefulWidget {
@@ -54,7 +55,7 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
     if (_deckData == null || !_deckData!.exists) {
       final screenWidth = MediaQuery.of(context).size.width;
       final isMobile = screenWidth < 600;
-      
+
       return Scaffold(
         appBar: AppBar(
           title: Text(
@@ -73,19 +74,27 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
               color: Theme.of(context).primaryColor,
               size: isMobile ? 20 : 22,
             ),
-            onPressed: () => context.go('/notes'),
+            onPressed: () {
+              // URL paraméterekkel vissza navigálás a szűrők megőrzéséhez
+              final uri = Uri(
+                path: '/notes',
+                queryParameters: {
+                  if (FilterStorage.searchText != null &&
+                      FilterStorage.searchText!.isNotEmpty)
+                    'q': FilterStorage.searchText!,
+                  if (FilterStorage.status != null)
+                    'status': FilterStorage.status!,
+                  if (FilterStorage.category != null)
+                    'category': FilterStorage.category!,
+                  if (FilterStorage.science != null)
+                    'science': FilterStorage.science!,
+                  if (FilterStorage.tag != null) 'tag': FilterStorage.tag!,
+                  if (FilterStorage.type != null) 'type': FilterStorage.type!,
+                },
+              );
+              context.go(uri.toString());
+            },
           ),
-          actions: [
-            IconButton(
-              icon: Icon(
-                Icons.home,
-                color: Theme.of(context).primaryColor,
-                size: isMobile ? 20 : 22,
-              ),
-              onPressed: () => context.go('/notes'),
-              tooltip: 'Vissza a jegyzetek listájához',
-            ),
-          ],
         ),
         body: const Center(child: Text('A pakli nem található.')),
       );
@@ -149,7 +158,7 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
       if (isWide) {
         final screenWidth = MediaQuery.of(context).size.width;
         final isMobile = screenWidth < 600;
-        
+
         return Scaffold(
           appBar: AppBar(
             title: Text(
@@ -168,18 +177,28 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
                 color: Theme.of(context).primaryColor,
                 size: isMobile ? 20 : 22,
               ),
-              onPressed: () => context.go('/notes'),
+              onPressed: () {
+                // URL paraméterekkel vissza navigálás a szűrők megőrzéséhez
+                final uri = Uri(
+                  path: '/notes',
+                  queryParameters: {
+                    if (FilterStorage.searchText != null &&
+                        FilterStorage.searchText!.isNotEmpty)
+                      'q': FilterStorage.searchText!,
+                    if (FilterStorage.status != null)
+                      'status': FilterStorage.status!,
+                    if (FilterStorage.category != null)
+                      'category': FilterStorage.category!,
+                    if (FilterStorage.science != null)
+                      'science': FilterStorage.science!,
+                    if (FilterStorage.tag != null) 'tag': FilterStorage.tag!,
+                    if (FilterStorage.type != null) 'type': FilterStorage.type!,
+                  },
+                );
+                context.go(uri.toString());
+              },
             ),
             actions: [
-              IconButton(
-                icon: Icon(
-                  Icons.home,
-                  color: Theme.of(context).primaryColor,
-                  size: isMobile ? 20 : 22,
-                ),
-                onPressed: () => context.go('/notes'),
-                tooltip: 'Vissza a jegyzetek listájához',
-              ),
               IconButton(
                 icon: Icon(_reorderMode ? Icons.check : Icons.swap_vert),
                 tooltip: _reorderMode ? 'Rendezés mentése' : 'Átrendezés',
@@ -206,7 +225,7 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
 
       final screenWidth = MediaQuery.of(context).size.width;
       final isMobile = screenWidth < 600;
-      
+
       return Scaffold(
         appBar: AppBar(
           title: Text(
@@ -225,18 +244,28 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
               color: Theme.of(context).primaryColor,
               size: isMobile ? 20 : 22,
             ),
-            onPressed: () => context.go('/notes'),
+            onPressed: () {
+              // URL paraméterekkel vissza navigálás a szűrők megőrzéséhez
+              final uri = Uri(
+                path: '/notes',
+                queryParameters: {
+                  if (FilterStorage.searchText != null &&
+                      FilterStorage.searchText!.isNotEmpty)
+                    'q': FilterStorage.searchText!,
+                  if (FilterStorage.status != null)
+                    'status': FilterStorage.status!,
+                  if (FilterStorage.category != null)
+                    'category': FilterStorage.category!,
+                  if (FilterStorage.science != null)
+                    'science': FilterStorage.science!,
+                  if (FilterStorage.tag != null) 'tag': FilterStorage.tag!,
+                  if (FilterStorage.type != null) 'type': FilterStorage.type!,
+                },
+              );
+              context.go(uri.toString());
+            },
           ),
           actions: [
-            IconButton(
-              icon: Icon(
-                Icons.home,
-                color: Theme.of(context).primaryColor,
-                size: isMobile ? 20 : 22,
-              ),
-              onPressed: () => context.go('/notes'),
-              tooltip: 'Vissza a jegyzetek listájához',
-            ),
             IconButton(
               icon: Icon(_reorderMode ? Icons.check : Icons.swap_vert),
               tooltip: _reorderMode ? 'Rendezés mentése' : 'Átrendezés',
