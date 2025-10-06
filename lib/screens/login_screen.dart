@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../utils/device_fingerprint.dart';
 
 /// A bejelentkezési képernyőt megvalósító widget.
 ///
@@ -51,6 +52,8 @@ class LoginScreenState extends State<LoginScreen> {
             .get();
 
         final isActive = userDoc.data()?['isActive'] as bool? ?? true;
+        final authorizedDeviceFingerprint =
+            userDoc.data()?['authorizedDeviceFingerprint'] as String?;
 
         if (!isActive) {
           // Ha a felhasználó inaktív, kijelentkeztetjük és hibaüzenetet mutatunk
@@ -60,6 +63,34 @@ class LoginScreenState extends State<LoginScreen> {
                 'A fiókod inaktív. Kérlek, lépj kapcsolatba az adminisztrátorral.';
           });
           return;
+        }
+
+        // Eszköz ellenőrzés - csak akkor engedjük be, ha nincs regisztrált eszköz vagy az aktuális eszköz engedélyezett
+        if (authorizedDeviceFingerprint != null &&
+            authorizedDeviceFingerprint.isNotEmpty) {
+          final currentFingerprint =
+              await DeviceFingerprint.getCurrentFingerprint();
+
+          if (currentFingerprint != authorizedDeviceFingerprint) {
+            // Ha van regisztrált eszköz, de ez nem az, akkor eszközváltásra irányítjuk
+            await FirebaseAuth.instance.signOut();
+            setState(() {
+              _errorMessage =
+                  'Ez az eszköz nincs regisztrálva a fiókodhoz. Használd az eszközváltás funkciót.';
+            });
+            return;
+          }
+        } else {
+          // Ha nincs regisztrált eszköz, akkor regisztráljuk az aktuális eszközt
+          final currentFingerprint =
+              await DeviceFingerprint.getCurrentFingerprint();
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userCredential.user!.uid)
+              .update({
+            'authorizedDeviceFingerprint': currentFingerprint,
+            'deviceRegistrationDate': FieldValue.serverTimestamp(),
+          });
         }
 
         // Sikeres bejelentkezés után ellenőrzi, hogy a widget még a fán van-e
@@ -181,11 +212,23 @@ class LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 16),
                       Text(
                         _errorMessage!, // A `!` jelzi, hogy biztosak vagyunk benne, itt már nem `null`.
+                        textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: Color(0xFFE74C3C),
                           fontSize: 14,
                         ),
                       ),
+                      if (_errorMessage!.contains('nincs regisztrálva')) ...[
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Ha új böngészőt használsz vagy törölted a sütiket, használd az Eszközváltás gombot.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Color(0xFFE74C3C),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
                     ],
                     const SizedBox(height: 24),
                     // Bejelentkezés gomb
