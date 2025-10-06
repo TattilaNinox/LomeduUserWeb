@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+// import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../utils/device_fingerprint.dart';
 
@@ -161,6 +162,12 @@ class LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Cím
+                    Image.asset(
+                      'assets/images/login_LOGO.png',
+                      height: 180,
+                      fit: BoxFit.contain,
+                    ),
+                    const SizedBox(height: 8),
                     const Text(
                       'Lomedu Belépés',
                       style: TextStyle(

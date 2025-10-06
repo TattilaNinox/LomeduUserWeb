@@ -37,6 +37,8 @@ dependencies:
   printing: ^5.13.1
   pdf: ^3.11.1
   cloud_functions: ^4.7.6
+  shared_preferences: ^2.5.3
+  flutter_svg: ^2.2.1
 
 dev_dependencies:
   flutter_test:
@@ -53,3 +55,6 @@ flutter:
           weight: 500
         - asset: assets/fonts/Inter-Bold.ttf
           weight: 700
+
+  assets:
+    - assets/images/login_LOGO.png
