@@ -1,4 +1,5 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { getAuth, connectAuthEmulator, type Auth } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator, type Firestore } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator, type Functions } from 'firebase/functions';
@@ -31,6 +32,17 @@ export function initFirebase(): { app: FirebaseApp; auth: Auth; db: Firestore; f
       connectFirestoreEmulator(db, 'localhost', 8080);
       connectFunctionsEmulator(functions, 'localhost', 5001);
     } catch (_) {}
+  }
+
+  // App Check (reCAPTCHA v3) inicializálása – site key a Firebase Console-ból
+  if (typeof window !== 'undefined' && !(window as any).__APPCHECK_INITIALIZED__) {
+    try {
+      initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider('6LcgYuArAAAAAO3diSOO5tKAvP6HVZZQFh3PgDYl'),
+        isTokenAutoRefreshEnabled: true,
+      });
+      (window as any).__APPCHECK_INITIALIZED__ = true;
+    } catch {}
   }
 
   return { app, auth, db, functions } as { app: FirebaseApp; auth: Auth; db: Firestore; functions: Functions };
