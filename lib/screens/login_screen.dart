@@ -52,22 +52,16 @@ class LoginScreenState extends State<LoginScreen> {
             .doc(userCredential.user!.uid)
             .get();
 
-        final isActive = userDoc.data()?['isActive'] as bool? ?? true;
+        final userType = userDoc.data()?['userType'] as String? ?? '';
         final authorizedDeviceFingerprint =
             userDoc.data()?['authorizedDeviceFingerprint'] as String?;
 
-        if (!isActive) {
-          // Ha a felhasználó inaktív, kijelentkeztetjük és hibaüzenetet mutatunk
-          await FirebaseAuth.instance.signOut();
-          setState(() {
-            _errorMessage =
-                'A fiókod inaktív. Kérlek, lépj kapcsolatba az adminisztrátorral.';
-          });
-          return;
-        }
+        // Admin felhasználók eszköz-függetlenül beléphetnek
+        final isAdmin = userType.toLowerCase() == 'admin';
 
-        // Eszköz ellenőrzés - csak akkor engedjük be, ha nincs regisztrált eszköz vagy az aktuális eszköz engedélyezett
-        if (authorizedDeviceFingerprint != null &&
+        // Eszköz ellenőrzés - csak nem-adminnál
+        if (!isAdmin &&
+            authorizedDeviceFingerprint != null &&
             authorizedDeviceFingerprint.isNotEmpty) {
           final currentFingerprint =
               await DeviceFingerprint.getCurrentFingerprint();
@@ -81,7 +75,7 @@ class LoginScreenState extends State<LoginScreen> {
             });
             return;
           }
-        } else {
+        } else if (!isAdmin) {
           // Ha nincs regisztrált eszköz, akkor regisztráljuk az aktuális eszközt
           final currentFingerprint =
               await DeviceFingerprint.getCurrentFingerprint();
