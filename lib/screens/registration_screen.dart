@@ -21,8 +21,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   bool _isLoading = false;
 
   bool _isValidEmail(String email) {
+    // Javított regex: raw string + helyes egy backslash-es escape a regexben
     final regExp = RegExp(
-        r"^(?:[a-zA-Z0-9_'^&/+-])+(?:\\.(?:[a-zA-Z0-9_'^&/+-])+)*@(?:(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,})$");
+        r"^(?:[a-zA-Z0-9_'^&/+-])+(?:\.(?:[a-zA-Z0-9_'^&/+-])+)*@(?:(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})$");
     return regExp.hasMatch(email);
   }
 
