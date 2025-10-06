@@ -131,7 +131,7 @@ class LoginScreenState extends State<LoginScreen> {
                   children: [
                     // Cím
                     const Text(
-                      'Lomedu Admin',
+                      'Lomedu Belépés',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 24,
@@ -223,6 +223,16 @@ class LoginScreenState extends State<LoginScreen> {
                           child: const Text('Regisztráció'),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: () => context.go('/device-change'),
+                      icon: const Icon(
+                        Icons.devices,
+                        size: 16,
+                        color: Color(0xFF1E3A8A),
+                      ),
+                      label: const Text('Eszközváltás'),
                     ),
                   ],
                 ),

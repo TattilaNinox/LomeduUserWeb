@@ -13,6 +13,7 @@ import 'theme/app_theme.dart'; // <-- AppTheme importálása
 // flashcard/kvíz admin képernyők eltávolítva
 // import 'screens/verify_otp_screen.dart'; // 2FA csak az admin webben
 import 'screens/verify_email_screen.dart';
+import 'screens/device_change_screen.dart';
 // import 'screens/two_factor_auth_screen.dart';
 // public doc admin képernyők eltávolítva
 import 'screens/note_read_screen.dart';
@@ -55,6 +56,11 @@ final _router = GoRouter(
     GoRoute(
       path: '/verify-email',
       builder: (context, state) => const VerifyEmailScreen(),
+    ),
+    // Eszközváltás képernyő
+    GoRoute(
+      path: '/device-change',
+      builder: (context, state) => const DeviceChangeScreen(),
     ),
     // Felhasználói appban a regisztráció/jelszó elfelejtése elrejtve (ha nem kell)
     // Jegyzetek listájának képernyője.
