@@ -128,24 +128,32 @@ class _NoteListScreenState extends State<NoteListScreen> {
   }
 
   Future<void> _loadTags() async {
-    final notesSnapshot =
-        await FirebaseConfig.firestore.collection('notes').get();
-    final allTags =
-        <String>{}; // Set-et használunk a duplikátumok automatikus kezelésére
+    try {
+      final notesSnapshot = await FirebaseConfig.firestore
+          .collection('notes')
+          .where('status', whereIn: ['Published', 'Public']).get();
+      final allTags = <String>{};
 
-    for (final doc in notesSnapshot.docs) {
-      final data = doc.data();
-      if (data.containsKey('tags') && data['tags'] is List) {
-        final tags = List<String>.from(data['tags']);
-        allTags.addAll(tags);
+      for (final doc in notesSnapshot.docs) {
+        final data = doc.data();
+        if (data.containsKey('tags') && data['tags'] is List) {
+          final tags = List<String>.from(data['tags']);
+          allTags.addAll(tags);
+        }
       }
-    }
 
-    if (mounted) {
-      setState(() {
-        _tags = allTags.toList()
-          ..sort(); // Opcionális: ABC sorrendbe rendezzük a listát
-      });
+      if (mounted) {
+        setState(() {
+          _tags = allTags.toList()..sort();
+        });
+      }
+    } catch (e) {
+      // Ha jogosultság/lekérdezési hiba, ne akassza meg az oldalt
+      if (mounted) {
+        setState(() {
+          _tags = const [];
+        });
+      }
     }
   }
 

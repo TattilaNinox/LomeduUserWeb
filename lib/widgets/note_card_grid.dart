@@ -26,6 +26,9 @@ class NoteCardGrid extends StatelessWidget {
     Query<Map<String, dynamic>> query =
         FirebaseConfig.firestore.collection('notes');
 
+    // Csak publikusan elérhető jegyzetek (szabályokkal összhangban)
+    query = query.where('status', whereIn: ['Published', 'Public']);
+
     if (selectedStatus != null && selectedStatus!.isNotEmpty) {
       query = query.where('status', isEqualTo: selectedStatus);
     }
@@ -48,16 +51,17 @@ class NoteCardGrid extends StatelessWidget {
         if (snapshot.hasError) {
           return const Center(child: Text('Hiba az adatok betöltésekor.'));
         }
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final docs = snapshot.data!.docs
+        final docs = (snapshot.data?.docs ?? const <QueryDocumentSnapshot<Map<String, dynamic>>>[])
             .where((d) => !(d.data()['deletedAt'] != null))
             .where((d) => (d.data()['title'] ?? '')
                 .toString()
                 .toLowerCase()
                 .contains(searchText.toLowerCase()))
             .toList();
+
+        if (!snapshot.hasData && snapshot.connectionState != ConnectionState.active) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
         if (docs.isEmpty) {
           return const Center(child: Text('Nincs találat.'));
