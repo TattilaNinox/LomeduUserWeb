@@ -21,7 +21,7 @@ class NoteReadScreen extends StatefulWidget {
 
 class _NoteReadScreenState extends State<NoteReadScreen> {
   DocumentSnapshot? _noteSnapshot;
-  int _currentPageIndex = 0;
+  final int _currentPageIndex = 0;
   WebViewController? _webViewController;
 
   @override
@@ -186,9 +186,9 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
                                   fontStyle: FontStyle.italic,
                                   color: const Color(0xFF4A5568),
                                   backgroundColor: const Color(0xFFF7FAFC),
-                                  border: Border(
+                                  border: const Border(
                                     left: BorderSide(
-                                      color: const Color(0xFFE2E8F0),
+                                      color: Color(0xFFE2E8F0),
                                       width: 4,
                                     ),
                                   ),

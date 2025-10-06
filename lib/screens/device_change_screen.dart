@@ -140,7 +140,7 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
                     width: isMobile ? 100 : 120,
                     height: isMobile ? 100 : 120,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1E3A8A).withOpacity(0.1),
+                      color: const Color(0x1A1E3A8A),
                       borderRadius: BorderRadius.circular(isMobile ? 50 : 60),
                     ),
                     child: Icon(
@@ -178,14 +178,14 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
                   // E-mail mező
                   TextField(
                     controller: _emailController,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       hintText: 'Email cím',
-                      prefixIcon: const Icon(Icons.email_outlined,
-                          color: Color(0xFF6B7280)),
-                      border: const UnderlineInputBorder(
+                      prefixIcon:
+                          Icon(Icons.email_outlined, color: Color(0xFF6B7280)),
+                      border: UnderlineInputBorder(
                         borderSide: BorderSide(color: Color(0xFFE5E7EB)),
                       ),
-                      focusedBorder: const UnderlineInputBorder(
+                      focusedBorder: UnderlineInputBorder(
                         borderSide:
                             BorderSide(color: Color(0xFF1E3A8A), width: 2),
                       ),
@@ -239,7 +239,7 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
                         decoration: BoxDecoration(
                           border: Border.all(color: const Color(0xFF1E3A8A)),
                           borderRadius: BorderRadius.circular(8),
-                          color: const Color(0xFF1E3A8A).withOpacity(0.1),
+                          color: const Color(0x1A1E3A8A),
                         ),
                       ),
                       keyboardType: TextInputType.number,

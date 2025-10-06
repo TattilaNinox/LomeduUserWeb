@@ -281,7 +281,7 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
             ),
           ],
         ),
-        drawer: Drawer(
+        drawer: const Drawer(
           child: SafeArea(
             child: Sidebar(selectedMenu: 'notes'),
           ),
