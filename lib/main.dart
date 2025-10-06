@@ -11,7 +11,7 @@ import 'screens/note_list_screen.dart';
 // importok eltávolítva: bundle, create/edit képernyők
 import 'theme/app_theme.dart'; // <-- AppTheme importálása
 // flashcard/kvíz admin képernyők eltávolítva
-import 'screens/verify_otp_screen.dart';
+// import 'screens/verify_otp_screen.dart'; // 2FA csak az admin webben
 import 'screens/verify_email_screen.dart';
 // import 'screens/two_factor_auth_screen.dart';
 // public doc admin képernyők eltávolítva
@@ -110,11 +110,7 @@ final _router = GoRouter(
     // Interaktív jegyzet megtekintés megmaradhat, ha kell – külön request esetén visszahozzuk
     // Szerkesztés útvonal eltávolítva
     // További admin útvonalak eltávolítva
-    // Kétfaktoros hitelesítési kód ellenőrzése
-    GoRoute(
-      path: '/verify-otp',
-      builder: (context, state) => const VerifyOtpScreen(),
-    ),
+    // 2FA route eltávolítva a felhasználói webből
     // Flashcard deck megtekintés útvonal (csak olvasás)
     GoRoute(
       path: '/deck/:deckId/view',

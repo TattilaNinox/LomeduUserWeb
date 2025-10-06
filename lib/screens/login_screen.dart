@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../core/two_factor_auth.dart';
 
 /// A bejelentkezési képernyőt megvalósító widget.
 ///
@@ -63,19 +62,11 @@ class LoginScreenState extends State<LoginScreen> {
           return;
         }
 
-        final has2FA =
-            await TwoFactorAuth.isTwoFactorEnabled(userCredential.user!);
-
         // Sikeres bejelentkezés után ellenőrzi, hogy a widget még a fán van-e
         // (`mounted` tulajdonság), mielőtt navigálna.
         if (mounted) {
-          if (has2FA) {
-            // Ha be van kapcsolva a 2FA, akkor a kód ellenőrző oldalra irányítjuk
-            context.go('/verify-otp');
-          } else {
-            // Ha nincs 2FA, akkor egyből a főoldalra irányítjuk
-            context.go('/notes');
-          }
+          // 2FA nincs a felhasználói webben: közvetlenül a főoldalra navigálunk
+          context.go('/notes');
         }
       }
     } on FirebaseAuthException catch (e) {
