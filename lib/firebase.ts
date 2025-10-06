@@ -19,6 +19,18 @@ export function initFirebase(): { app: FirebaseApp; auth: Auth; db: Firestore; f
       messagingSenderId: '673799768268',
       appId: '1:673799768268:web:2313db56d5226e17c6da69',
     });
+
+    // App Check (reCAPTCHA v3) inicializálása KÖZVETLEN az app után,
+    // még bármely Firebase szolgáltatás példányosítása előtt.
+    if (typeof window !== 'undefined' && !(window as any).__APPCHECK_INITIALIZED__) {
+      try {
+        initializeAppCheck(app, {
+          provider: new ReCaptchaV3Provider('6LcgYuArAAAAAO3diSOO5tKAvP6HVZZQFh3PgDYl'),
+          isTokenAutoRefreshEnabled: true,
+        });
+        (window as any).__APPCHECK_INITIALIZED__ = true;
+      } catch {}
+    }
   }
 
   if (!auth) auth = getAuth(app);
@@ -34,16 +46,7 @@ export function initFirebase(): { app: FirebaseApp; auth: Auth; db: Firestore; f
     } catch (_) {}
   }
 
-  // App Check (reCAPTCHA v3) inicializálása – site key a Firebase Console-ból
-  if (typeof window !== 'undefined' && !(window as any).__APPCHECK_INITIALIZED__) {
-    try {
-      initializeAppCheck(app, {
-        provider: new ReCaptchaV3Provider('6LcgYuArAAAAAO3diSOO5tKAvP6HVZZQFh3PgDYl'),
-        isTokenAutoRefreshEnabled: true,
-      });
-      (window as any).__APPCHECK_INITIALIZED__ = true;
-    } catch {}
-  }
+
 
   return { app, auth, db, functions } as { app: FirebaseApp; auth: Auth; db: Firestore; functions: Functions };
 }
