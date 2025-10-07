@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "source": "functions",
-    "runtime": "nodejs18",
-    "region": "europe-west1"
-  },
   "firestore": {
     "rules": "firestore.rules"
   },
@@ -29,5 +24,8 @@
         ]
       }
     ]
+  },
+  "functions": {
+    "source": "functions"
   }
 }
