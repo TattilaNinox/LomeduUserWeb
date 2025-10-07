@@ -6,6 +6,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ensureUserDocument } from '@/lib/ensureUserDocument';
+import { getWebDeviceFingerprint } from '@/lib/deviceFingerprint';
 
 function isValidEmail(email: string) {
   return /^(?:[a-zA-Z0-9_'^&/+-])+(?:\.(?:[a-zA-Z0-9_'^&/+-])+)*@(?:(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})$/.test(email);
@@ -36,7 +37,7 @@ export default function LoginPage() {
       await user.reload();
       if (!user.emailVerified) {
         setError('Az email cím nincs megerősítve. Küldtünk új megerősítő emailt.');
-        await user.sendEmailVerification();
+        await (user as any).sendEmailVerification();
         return;
       }
       const userRef = doc(db, 'users', user.uid);
@@ -49,7 +50,7 @@ export default function LoginPage() {
         return;
       }
       await ensureUserDocument(user);
-      router.replace('/categories');
+      router.replace('/');
     } catch (e: any) {
       const code = e?.code as string | undefined;
       switch (code) {
@@ -88,6 +89,39 @@ export default function LoginPage() {
     }
   }, [auth, email]);
 
+  const checkDevice = async () => {
+    const u = auth.currentUser;
+    if (!u) {
+      console.log('No user logged in');
+      return;
+    }
+
+    try {
+      const fingerprint = getWebDeviceFingerprint();
+      console.log('Manual check - Current fingerprint:', fingerprint);
+      
+      const userDoc = await getDoc(doc(db, 'users', u.uid));
+      if (!userDoc.exists()) {
+        console.log('User document not found');
+        return;
+      }
+      
+      const data = userDoc.data();
+      const allowed = data?.authorizedDeviceFingerprint;
+      console.log('Manual check - Allowed fingerprint:', allowed);
+      
+      if (allowed && allowed !== fingerprint) {
+        console.log('MANUAL CHECK: Device mismatch! Logging out...');
+        await auth.signOut();
+        router.replace('/login');
+      } else {
+        console.log('MANUAL CHECK: Device OK');
+      }
+    } catch (error) {
+      console.error('Manual check error:', error);
+    }
+  };
+
   return (
     <main className="mx-auto max-w-md p-6">
       <h1 className="text-2xl font-semibold mb-4">Bejelentkezés</h1>
@@ -116,6 +150,12 @@ export default function LoginPage() {
         <div className="text-sm">
           Nincs fiókja? <Link href="/register" className="text-blue-700 underline">Regisztráció</Link>
         </div>
+        <button 
+          onClick={checkDevice}
+          className="w-full bg-blue-500 text-white px-4 py-2 rounded mt-2"
+        >
+          Eszköz ellenőrzés (Debug)
+        </button>
       </div>
     </main>
   );

@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "tailwindcss -i ./html_src/input.css -o ./web/output.css --watch",
+    "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "tailwind": "tailwindcss -i ./html_src/input.css -o ./web/output.css --watch"
   },
   "dependencies": {
     "@emotion/react": "^11.11.3",
