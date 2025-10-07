@@ -48,6 +48,9 @@ exports.verifyAndChangeDevice = functions.region('europe-west1').https.onCall(as
     deviceChange: admin.firestore.FieldValue.delete(),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   }, { merge: true });
+
+  // Invalidate all existing refresh tokens so other devices sign out automatically
+  await admin.auth().revokeRefreshTokens(userDoc.id);
   return { ok: true };
 });
 
