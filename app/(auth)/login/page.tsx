@@ -45,6 +45,7 @@ export default function LoginPage() {
       if (!isActive) {
         setError('A fiók inaktív. Kérjük, lépjen kapcsolatba az adminnal.');
         await auth.signOut();
+        router.replace('/login');
         return;
       }
       await ensureUserDocument(user);
