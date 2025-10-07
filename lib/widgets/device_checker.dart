@@ -20,26 +20,52 @@ class DeviceChecker extends StatefulWidget {
   State<DeviceChecker> createState() => _DeviceCheckerState();
 }
 
-class _DeviceCheckerState extends State<DeviceChecker> {
+class _DeviceCheckerState extends State<DeviceChecker> with WidgetsBindingObserver {
   StreamSubscription<DocumentSnapshot>? _userDocSubscription;
+  StreamSubscription<User?>? _authStateSubscription;
+  Timer? _periodicCheckTimer;
   String? _currentFingerprint;
   bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeDeviceCheck();
+    
+    // Figyeljük a Firebase Auth állapot változásait
+    _authStateSubscription = FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (user != null) {
+        _initializeDeviceCheck();
+      } else {
+        _cleanup();
+      }
+    });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _userDocSubscription?.cancel();
+    _authStateSubscription?.cancel();
+    _periodicCheckTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Amikor az app visszatér a foreground-ba, ellenőrizzük újra
+      _initializeDeviceCheck();
+    }
   }
 
   /// Inicializálja az eszköz ellenőrzést
   Future<void> _initializeDeviceCheck() async {
     try {
+      // Először töröljük a régi subscription-t
+      _cleanup();
+      
       // Jelenlegi felhasználó lekérése
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -59,10 +85,54 @@ class _DeviceCheckerState extends State<DeviceChecker> {
           .snapshots()
           .listen(_onUserDocumentChanged);
 
+      // Periódikus ellenőrzés is (5 másodpercenként)
+      _periodicCheckTimer = Timer.periodic(Duration(seconds: 5), (timer) {
+        _checkDevicePeriodically();
+      });
+
       setState(() => _isInitialized = true);
     } catch (error) {
       print('DeviceChecker: Error initializing device check: $error');
       setState(() => _isInitialized = true);
+    }
+  }
+
+  /// Törli a subscription-öket
+  void _cleanup() {
+    _userDocSubscription?.cancel();
+    _userDocSubscription = null;
+    _periodicCheckTimer?.cancel();
+    _periodicCheckTimer = null;
+  }
+
+  /// Periódikus eszköz ellenőrzés
+  Future<void> _checkDevicePeriodically() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (!userDoc.exists) return;
+
+      final data = userDoc.data() as Map<String, dynamic>?;
+      final authorizedFingerprint = data?['authorizedDeviceFingerprint'] as String?;
+      
+      print('DeviceChecker: Periodic check - Current: $_currentFingerprint, Allowed: $authorizedFingerprint');
+
+      if (authorizedFingerprint != null && 
+          authorizedFingerprint.isNotEmpty && 
+          _currentFingerprint != null &&
+          authorizedFingerprint != _currentFingerprint) {
+        
+        print('DeviceChecker: Periodic check - Device mismatch! Logging out user...');
+        _logoutUser();
+      }
+    } catch (error) {
+      print('DeviceChecker: Error in periodic check: $error');
     }
   }
 
