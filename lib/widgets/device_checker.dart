@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/foundation.dart';
 import '../utils/device_fingerprint.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 
 /// A DeviceChecker widget globálisan figyeli a felhasználó eszközének ujjlenyomatát
 /// és kijelentkezteti a felhasználót, ha az nem egyezik a Firestore-ban tárolttal.
-/// 
+///
 /// Ez a widget csak akkor fut, ha a felhasználó be van jelentkezve és nem
 /// auth-related képernyőkön van (login, register, device-change, verify-email).
 class DeviceChecker extends StatefulWidget {
@@ -20,21 +23,22 @@ class DeviceChecker extends StatefulWidget {
   State<DeviceChecker> createState() => _DeviceCheckerState();
 }
 
-class _DeviceCheckerState extends State<DeviceChecker> with WidgetsBindingObserver {
+class _DeviceCheckerState extends State<DeviceChecker>
+    with WidgetsBindingObserver {
   StreamSubscription<DocumentSnapshot>? _userDocSubscription;
   StreamSubscription<User?>? _authStateSubscription;
   Timer? _periodicCheckTimer;
   String? _currentFingerprint;
-  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initializeDeviceCheck();
-    
+
     // Figyeljük a Firebase Auth állapot változásait
-    _authStateSubscription = FirebaseAuth.instance.authStateChanges().listen((User? user) {
+    _authStateSubscription =
+        FirebaseAuth.instance.authStateChanges().listen((User? user) {
       if (user != null) {
         _initializeDeviceCheck();
       } else {
@@ -65,18 +69,21 @@ class _DeviceCheckerState extends State<DeviceChecker> with WidgetsBindingObserv
     try {
       // Először töröljük a régi subscription-t
       _cleanup();
-      
+
+      // Várunk egy kicsit, hogy a Firebase inicializálódjon
+      await Future.delayed(const Duration(milliseconds: 500));
+
       // Jelenlegi felhasználó lekérése
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        setState(() => _isInitialized = true);
         return;
       }
 
       // Jelenlegi eszköz ujjlenyomatának lekérése
       _currentFingerprint = await DeviceFingerprint.getCurrentFingerprint();
-      
-      print('DeviceChecker: Checking device for user ${user.uid}, fingerprint: $_currentFingerprint');
+
+      debugPrint(
+          'DeviceChecker: Checking device for user ${user.uid}, fingerprint: $_currentFingerprint');
 
       // Firestore listener beállítása a felhasználó dokumentumára
       _userDocSubscription = FirebaseFirestore.instance
@@ -86,14 +93,11 @@ class _DeviceCheckerState extends State<DeviceChecker> with WidgetsBindingObserv
           .listen(_onUserDocumentChanged);
 
       // Periódikus ellenőrzés is (5 másodpercenként)
-      _periodicCheckTimer = Timer.periodic(Duration(seconds: 5), (timer) {
+      _periodicCheckTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
         _checkDevicePeriodically();
       });
-
-      setState(() => _isInitialized = true);
     } catch (error) {
-      print('DeviceChecker: Error initializing device check: $error');
-      setState(() => _isInitialized = true);
+      debugPrint('DeviceChecker: Error initializing device check: $error');
     }
   }
 
@@ -118,21 +122,23 @@ class _DeviceCheckerState extends State<DeviceChecker> with WidgetsBindingObserv
 
       if (!userDoc.exists) return;
 
-      final data = userDoc.data() as Map<String, dynamic>?;
-      final authorizedFingerprint = data?['authorizedDeviceFingerprint'] as String?;
-      
-      print('DeviceChecker: Periodic check - Current: $_currentFingerprint, Allowed: $authorizedFingerprint');
+      final data = userDoc.data();
+      final authorizedFingerprint =
+          data?['authorizedDeviceFingerprint'] as String?;
 
-      if (authorizedFingerprint != null && 
-          authorizedFingerprint.isNotEmpty && 
+      debugPrint(
+          'DeviceChecker: Periodic check - Current: $_currentFingerprint, Allowed: $authorizedFingerprint');
+
+      if (authorizedFingerprint != null &&
+          authorizedFingerprint.isNotEmpty &&
           _currentFingerprint != null &&
           authorizedFingerprint != _currentFingerprint) {
-        
-        print('DeviceChecker: Periodic check - Device mismatch! Logging out user...');
+        debugPrint(
+            'DeviceChecker: Periodic check - Device mismatch! Logging out user...');
         _logoutUser();
       }
     } catch (error) {
-      print('DeviceChecker: Error in periodic check: $error');
+      debugPrint('DeviceChecker: Error in periodic check: $error');
     }
   }
 
@@ -142,69 +148,89 @@ class _DeviceCheckerState extends State<DeviceChecker> with WidgetsBindingObserv
 
     try {
       if (!snapshot.exists) {
-        print('DeviceChecker: User document not found');
+        debugPrint('DeviceChecker: User document not found');
         return;
       }
 
       final data = snapshot.data() as Map<String, dynamic>?;
-      final authorizedFingerprint = data?['authorizedDeviceFingerprint'] as String?;
-      
-      print('DeviceChecker: Current fingerprint: $_currentFingerprint, Allowed: $authorizedFingerprint');
+      final authorizedFingerprint =
+          data?['authorizedDeviceFingerprint'] as String?;
+
+      debugPrint(
+          'DeviceChecker: Current fingerprint: $_currentFingerprint, Allowed: $authorizedFingerprint');
 
       // Ha van engedélyezett ujjlenyomat és az nem egyezik a jelenlegivel
-      if (authorizedFingerprint != null && 
-          authorizedFingerprint.isNotEmpty && 
+      if (authorizedFingerprint != null &&
+          authorizedFingerprint.isNotEmpty &&
           _currentFingerprint != null &&
           authorizedFingerprint != _currentFingerprint) {
-        
-        print('DeviceChecker: Device fingerprint mismatch! Logging out user...');
+        debugPrint(
+            'DeviceChecker: Device fingerprint mismatch! Logging out user...');
         _logoutUser();
       }
     } catch (error) {
-      print('DeviceChecker: Error checking device: $error');
+      debugPrint('DeviceChecker: Error checking device: $error');
     }
   }
 
   /// Felhasználó kijelentkeztetése
   Future<void> _logoutUser() async {
     try {
+      debugPrint('DeviceChecker: ===== LOGOUT STARTED =====');
+      debugPrint('DeviceChecker: Logging out user due to device mismatch');
+      
+      // Kijelentkeztetjük a felhasználót
       await FirebaseAuth.instance.signOut();
+      debugPrint('DeviceChecker: User signed out from Firebase');
+      
+      // Navigálás a login oldalra - egyszerűbb megközelítés
       if (mounted) {
-        // Navigálás a bejelentkezési oldalra
-        context.go('/login');
+        try {
+          // Próbáljuk meg a GoRouter.of(context) használatával
+          final router = GoRouter.of(context);
+          router.go('/login');
+          debugPrint('DeviceChecker: Successfully navigated using GoRouter.of');
+        } catch (routerError) {
+          debugPrint('DeviceChecker: GoRouter.of failed: $routerError');
+          
+          // Fallback: próbáljuk meg a context.go-val
+          try {
+            context.go('/login');
+            debugPrint('DeviceChecker: Successfully navigated using context.go');
+          } catch (contextError) {
+            debugPrint('DeviceChecker: context.go also failed: $contextError');
+            
+            // Utolsó fallback: web navigáció
+            try {
+              // Web-specifikus navigáció
+              if (kIsWeb) {
+                html.window.location.href = '/login';
+                debugPrint('DeviceChecker: Successfully navigated using window.location');
+              }
+            } catch (webError) {
+              debugPrint('DeviceChecker: Web navigation also failed: $webError');
+            }
+          }
+        }
+      } else {
+        debugPrint('DeviceChecker: Widget is not mounted, cannot navigate');
       }
+      
+      debugPrint('DeviceChecker: ===== LOGOUT COMPLETED =====');
     } catch (error) {
-      print('DeviceChecker: Error during logout: $error');
+      debugPrint('DeviceChecker: Error during logout: $error');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Ha még nincs inicializálva, csak a gyerek widget-et jelenítsd meg
-    if (!_isInitialized) {
-      return widget.child;
-    }
-
-    // Ellenőrizzük, hogy auth-related képernyőn vagyunk-e
-    final currentLocation = GoRouterState.of(context).uri.path;
-    final isAuthScreen = currentLocation.startsWith('/login') ||
-                        currentLocation.startsWith('/register') ||
-                        currentLocation.startsWith('/device-change') ||
-                        currentLocation.startsWith('/verify-email');
-
-    // Ha auth képernyőn vagyunk, ne futtassuk az ellenőrzést
-    if (isAuthScreen) {
-      return widget.child;
-    }
-
-    // Ellenőrizzük, hogy be van-e jelentkezve a felhasználó
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      return widget.child;
-    }
-
-    // Ha minden rendben, jelenítsd meg a gyerek widget-et
+    // Mindig jelenítsd meg a gyerek widget-et, a DeviceChecker csak háttérben fut
     return widget.child;
   }
+  
+  /// Tesztelési metódus - manuálisan kijelentkeztet
+  void testLogout() {
+    debugPrint('DeviceChecker: Manual test logout triggered');
+    _logoutUser();
+  }
 }
-
