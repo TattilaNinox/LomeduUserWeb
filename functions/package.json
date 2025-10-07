@@ -1,10 +1,10 @@
 {
   "name": "lomedu-functions",
   "engines": {
-    "node": "14"
+    "node": "20"
   },
   "dependencies": {
     "firebase-admin": "^11.10.1",
-    "firebase-functions": "^4.5.0"
+    "firebase-functions": "^5.1.0"
   }
 }
