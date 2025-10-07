@@ -20,6 +20,7 @@ import 'screens/note_read_screen.dart';
 import 'screens/flashcard_deck_view_screen.dart';
 import 'screens/interactive_note_view_screen.dart';
 import 'screens/dynamic_quiz_view_screen.dart';
+import 'widgets/device_checker.dart';
 
 /// Az alkalmazás fő belépési pontja.
 void main() async {
@@ -140,15 +141,17 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     // A `MaterialApp.router` a `go_router` használatához szükséges.
     // Ez köti össze a router konfigurációt az alkalmazás vizuális rétegével.
-    return MaterialApp.router(
-      title: 'Lomedu Admin',
-      // Az alkalmazás központi vizuális témájának beállítása.
-      theme: AppTheme.lightTheme,
-      // A "debug" szalag eltávolítása a jobb felső sarokból.
-      debugShowCheckedModeBanner: false,
-      scaffoldMessengerKey: AppMessenger.key,
-      // A korábban definiált router konfiguráció átadása az alkalmazásnak.
-      routerConfig: _router,
+    return DeviceChecker(
+      child: MaterialApp.router(
+        title: 'Lomedu Admin',
+        // Az alkalmazás központi vizuális témájának beállítása.
+        theme: AppTheme.lightTheme,
+        // A "debug" szalag eltávolítása a jobb felső sarokból.
+        debugShowCheckedModeBanner: false,
+        scaffoldMessengerKey: AppMessenger.key,
+        // A korábban definiált router konfiguráció átadása az alkalmazásnak.
+        routerConfig: _router,
+      ),
     );
   }
 }
