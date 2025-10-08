@@ -19,15 +19,22 @@ class LearningService {
   ) async {
     try {
       final user = _auth.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        print('LearningService: No authenticated user');
+        return;
+      }
+
+      print('LearningService: Updating learning data for cardId: $cardId, rating: $rating, categoryId: $categoryId');
 
       // Jelenlegi adatok lekérése
       final currentData = await _getCurrentLearningData(cardId, categoryId);
+      print('LearningService: Current data - state: ${currentData.state}, interval: ${currentData.interval}, easeFactor: ${currentData.easeFactor}');
       
       // Új állapot kalkulálása
       final newData = _calculateNextState(currentData, rating);
+      print('LearningService: New data - state: ${newData.state}, interval: ${newData.interval}, easeFactor: ${newData.easeFactor}');
       
-      // Mentés az új útvonalra
+      // Mentés az új útvonalra (users/{uid}/categories/{categoryId}/learning/{cardId})
       await _firestore
           .collection('users')
           .doc(user.uid)
@@ -36,6 +43,8 @@ class LearningService {
           .collection('learning')
           .doc(cardId)
           .set(newData.toMap());
+      
+      print('LearningService: Successfully saved learning data to Firestore');
 
       // Legacy dokumentum törlése, ha létezik
       await _firestore
@@ -46,7 +55,8 @@ class LearningService {
           .delete();
 
       // Deck és kategória statisztikák frissítése
-      await _updateDeckSnapshot(cardId.split('#')[0], cardId.split('#')[1], rating, currentData.lastRating);
+      final cardIndex = cardId.split('#')[1]; // String index formátumban
+      await _updateDeckSnapshot(cardId.split('#')[0], cardIndex, rating, currentData.lastRating);
       await _updateCategoryStats(categoryId, rating, currentData.lastRating);
 
       // Cache invalidálása
@@ -367,17 +377,19 @@ class LearningService {
 
     switch (rating) {
       case 'Again':
+        // Again: kártya LEARNING állapotba kerül, repetitions nullázódik
         newEaseFactor = (current.easeFactor - 0.2).clamp(
           SpacedRepetitionConfig.minEaseFactor,
           SpacedRepetitionConfig.maxEaseFactor,
         );
         newRepetitions = 0;
+        newState = 'LEARNING';
         
         if (current.state == 'REVIEW') {
-          newState = 'LEARNING';
+          // REVIEW-ból visszaesés: lapse step (10 perc)
           newInterval = SpacedRepetitionConfig.lapseSteps.first;
         } else {
-          newState = 'LEARNING';
+          // NEW/LEARNING-ből: első learning step (1 perc)
           newInterval = SpacedRepetitionConfig.learningSteps.first;
         }
         break;
@@ -389,29 +401,37 @@ class LearningService {
         );
         
         if (current.state == 'NEW' || current.state == 'LEARNING') {
+          // NEW/LEARNING: következő learning step (10 perc)
           newState = 'LEARNING';
-          newInterval = SpacedRepetitionConfig.learningSteps.length > 1 
-              ? SpacedRepetitionConfig.learningSteps[1] 
-              : SpacedRepetitionConfig.learningSteps.first;
+          final currentStepIndex = SpacedRepetitionConfig.learningSteps.indexOf(current.interval);
+          if (currentStepIndex >= 0 && currentStepIndex < SpacedRepetitionConfig.learningSteps.length - 1) {
+            newInterval = SpacedRepetitionConfig.learningSteps[currentStepIndex + 1];
+          } else {
+            newInterval = SpacedRepetitionConfig.learningSteps.first;
+          }
         } else {
+          // REVIEW: kis növekedés (interval * 1.2, min 1 nap)
           newState = 'REVIEW';
-          newInterval = (current.interval * 1.2).clamp(0, 1440).round(); // min 1 nap
+          newInterval = (current.interval * 1.2).clamp(1440, SpacedRepetitionConfig.maxInterval).round();
         }
         break;
 
       case 'Good':
         if (current.state == 'NEW' || current.state == 'LEARNING') {
-          // Learning steps végén graduation
+          // NEW/LEARNING: következő learning step vagy graduation
           final currentStepIndex = SpacedRepetitionConfig.learningSteps.indexOf(current.interval);
-          if (currentStepIndex < SpacedRepetitionConfig.learningSteps.length - 1) {
+          if (currentStepIndex >= 0 && currentStepIndex < SpacedRepetitionConfig.learningSteps.length - 1) {
+            // Van még learning step
             newState = 'LEARNING';
             newInterval = SpacedRepetitionConfig.learningSteps[currentStepIndex + 1];
           } else {
+            // Utolsó learning step: graduation REVIEW-ba
             newState = 'REVIEW';
             newInterval = 4 * 24 * 60; // 4 nap
             newRepetitions = current.repetitions + 1;
           }
         } else {
+          // REVIEW: standard számítás (interval * easeFactor)
           newState = 'REVIEW';
           newInterval = (current.interval * current.easeFactor).round();
           newRepetitions = current.repetitions + 1;
@@ -425,10 +445,12 @@ class LearningService {
         );
         
         if (current.state == 'NEW' || current.state == 'LEARNING') {
+          // NEW/LEARNING: azonnali graduation REVIEW-ba bónusz intervallummal
           newState = 'REVIEW';
           newInterval = (4 * 24 * 60 * SpacedRepetitionConfig.easyBonus).round(); // 4 nap * easyBonus
           newRepetitions = current.repetitions + 1;
         } else {
+          // REVIEW: bónusz növekedés (interval * easeFactor * easyBonus)
           newState = 'REVIEW';
           newInterval = (current.interval * current.easeFactor * SpacedRepetitionConfig.easyBonus).round();
           newRepetitions = current.repetitions + 1;
@@ -490,7 +512,7 @@ class LearningService {
           updatedRatings.remove(cardIndex);
         }
 
-        // Új rating hozzáadása
+        // Új rating hozzáadása (string index formátumban)
         if (newRating != 'Again') {
           updatedRatings[cardIndex] = newRating;
         }

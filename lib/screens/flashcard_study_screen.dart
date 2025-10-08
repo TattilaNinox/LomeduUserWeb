@@ -73,7 +73,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
   Future<void> _evaluateCard(String evaluation) async {
     try {
       final currentCardIndex = _dueCardIndices[_currentIndex];
-      final cardId = '${widget.deckId}#$currentCardIndex';
+      final cardId = '${widget.deckId}#$currentCardIndex'; // deckId#index formátum
       
       // Optimista UI frissítés
       setState(() {
