@@ -79,15 +79,31 @@ class LearningService {
       final flashcards = List<Map<String, dynamic>>.from(deckData['flashcards'] ?? []);
       final categoryId = deckData['category'] as String? ?? 'default';
 
+      // Ha kevés kártya van, gyorsan visszaadjuk az összeset
+      if (flashcards.length <= 20) {
+        final dueIndices = List.generate(flashcards.length, (i) => i);
+        _dueCardsCache[deckId] = dueIndices;
+        _cacheTimestamps[deckId] = DateTime.now();
+        return dueIndices;
+      }
+
+      // Batch lekérdezés timeout-tal
+      final learningDataMap = await _getBatchLearningDataWithTimeout(
+        deckId, 
+        flashcards.length, 
+        categoryId,
+        const Duration(seconds: 10),
+      );
+
       final dueIndices = <int>[];
       final now = Timestamp.now();
 
       // LEARNING és REVIEW állapotú esedékes kártyák
       for (int i = 0; i < flashcards.length; i++) {
-        final cardId = '${deckId}#$i';
-        final learningData = await _getCurrentLearningData(cardId, categoryId);
-        
-        if (learningData.state != 'NEW' && learningData.nextReview.seconds <= now.seconds) {
+        final learningData = learningDataMap[i];
+        if (learningData != null && 
+            learningData.state != 'NEW' && 
+            learningData.nextReview.seconds <= now.seconds) {
           dueIndices.add(i);
         }
       }
@@ -95,10 +111,8 @@ class LearningService {
       // NEW kártyák (legfeljebb newCardLimit)
       int newCardCount = 0;
       for (int i = 0; i < flashcards.length && newCardCount < SpacedRepetitionConfig.newCardLimit; i++) {
-        final cardId = '${deckId}#$i';
-        final learningData = await _getCurrentLearningData(cardId, categoryId);
-        
-        if (learningData.state == 'NEW') {
+        final learningData = learningDataMap[i];
+        if (learningData != null && learningData.state == 'NEW') {
           dueIndices.add(i);
           newCardCount++;
         }
@@ -112,7 +126,114 @@ class LearningService {
 
     } catch (e) {
       print('Error getting due cards: $e');
+      // Hiba esetén visszaadjuk az első 20 kártyát
+      final deckDoc = await _firestore.collection('notes').doc(deckId).get();
+      if (deckDoc.exists) {
+        final deckData = deckDoc.data() as Map<String, dynamic>;
+        final flashcards = List<Map<String, dynamic>>.from(deckData['flashcards'] ?? []);
+        return List.generate(flashcards.length.clamp(0, 20), (i) => i);
+      }
       return [];
+    }
+  }
+
+  /// Batch lekérdezés timeout-tal
+  static Future<Map<int, FlashcardLearningData>> _getBatchLearningDataWithTimeout(
+    String deckId,
+    int cardCount,
+    String categoryId,
+    Duration timeout,
+  ) async {
+    try {
+      return await _getBatchLearningData(deckId, cardCount, categoryId)
+          .timeout(timeout);
+    } catch (e) {
+      print('Batch query timeout, falling back to default data: $e');
+      // Timeout esetén alapértelmezett adatokkal térünk vissza
+      final defaultData = <int, FlashcardLearningData>{};
+      for (int i = 0; i < cardCount; i++) {
+        defaultData[i] = _getDefaultLearningData();
+      }
+      return defaultData;
+    }
+  }
+
+  /// Batch lekérdezés az összes kártya tanulási adatainak lekéréséhez
+  static Future<Map<int, FlashcardLearningData>> _getBatchLearningData(
+    String deckId,
+    int cardCount,
+    String categoryId,
+  ) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return {};
+
+      final learningDataMap = <int, FlashcardLearningData>{};
+
+      // Először az új útvonalról próbáljuk lekérni batch-ben
+      final learningQuery = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('categories')
+          .doc(categoryId)
+          .collection('learning')
+          .where(FieldPath.documentId, whereIn: 
+              List.generate(cardCount, (i) => '${deckId}#$i'))
+          .limit(500) // Firestore limit
+          .get();
+
+      // Feltöltjük a meglévő adatokat
+      for (final doc in learningQuery.docs) {
+        final cardId = doc.id;
+        final index = int.tryParse(cardId.split('#').last) ?? -1;
+        if (index >= 0) {
+          learningDataMap[index] = FlashcardLearningData.fromMap(doc.data());
+        }
+      }
+
+      // Hiányzó kártyák esetén legacy útvonal ellenőrzése
+      final missingIndices = <int>[];
+      for (int i = 0; i < cardCount; i++) {
+        if (!learningDataMap.containsKey(i)) {
+          missingIndices.add(i);
+        }
+      }
+
+      if (missingIndices.isNotEmpty) {
+        final legacyQuery = await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('user_learning_data')
+            .where(FieldPath.documentId, whereIn: 
+                missingIndices.map((i) => '${deckId}#$i').toList())
+            .get();
+
+        for (final doc in legacyQuery.docs) {
+          final cardId = doc.id;
+          final index = int.tryParse(cardId.split('#').last) ?? -1;
+          if (index >= 0) {
+            learningDataMap[index] = FlashcardLearningData.fromMap(doc.data());
+          }
+        }
+      }
+
+      // Hiányzó kártyák esetén alapértelmezett adatok
+      for (int i = 0; i < cardCount; i++) {
+        if (!learningDataMap.containsKey(i)) {
+          learningDataMap[i] = _getDefaultLearningData();
+        }
+      }
+
+      return learningDataMap;
+
+    } catch (e) {
+      print('Error getting batch learning data: $e');
+      // Hiba esetén alapértelmezett adatokkal térünk vissza
+      final defaultData = <int, FlashcardLearningData>{};
+      for (int i = 0; i < cardCount; i++) {
+        defaultData[i] = _getDefaultLearningData();
+      }
+      return defaultData;
     }
   }
 
