@@ -536,12 +536,21 @@ class LearningService {
           updatedRatings[cardIndex] = newRating;
         }
 
-        // Számlálók frissítése – kumulatív, nem vonunk ki régit
+        // Számlálók frissítése - előző rating levonása, új hozzáadása
         int again = current.again;
         int hard = current.hard;
         int good = current.good;
         int easy = current.easy;
 
+        // Előző rating kivonása
+        switch (oldRating) {
+          case 'Again': again = (again - 1).clamp(0, double.infinity).toInt(); break;
+          case 'Hard': hard = (hard - 1).clamp(0, double.infinity).toInt(); break;
+          case 'Good': good = (good - 1).clamp(0, double.infinity).toInt(); break;
+          case 'Easy': easy = (easy - 1).clamp(0, double.infinity).toInt(); break;
+        }
+
+        // Új rating hozzáadása
         switch (newRating) {
           case 'Again': again++; break;
           case 'Hard': hard++; break;

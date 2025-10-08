@@ -44,25 +44,43 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
       if (mounted) {
         final data = doc.data();
         final categoryId = data?['category'] as String? ?? 'default';
+        final flashcards = List<Map<String, dynamic>>.from(data?['flashcards'] ?? []);
         
         // Esedékes kártyák lekérése
         final dueIndices = await LearningService.getDueFlashcardIndicesForDeck(widget.deckId);
-        // Deck statisztikák betöltése a számlálókhoz
+        // Valós időben számolt statisztikák a kártyák aktuális értékelései alapján
         final user = FirebaseAuth.instance.currentUser;
         int again = 0, hard = 0, good = 0, easy = 0;
-        if (user != null) {
-          final statsDoc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .collection('deck_stats')
-              .doc(widget.deckId)
-              .get();
-          if (statsDoc.exists) {
-            final s = statsDoc.data() as Map<String, dynamic>;
-            again = s['again'] as int? ?? 0;
-            hard = s['hard'] as int? ?? 0;
-            good = s['good'] as int? ?? 0;
-            easy = s['easy'] as int? ?? 0;
+        if (user != null && flashcards.isNotEmpty) {
+          // Batch lekérdezés a tanulási adatokhoz
+          final allCardIds = List.generate(flashcards.length, (i) => '${widget.deckId}#$i');
+          const chunkSize = 10;
+          final learningDocs = <QueryDocumentSnapshot>[];
+          
+          for (var i = 0; i < allCardIds.length; i += chunkSize) {
+            final chunk = allCardIds.sublist(i, (i + chunkSize).clamp(0, allCardIds.length));
+            final query = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('categories')
+                .doc(categoryId)
+                .collection('learning')
+                .where(FieldPath.documentId, whereIn: chunk)
+                .get();
+            learningDocs.addAll(query.docs);
+          }
+          
+          // Számlálók számítása az utolsó értékelések alapján
+          for (final doc in learningDocs) {
+            final data = doc.data() as Map<String, dynamic>?;
+            final lastRating = data?['lastRating'] as String? ?? 'Again';
+            
+            switch (lastRating) {
+              case 'Again': again++; break;
+              case 'Hard': hard++; break;
+              case 'Good': good++; break;
+              case 'Easy': easy++; break;
+            }
           }
         }
         
