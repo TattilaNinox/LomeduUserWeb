@@ -6,6 +6,7 @@ import 'dart:ui_web' as ui_web;
 import 'dart:async';
 // no extra JS interop needed
 import '../widgets/audio_preview_player.dart';
+import 'quiz_page.dart';
 
 class InteractiveNoteViewScreen extends StatefulWidget {
   final String noteId;
@@ -88,6 +89,24 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
     });
   }
 
+  void _handleQuizNavigation() {
+    final data = _noteSnapshot!.data() as Map<String, dynamic>;
+    final type = data['type'] as String? ?? '';
+    final questionBankId = data['questionBankId'] as String?;
+    
+    if (questionBankId != null && (type == 'dynamic_quiz' || type == 'dynamic_quiz_dual')) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => QuizPage(
+            noteId: widget.noteId,
+            questionBankId: questionBankId,
+            quizType: type,
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_noteSnapshot == null) {
@@ -127,6 +146,8 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
 
     final data = _noteSnapshot!.data() as Map<String, dynamic>;
     final title = data['title'] as String? ?? 'Cím nélkül';
+    final type = data['type'] as String? ?? '';
+    final questionBankId = data['questionBankId'] as String?;
 
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
@@ -174,11 +195,74 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (_hasContent)
+            // Quiz type handling
+            if (type == 'dynamic_quiz' || type == 'dynamic_quiz_dual') ...[
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        type == 'dynamic_quiz_dual' 
+                            ? Icons.quiz_outlined 
+                            : Icons.quiz,
+                        size: 80,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        type == 'dynamic_quiz_dual' 
+                            ? 'Dinamikus kétválaszos kvíz'
+                            : 'Dinamikus kvíz',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey[600],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32),
+                      ElevatedButton.icon(
+                        onPressed: questionBankId != null ? _handleQuizNavigation : null,
+                        icon: const Icon(Icons.play_arrow),
+                        label: const Text('Kvíz Indítása'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 16,
+                          ),
+                          textStyle: const TextStyle(fontSize: 18),
+                        ),
+                      ),
+                      if (questionBankId == null) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          'Hiba: Nincs kérdésbank azonosító',
+                          style: TextStyle(
+                            color: Colors.red[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ] else if (_hasContent) ...[
+              // Regular interactive content
               Expanded(
                 child: HtmlElementView(viewType: _viewId),
               )
-            else
+            ] else ...[
+              // No content fallback
               const Expanded(
                 child: Center(
                   child: Text(
@@ -188,6 +272,7 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
                   ),
                 ),
               ),
+            ],
             if (data['audioUrl'] != null &&
                 data['audioUrl'].toString().isNotEmpty) ...[
               const SizedBox(height: 16),

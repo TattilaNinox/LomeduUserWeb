@@ -4,6 +4,7 @@ import '../core/firebase_config.dart';
 import '../utils/filter_storage.dart';
 import 'quiz_viewer.dart';
 import 'quiz_viewer_dual.dart';
+import '../models/quiz_models.dart';
 import 'mini_audio_player.dart';
 
 class NoteListTile extends StatelessWidget {
@@ -117,7 +118,7 @@ class NoteListTile extends StatelessWidget {
       }
 
       questions.shuffle();
-      final selected = questions.take(10).toList();
+      final selected = questions.take(10).map((q) => Question.fromMap(q)).toList();
 
       if (!context.mounted) return;
       showDialog(
@@ -128,8 +129,18 @@ class NoteListTile extends StatelessWidget {
             width: MediaQuery.of(context).size.width * 0.8,
             height: MediaQuery.of(context).size.height * 0.8,
             child: dualMode
-                ? QuizViewerDual(questions: selected)
-                : QuizViewer(questions: selected),
+                ? QuizViewerDual(
+                    questions: selected,
+                    onQuizComplete: (result) {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Kvíz eredménye: ${result.score}/${result.totalQuestions}'),
+                        ),
+                      );
+                    },
+                  )
+                : QuizViewer(questions: selected.map((q) => q.toMap()).toList()),
           ),
           actions: [
             TextButton(

@@ -9,6 +9,7 @@ import 'video_preview_player.dart';
 import 'mini_audio_player.dart';
 import 'quiz_viewer.dart';
 import 'quiz_viewer_dual.dart';
+import '../models/quiz_models.dart';
 
 enum SortColumn { title, category, tags, status, modified }
 
@@ -755,7 +756,7 @@ class _NoteTableState extends State<NoteTable> {
     final bank = bankDoc.data()!;
     final questions = List<Map<String, dynamic>>.from(bank['questions'] ?? []);
     questions.shuffle();
-    final selectedQuestions = questions.take(10).toList();
+    final selectedQuestions = questions.take(10).map((q) => Question.fromMap(q)).toList();
 
     if (selectedQuestions.isEmpty) {
       if (context.mounted) {
@@ -774,8 +775,18 @@ class _NoteTableState extends State<NoteTable> {
             width: MediaQuery.of(context).size.width * 0.8,
             height: MediaQuery.of(context).size.height * 0.8,
             child: dualMode
-                ? QuizViewerDual(questions: selectedQuestions)
-                : QuizViewer(questions: selectedQuestions),
+                ? QuizViewerDual(
+                    questions: selectedQuestions,
+                    onQuizComplete: (result) {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Kvíz eredménye: ${result.score}/${result.totalQuestions}'),
+                        ),
+                      );
+                    },
+                  )
+                : QuizViewer(questions: selectedQuestions.map((q) => q.toMap()).toList()),
           ),
           actions: [
             TextButton(

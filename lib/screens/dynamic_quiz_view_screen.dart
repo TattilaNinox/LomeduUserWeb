@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/quiz_viewer.dart';
 import '../widgets/quiz_viewer_dual.dart';
+import '../models/quiz_models.dart';
 import '../widgets/audio_preview_player.dart';
 import '../utils/filter_storage.dart';
 
@@ -17,7 +18,7 @@ class DynamicQuizViewScreen extends StatefulWidget {
 
 class _DynamicQuizViewScreenState extends State<DynamicQuizViewScreen> {
   DocumentSnapshot? _noteSnapshot;
-  List<Map<String, dynamic>> _questions = [];
+  List<Question> _questions = [];
   bool _isLoading = true;
   String? _error;
 
@@ -25,6 +26,54 @@ class _DynamicQuizViewScreenState extends State<DynamicQuizViewScreen> {
   void initState() {
     super.initState();
     _loadNote();
+  }
+
+  void _handleQuizComplete(QuizResult result) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Kvíz Eredménye'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Pontszám: ${result.score} / ${result.totalQuestions}',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Százalék: ${result.percentage.toStringAsFixed(1)}%',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            LinearProgressIndicator(
+              value: result.percentage / 100,
+              backgroundColor: Colors.grey.withValues(alpha: 0.3),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                result.percentage >= 70 ? Colors.green : Colors.orange,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pop(); // Close quiz screen
+            },
+            child: const Text('Bezárás'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _loadNote(); // Restart quiz
+            },
+            child: const Text('Újra'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadNote() async {
@@ -87,7 +136,7 @@ class _DynamicQuizViewScreenState extends State<DynamicQuizViewScreen> {
       final List<dynamic> raw = (data['questions'] ?? []) as List<dynamic>;
       final questions = raw
           .whereType<Map<String, dynamic>>()
-          .map((q) => Map<String, dynamic>.from(q))
+          .map((q) => Question.fromMap(Map<String, dynamic>.from(q)))
           .toList();
 
       setState(() {
@@ -222,8 +271,13 @@ class _DynamicQuizViewScreenState extends State<DynamicQuizViewScreen> {
                             ),
                           )
                         : (isDualMode
-                            ? QuizViewerDual(questions: _questions)
-                            : QuizViewer(questions: _questions)),
+                            ? QuizViewerDual(
+                                questions: _questions,
+                                onQuizComplete: _handleQuizComplete,
+                              )
+                            : QuizViewer(
+                                questions:
+                                    _questions.map((q) => q.toMap()).toList())),
                   ),
                 ),
               ),

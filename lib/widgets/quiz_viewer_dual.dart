@@ -1,43 +1,143 @@
 import 'package:flutter/material.dart';
+import '../models/quiz_models.dart';
+import '../services/note_content_service.dart';
 
 class QuizViewerDual extends StatefulWidget {
-  final List<Map<String, dynamic>> questions;
+  final List<Question> questions;
+  final Function(QuizResult) onQuizComplete;
+  final VoidCallback? onClose;
 
-  const QuizViewerDual({super.key, required this.questions});
+  const QuizViewerDual({
+    super.key,
+    required this.questions,
+    required this.onQuizComplete,
+    this.onClose,
+  });
 
   @override
   State<QuizViewerDual> createState() => _QuizViewerDualState();
 }
 
-class OptionCardDual extends StatefulWidget {
-  final Map<String, dynamic> option;
-  final bool isSelected;
-  final bool answerChecked;
-  final VoidCallback onSelect;
+class _QuizViewerDualState extends State<QuizViewerDual> {
+  int _currentQuestionIndex = 0;
+  List<int> _selectedIndices = [];
+  bool _isAnswered = false;
+  List<QuestionResult> _questionResults = [];
+  String? _noteContentPreview;
+  bool _isLoadingPreview = false;
 
-  const OptionCardDual({
-    super.key,
-    required this.option,
-    required this.isSelected,
-    required this.answerChecked,
-    required this.onSelect,
-  });
+  Question get _currentQuestion => widget.questions[_currentQuestionIndex];
+  bool get _isLastQuestion =>
+      _currentQuestionIndex >= widget.questions.length - 1;
+  bool get _canCheck => _selectedIndices.length == 2 && !_isAnswered;
+  List<int> get _correctIndices => _currentQuestion.options
+      .asMap()
+      .entries
+      .where((entry) => entry.value.isCorrect)
+      .map((entry) => entry.key)
+      .toList();
 
   @override
-  State<OptionCardDual> createState() => _OptionCardDualState();
-}
+  void initState() {
+    super.initState();
+    _selectedIndices = [];
+    _isAnswered = false;
+    _loadNoteContentPreview();
+  }
 
-class _OptionCardDualState extends State<OptionCardDual> {
-  void _showRationalePopup(String text) {
+  Future<void> _loadNoteContentPreview() async {
+    if (_currentQuestion.noteId == null) return;
+
+    setState(() {
+      _isLoadingPreview = true;
+    });
+
+    try {
+      final preview = await NoteContentService.getNoteContentPreview(
+          _currentQuestion.noteId!);
+      if (mounted) {
+        setState(() {
+          _noteContentPreview = preview;
+          _isLoadingPreview = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingPreview = false;
+        });
+      }
+    }
+  }
+
+  void _selectOption(int index) {
+    if (_isAnswered) return;
+
+    setState(() {
+      if (_selectedIndices.contains(index)) {
+        _selectedIndices.remove(index);
+      } else if (_selectedIndices.length < 2) {
+        _selectedIndices.add(index);
+      } else {
+        // Replace the first selected option
+        _selectedIndices.removeAt(0);
+        _selectedIndices.add(index);
+      }
+    });
+  }
+
+  void _checkAnswer() {
+    if (!_canCheck) return;
+
+    setState(() {
+      _isAnswered = true;
+    });
+
+    // Check if the answer is correct
+    final isCorrect = _selectedIndices.length == _correctIndices.length &&
+        _selectedIndices.every((index) => _correctIndices.contains(index));
+
+    // Store the result
+    _questionResults.add(QuestionResult(
+      question: _currentQuestion,
+      selectedIndices: List.from(_selectedIndices),
+      correctIndices: _correctIndices,
+      isCorrect: isCorrect,
+    ));
+  }
+
+  void _showRationaleForOption(Option option) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        content: Text(
-          text,
-          style: const TextStyle(fontSize: 16, height: 1.4),
-          textAlign: TextAlign.left,
+        title: const Text('Magyarázat'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              option.text,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (option.rationale.isNotEmpty)
+              Text(
+                option.rationale,
+                style: const TextStyle(fontSize: 14),
+              )
+            else
+              Text(
+                'Nincs elérhető magyarázat ehhez a válaszopcióhoz.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+          ],
         ),
         actions: [
           TextButton(
@@ -49,424 +149,394 @@ class _OptionCardDualState extends State<OptionCardDual> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 600;
-
-    final bool isCorrect = widget.option['isCorrect'] as bool? ?? false;
-    final bool showResult = widget.answerChecked;
-
-    Color borderColor = Colors.grey.shade300;
-    Color? iconColor;
-    IconData? resultIcon;
-
-    if (showResult) {
-      if (isCorrect) {
-        borderColor = Colors.green;
-        iconColor = Colors.green;
-        resultIcon = Icons.check_circle;
-      } else if (widget.isSelected) {
-        borderColor = Colors.red;
-        iconColor = Colors.red;
-        resultIcon = Icons.cancel;
-      }
-    } else if (widget.isSelected) {
-      borderColor = Theme.of(context).primaryColor;
-    }
-
-    return GestureDetector(
-      onTap: () {
-        if (!widget.answerChecked) {
-          widget.onSelect();
-        }
-      },
-      child: Container(
-        padding: EdgeInsets.all(isMobile ? 14 : 16),
-        margin: EdgeInsets.only(bottom: isMobile ? 24 : 28),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(isMobile ? 14 : 16),
-          border: Border.all(
-            color: borderColor,
-            width: isMobile ? 2.5 : 2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: isMobile ? 8 : 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                widget.option['text'] ?? '',
-                style: TextStyle(
-                  fontSize: isMobile ? 15 : 16,
-                  fontWeight: FontWeight.w500,
-                  height: 1.4,
-                ),
-              ),
-            ),
-            if (showResult && widget.isSelected)
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.info_outline, color: Colors.grey),
-                    tooltip: 'Magyarázat',
-                    onPressed: () => _showRationalePopup(
-                      (widget.option['rationale'] as String?) ??
-                          'Nincs indoklás.',
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(resultIcon, color: iconColor, size: isMobile ? 20 : 24),
-                ],
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _QuizViewerDualState extends State<QuizViewerDual>
-    with TickerProviderStateMixin {
-  int _currentIndex = 0;
-  int _score = 0;
-  final Set<int> _selectedOptionIndices = {};
-  bool _answerChecked = false;
-
-  late PageController _pageController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController();
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  void _toggleOption(int optionIndex) {
-    if (_answerChecked) return; // Ne lehessen ellenőrzés után módosítani
-    setState(() {
-      if (_selectedOptionIndices.contains(optionIndex)) {
-        _selectedOptionIndices.remove(optionIndex);
-      } else {
-        if (_selectedOptionIndices.length < 2) {
-          _selectedOptionIndices.add(optionIndex);
-        }
-      }
-    });
-  }
-
-  void _checkAnswer() {
-    if (_answerChecked || _selectedOptionIndices.length != 2) return;
-
-    setState(() {
-      _answerChecked = true;
-      final options =
-          widget.questions[_currentIndex]['options'] as List<dynamic>;
-      final correctIndices = <int>[];
-      for (int i = 0; i < options.length; i++) {
-        if (options[i]['isCorrect'] == true) correctIndices.add(i);
-      }
-
-      final isCorrect = _selectedOptionIndices.length == 2 &&
-          _selectedOptionIndices.contains(correctIndices[0]) &&
-          _selectedOptionIndices.contains(correctIndices[1]);
-      if (isCorrect) _score++;
-    });
-  }
-
-  void _nextQuestion() {
-    if (_currentIndex < widget.questions.length - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeIn,
-      );
-      setState(() {
-        _selectedOptionIndices.clear();
-        _answerChecked = false;
-      });
-    } else {
-      _showResultDialog();
-    }
-  }
-
-  void _showResultDialog() {
+  void _showRationaleDialog() {
     showDialog(
       context: context,
-      barrierDismissible: false,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Kvíz Befejezve', textAlign: TextAlign.center),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Eredményed:', style: Theme.of(context).textTheme.bodyLarge),
-            const SizedBox(height: 16),
-            Text('$_score / ${widget.questions.length}',
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineMedium
-                    ?.copyWith(fontWeight: FontWeight.bold)),
-          ],
+        title: const Text('Magyarázat'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _currentQuestion.question,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              ..._currentQuestion.options.asMap().entries.map((entry) {
+                final index = entry.key;
+                final option = entry.value;
+                final isSelected = _selectedIndices.contains(index);
+                final isCorrect = option.isCorrect;
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isCorrect
+                        ? Colors.green.withValues(alpha: 0.1)
+                        : isSelected
+                            ? Colors.red.withValues(alpha: 0.1)
+                            : Colors.grey.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isCorrect
+                          ? Colors.green
+                          : isSelected
+                              ? Colors.red
+                              : Colors.grey,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            isCorrect ? Icons.check_circle : Icons.cancel,
+                            color: isCorrect ? Colors.green : Colors.red,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              option.text,
+                              style: TextStyle(
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: isCorrect
+                                    ? Colors.green.shade700
+                                    : Colors.red.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (option.rationale.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          option.rationale,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _pageController.jumpToPage(0);
-              setState(() {
-                _currentIndex = 0;
-                _selectedOptionIndices.clear();
-                _answerChecked = false;
-                _score = 0;
-              });
-            },
-            child: const Text('Újrapróbálkozás'),
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Bezárás'),
           ),
         ],
       ),
     );
+  }
+
+  void _nextQuestion() {
+    if (_isLastQuestion) {
+      // Quiz completed
+      final score = _questionResults.where((result) => result.isCorrect).length;
+      final result = QuizResult(
+        score: score,
+        totalQuestions: widget.questions.length,
+        questionResults: _questionResults,
+      );
+      widget.onQuizComplete(result);
+    } else {
+      setState(() {
+        _currentQuestionIndex++;
+        _selectedIndices = [];
+        _isAnswered = false;
+        _noteContentPreview = null; // Clear previous preview
+      });
+      _loadNoteContentPreview(); // Load preview for new question
+    }
+  }
+
+  Color _getOptionColor(int index) {
+    if (!_isAnswered) {
+      return _selectedIndices.contains(index)
+          ? Colors.blue.withValues(alpha: 0.2)
+          : Colors.transparent;
+    }
+
+    final option = _currentQuestion.options[index];
+    if (option.isCorrect) {
+      return Colors.green.withValues(alpha: 0.2);
+    } else if (_selectedIndices.contains(index)) {
+      return Colors.red.withValues(alpha: 0.2);
+    }
+    return Colors.transparent;
+  }
+
+  Color _getOptionBorderColor(int index) {
+    if (!_isAnswered) {
+      return _selectedIndices.contains(index) ? Colors.blue : Colors.grey;
+    }
+
+    final option = _currentQuestion.options[index];
+    if (option.isCorrect) {
+      return Colors.green;
+    } else if (_selectedIndices.contains(index)) {
+      return Colors.red;
+    }
+    return Colors.grey;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.questions.isEmpty) {
-      return const Center(child: Text('Nincsenek kérdések a kvízben.'));
-    }
-
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 600;
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F5),
       appBar: AppBar(
         title: Text(
-          'Kvíz (${_currentIndex + 1}/${widget.questions.length})',
-          style: TextStyle(
-            fontSize: isMobile ? 16 : 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 1,
-        centerTitle: true,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(4),
-          child: LinearProgressIndicator(
-            value: (_currentIndex + 1) / widget.questions.length,
-            color: Theme.of(context).primaryColor,
-            backgroundColor: Colors.grey.shade300,
-          ),
-        ),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: widget.questions.length,
-              itemBuilder: (context, index) {
-                final question = widget.questions[index];
-                final options =
-                    (question['options'] as List).cast<Map<String, dynamic>>();
-                return _buildQuestionPage(question, options);
-              },
+            'Kvíz (${_currentQuestionIndex + 1}/${widget.questions.length})'),
+        actions: [
+          if (widget.onClose != null)
+            IconButton(
+              onPressed: widget.onClose,
+              icon: const Icon(Icons.close),
             ),
-          ),
-          _buildBottomNavBar(),
         ],
       ),
-    );
-  }
-
-  Widget _buildQuestionPage(
-      Map<String, dynamic> question, List<Map<String, dynamic>> options) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 600;
-    final padding = isMobile ? 16.0 : 24.0;
-    final spacing = isMobile ? 16.0 : 24.0;
-
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(padding),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: isMobile ? 12 : 16,
-              vertical: isMobile ? 8 : 12,
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Progress bar
+            LinearProgressIndicator(
+              value: (_currentQuestionIndex + 1) / widget.questions.length,
+              backgroundColor: Colors.grey.withValues(alpha: 0.3),
+              valueColor:
+                  AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
             ),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              'Jelöld ki a KÉT helyes választ!',
-              style: TextStyle(
-                fontSize: isMobile ? 13 : 14,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).primaryColor,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          SizedBox(height: spacing),
-          Text(
-            question['question'],
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  fontSize: isMobile ? 18 : 22,
-                  height: 1.3,
-                ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: spacing * 1.5),
-          ...List.generate(
-              options.length, (i) => _buildAnswerOption(options[i], i)),
-        ],
-      ),
-    );
-  }
+            const SizedBox(height: 24),
 
-  Widget _buildAnswerOption(Map<String, dynamic> option, int index) {
-    final isSelected = _selectedOptionIndices.contains(index);
-    return OptionCardDual(
-      option: option,
-      isSelected: isSelected,
-      answerChecked: _answerChecked,
-      onSelect: () => _toggleOption(index),
-    );
-  }
-
-  Widget _buildBottomNavBar() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 600;
-    final canCheck = !_answerChecked && _selectedOptionIndices.length == 2;
-
-    return Container(
-      padding: EdgeInsets.symmetric(
-        vertical: isMobile ? 16 : 12,
-        horizontal: isMobile ? 16 : 24,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: isMobile
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: canCheck ? _checkAnswer : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: canCheck
-                          ? Theme.of(context).primaryColor
-                          : Colors.grey.shade300,
-                      foregroundColor:
-                          canCheck ? Colors.white : Colors.grey.shade600,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+            // Note content preview (if available)
+            if (_currentQuestion.noteId != null) ...[
+              Card(
+                elevation: 2,
+                color: Colors.grey[50],
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.note,
+                            size: 20,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Kapcsolódó jegyzet',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ],
                       ),
-                      elevation: canCheck ? 2 : 0,
-                    ),
-                    child: const Text(
-                      'Válasz ellenőrzése',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                      const SizedBox(height: 8),
+                      if (_isLoadingPreview)
+                        const Row(
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Betöltés...',
+                              style:
+                                  TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          ],
+                        )
+                      else if (_noteContentPreview != null)
+                        Text(
+                          _noteContentPreview!,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black87,
+                            height: 1.4,
+                          ),
+                        )
+                      else
+                        Text(
+                          'Nem sikerült betölteni a jegyzet tartalmát',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                if (_answerChecked) ...[
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Question
+            Card(
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Text(
+                  _currentQuestion.question,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Options
+            Expanded(
+              child: ListView.builder(
+                itemCount: _currentQuestion.options.length,
+                itemBuilder: (context, index) {
+                  final option = _currentQuestion.options[index];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: InkWell(
+                      onTap: () => _selectOption(index),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _getOptionColor(index),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _getOptionBorderColor(index),
+                            width: 2,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: _getOptionBorderColor(index),
+                                  width: 2,
+                                ),
+                                color: _selectedIndices.contains(index)
+                                    ? _getOptionBorderColor(index)
+                                    : Colors.transparent,
+                              ),
+                              child: _selectedIndices.contains(index)
+                                  ? const Icon(
+                                      Icons.check,
+                                      color: Colors.white,
+                                      size: 16,
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Text(
+                                option.text,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: _selectedIndices.contains(index)
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ),
+                            if (_isAnswered) ...[
+                              // Show check/cancel icons
+                              if (option.isCorrect)
+                                const Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green,
+                                  size: 24,
+                                ),
+                              if (_selectedIndices.contains(index) &&
+                                  !option.isCorrect)
+                                const Icon(
+                                  Icons.cancel,
+                                  color: Colors.red,
+                                  size: 24,
+                                ),
+                              // Show info icon for rationale (if option is correct OR was selected)
+                              if (option.isCorrect ||
+                                  _selectedIndices.contains(index))
+                                IconButton(
+                                  onPressed: () =>
+                                      _showRationaleForOption(option),
+                                  icon: const Icon(
+                                    Icons.info_outline,
+                                    color: Colors.blue,
+                                    size: 20,
+                                  ),
+                                  tooltip: 'Magyarázat',
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 24,
+                                    minHeight: 24,
+                                  ),
+                                ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // Action buttons
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                if (_isAnswered) ...[
+                  IconButton(
+                    onPressed: _showRationaleDialog,
+                    icon: const Icon(Icons.info_outline),
+                    tooltip: 'Magyarázat',
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _canCheck ? _checkAnswer : null,
+                    child: Text(_isAnswered
+                        ? 'Ellenőrizve'
+                        : 'Ellenőrzés (${_selectedIndices.length}/2)'),
+                  ),
+                ),
+                if (_isAnswered) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
                     child: ElevatedButton(
                       onPressed: _nextQuestion,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 2,
-                      ),
-                      child: Text(
-                        _currentIndex < widget.questions.length - 1
-                            ? 'Következő'
-                            : 'Eredmény',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: Text(_isLastQuestion ? 'Befejezés' : 'Következő'),
                     ),
                   ),
                 ],
               ],
-            )
-          : Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ElevatedButton(
-                  onPressed: canCheck ? _checkAnswer : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: canCheck
-                        ? Theme.of(context).primaryColor
-                        : Colors.grey.shade300,
-                    foregroundColor:
-                        canCheck ? Colors.white : Colors.grey.shade600,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text('Válasz ellenőrzése'),
-                ),
-                ElevatedButton(
-                  onPressed: _answerChecked ? _nextQuestion : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _answerChecked
-                        ? Theme.of(context).primaryColor
-                        : Colors.grey.shade300,
-                    foregroundColor:
-                        _answerChecked ? Colors.white : Colors.grey.shade600,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Text(_currentIndex < widget.questions.length - 1
-                      ? 'Következő'
-                      : 'Eredmény'),
-                ),
-              ],
             ),
+          ],
+        ),
+      ),
     );
   }
 }
