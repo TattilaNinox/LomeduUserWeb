@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/flashcard_learning_data.dart';
 
 class LearningService {
@@ -20,19 +21,19 @@ class LearningService {
     try {
       final user = _auth.currentUser;
       if (user == null) {
-        print('LearningService: No authenticated user');
+        debugPrint('LearningService: No authenticated user');
         return;
       }
 
-      print('LearningService: Updating learning data for cardId: $cardId, rating: $rating, categoryId: $categoryId');
+      debugPrint('LearningService: Updating learning data for cardId: $cardId, rating: $rating, categoryId: $categoryId');
 
       // Jelenlegi adatok lekérése
       final currentData = await _getCurrentLearningData(cardId, categoryId);
-      print('LearningService: Current data - state: ${currentData.state}, interval: ${currentData.interval}, easeFactor: ${currentData.easeFactor}');
+      debugPrint('LearningService: Current data - state: ${currentData.state}, interval: ${currentData.interval}, easeFactor: ${currentData.easeFactor}');
       
       // Új állapot kalkulálása
       final newData = _calculateNextState(currentData, rating);
-      print('LearningService: New data - state: ${newData.state}, interval: ${newData.interval}, easeFactor: ${newData.easeFactor}');
+      debugPrint('LearningService: New data - state: ${newData.state}, interval: ${newData.interval}, easeFactor: ${newData.easeFactor}');
       
       // Mentés az új útvonalra (users/{uid}/categories/{categoryId}/learning/{cardId})
       await _firestore
@@ -44,7 +45,7 @@ class LearningService {
           .doc(cardId)
           .set(newData.toMap());
       
-      print('LearningService: Successfully saved learning data to Firestore');
+      debugPrint('LearningService: Successfully saved learning data to Firestore');
 
       // Legacy dokumentum törlése, ha létezik
       await _firestore
@@ -63,7 +64,7 @@ class LearningService {
       _invalidateDeckCache(cardId.split('#')[0]);
 
     } catch (e) {
-      print('Error updating learning data: $e');
+      debugPrint('Error updating learning data: $e');
       rethrow;
     }
   }
@@ -131,7 +132,7 @@ class LearningService {
       return dueIndices;
 
     } catch (e) {
-      print('Error getting due cards: $e');
+      debugPrint('Error getting due cards: $e');
       // Hiba esetén visszaadjuk az első 20 kártyát
       final deckDoc = await _firestore.collection('notes').doc(deckId).get();
       if (deckDoc.exists) {
@@ -154,7 +155,7 @@ class LearningService {
       return await _getBatchLearningData(deckId, cardCount, categoryId)
           .timeout(timeout);
     } catch (e) {
-      print('Batch query timeout, falling back to default data: $e');
+      debugPrint('Batch query timeout, falling back to default data: $e');
       // Timeout esetén alapértelmezett adatokkal térünk vissza
       final defaultData = <int, FlashcardLearningData>{};
       for (int i = 0; i < cardCount; i++) {
@@ -179,7 +180,7 @@ class LearningService {
       // Először az új útvonalról próbáljuk lekérni batch-ben
       // Firestore whereIn filter maximum 10 elemű listát engedélyez.
       // Nagyobb pakli esetén daraboljuk a lekérdezéseket 10-es blokkokra.
-      final allCardIds = List.generate(cardCount, (i) => '${deckId}#$i');
+      final allCardIds = List.generate(cardCount, (i) => '$deckId#$i');
       const chunkSize = 10;
       final learningFutures = <Future>[];
       for (var i = 0; i < allCardIds.length; i += chunkSize) {
@@ -214,7 +215,7 @@ class LearningService {
       }
 
       if (missingIndices.isNotEmpty) {
-        final legacyIds = missingIndices.map((i) => '${deckId}#$i').toList();
+        final legacyIds = missingIndices.map((i) => '$deckId#$i').toList();
         final legacyFutures = <Future>[];
         for (var i = 0; i < legacyIds.length; i += chunkSize) {
           final chunk = legacyIds.sublist(i, (i + chunkSize).clamp(0, legacyIds.length));
@@ -248,7 +249,7 @@ class LearningService {
       return learningDataMap;
 
     } catch (e) {
-      print('Error getting batch learning data: $e');
+      debugPrint('Error getting batch learning data: $e');
       // Hiba esetén alapértelmezett adatokkal térünk vissza
       final defaultData = <int, FlashcardLearningData>{};
       for (int i = 0; i < cardCount; i++) {
@@ -276,7 +277,7 @@ class LearningService {
 
       // Kártya dokumentumok törlése
       for (int i = 0; i < cardCount; i++) {
-        final cardId = '${deckId}#$i';
+        final cardId = '$deckId#$i';
         
         // Új útvonal törlése
         final newPathRef = _firestore
@@ -319,10 +320,10 @@ class LearningService {
       // Cache invalidálása
       _invalidateDeckCache(deckId);
 
-      print('Successfully reset deck progress for deck: $deckId');
+      debugPrint('Successfully reset deck progress for deck: $deckId');
 
     } catch (e) {
-      print('Error resetting deck progress: $e');
+      debugPrint('Error resetting deck progress: $e');
       rethrow;
     }
   }
@@ -364,7 +365,7 @@ class LearningService {
       return _getDefaultLearningData();
 
     } catch (e) {
-      print('Error getting current learning data: $e');
+      debugPrint('Error getting current learning data: $e');
       return _getDefaultLearningData();
     }
   }
@@ -571,7 +572,7 @@ class LearningService {
       });
 
     } catch (e) {
-      print('Error updating deck snapshot: $e');
+      debugPrint('Error updating deck snapshot: $e');
     }
   }
 
@@ -629,7 +630,7 @@ class LearningService {
       });
 
     } catch (e) {
-      print('Error updating category stats: $e');
+      debugPrint('Error updating category stats: $e');
     }
   }
 
@@ -654,13 +655,15 @@ class LearningService {
       final categoryId = deckData['category'] as String? ?? 'default';
       final totalCards = flashcards.length;
 
-      if (totalCards == 0) return {
-        'total': 0,
-        'new': 0,
-        'learning': 0,
-        'review': 0,
-        'due': 0,
-      };
+      if (totalCards == 0) {
+        return {
+          'total': 0,
+          'new': 0,
+          'learning': 0,
+          'review': 0,
+          'due': 0,
+        };
+      }
 
       // Batch lekérdezés a tanulási adatokhoz
       final learningDataMap = await _getBatchLearningDataWithTimeout(
@@ -713,7 +716,7 @@ class LearningService {
       };
 
     } catch (e) {
-      print('Error getting deck stats: $e');
+      debugPrint('Error getting deck stats: $e');
       return {};
     }
   }

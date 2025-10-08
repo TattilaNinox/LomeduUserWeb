@@ -84,7 +84,7 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
               }
             }
           } catch (e) {
-            print('Error loading learning data: $e');
+            debugPrint('Error loading learning data: $e');
           }
         }
         

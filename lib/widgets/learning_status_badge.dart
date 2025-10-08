@@ -47,7 +47,7 @@ class LearningStatusBadge extends StatelessWidget {
 
     // Ha esedékes, akkor kicsit kiemeljük
     if (isDue && state != 'NEW') {
-      backgroundColor = backgroundColor.withOpacity(0.8);
+        backgroundColor = backgroundColor.withValues(alpha: 0.8);
     }
 
     return Container(
@@ -56,7 +56,7 @@ class LearningStatusBadge extends StatelessWidget {
         color: backgroundColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: textColor.withOpacity(0.3),
+          color: textColor.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
