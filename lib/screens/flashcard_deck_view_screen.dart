@@ -19,7 +19,6 @@ class FlashcardDeckViewScreen extends StatefulWidget {
 class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
   DocumentSnapshot? _deckData;
   bool _isLoading = true;
-  bool _reorderMode = false;
   Map<int, Map<String, dynamic>> _learningData = {};
 
   @override
@@ -168,45 +167,7 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
 
       final content = flashcards.isEmpty
           ? const Center(child: Text('Ez a pakli üres.'))
-          : _reorderMode
-              ? ReorderableListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: flashcards.length,
-                  onReorder: (oldIndex, newIndex) {
-                    setState(() {
-                      if (newIndex > oldIndex) newIndex -= 1;
-                      final item = flashcards.removeAt(oldIndex);
-                      flashcards.insert(newIndex, item);
-                    });
-                  },
-                  itemBuilder: (context, index) {
-                    final learningInfo = _learningData[index];
-                    return ListTile(
-                      key: ValueKey(index),
-                      title: Stack(
-                        children: [
-                          FlippableCard(
-                            frontText: flashcards[index]['front'] ?? '',
-                            backText: flashcards[index]['back'] ?? '',
-                            flipAxis: Axis.vertical,
-                            interactive: false,
-                          ),
-                          if (learningInfo != null)
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              child: LearningStatusBadge(
-                                state: learningInfo['state'] as String,
-                                lastRating: learningInfo['lastRating'] as String,
-                                isDue: learningInfo['isDue'] as bool,
-                              ),
-                            ),
-                        ],
-                      ),
-                    );
-                  },
-                )
-              : GridView.builder(
+          : GridView.builder(
                   padding: const EdgeInsets.all(16),
                   gridDelegate: isWide
                       ? const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -251,12 +212,30 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(
-              title,
-              style: TextStyle(
-                fontSize: isMobile ? 16 : 18,
-                fontWeight: FontWeight.w600,
-              ),
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: isMobile ? 16 : 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (flashcards.isNotEmpty) ...[
+                  const SizedBox(width: 16),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.school,
+                      color: Color(0xFF1E3A8A), // Bíborkék
+                    ),
+                    tooltip: 'Tanulás',
+                    onPressed: () {
+                      context.go('/deck/${widget.deckId}/study');
+                    },
+                  ),
+                ],
+              ],
             ),
             backgroundColor: Colors.white,
             elevation: 1,
@@ -288,29 +267,6 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
                 context.go(uri.toString());
               },
             ),
-            actions: [
-              if (!_reorderMode && flashcards.isNotEmpty)
-                IconButton(
-                  icon: const Icon(Icons.school),
-                  tooltip: 'Tanulás',
-                  onPressed: () {
-                    context.go('/deck/${widget.deckId}/study');
-                  },
-                ),
-              IconButton(
-                icon: Icon(_reorderMode ? Icons.check : Icons.swap_vert),
-                tooltip: _reorderMode ? 'Rendezés mentése' : 'Átrendezés',
-                onPressed: () async {
-                  if (_reorderMode) {
-                    await FirebaseFirestore.instance
-                        .collection('notes')
-                        .doc(widget.deckId)
-                        .update({'flashcards': flashcards});
-                  }
-                  setState(() => _reorderMode = !_reorderMode);
-                },
-              ),
-            ],
           ),
           body: Row(
             children: [
@@ -326,12 +282,30 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
 
       return Scaffold(
         appBar: AppBar(
-          title: Text(
-            title,
-            style: TextStyle(
-              fontSize: isMobile ? 16 : 18,
-              fontWeight: FontWeight.w600,
-            ),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: isMobile ? 16 : 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (flashcards.isNotEmpty) ...[
+                const SizedBox(width: 16),
+                IconButton(
+                  icon: const Icon(
+                    Icons.school,
+                    color: Color(0xFF1E3A8A), // Bíborkék
+                  ),
+                  tooltip: 'Tanulás',
+                  onPressed: () {
+                    context.go('/deck/${widget.deckId}/study');
+                  },
+                ),
+              ],
+            ],
           ),
           backgroundColor: Colors.white,
           elevation: 1,
@@ -363,29 +337,6 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
               context.go(uri.toString());
             },
           ),
-          actions: [
-            if (!_reorderMode && flashcards.isNotEmpty)
-              IconButton(
-                icon: const Icon(Icons.school),
-                tooltip: 'Tanulás',
-                onPressed: () {
-                  context.go('/deck/${widget.deckId}/study');
-                },
-              ),
-            IconButton(
-              icon: Icon(_reorderMode ? Icons.check : Icons.swap_vert),
-              tooltip: _reorderMode ? 'Rendezés mentése' : 'Átrendezés',
-              onPressed: () async {
-                if (_reorderMode) {
-                  await FirebaseFirestore.instance
-                      .collection('notes')
-                      .doc(widget.deckId)
-                      .update({'flashcards': flashcards});
-                }
-                setState(() => _reorderMode = !_reorderMode);
-              },
-            ),
-          ],
         ),
         drawer: const Drawer(
           child: SafeArea(
