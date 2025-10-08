@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
+import '../services/learning_service.dart';
 
 class FlashcardStudyScreen extends StatefulWidget {
   final String deckId;
@@ -15,12 +16,17 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
   bool _isLoading = true;
   int _currentIndex = 0;
   bool _showAnswer = false;
-
+  
   // Evaluation counters
   int _againCount = 0;
   int _hardCount = 0;
   int _goodCount = 0;
   int _easyCount = 0;
+  
+  // Learning data
+  List<int> _dueCardIndices = [];
+  String? _categoryId;
+  bool _isEvaluating = false;
 
   @override
   void initState() {
@@ -34,9 +40,18 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
           .collection('notes')
           .doc(widget.deckId)
           .get();
+      
       if (mounted) {
+        final data = doc.data();
+        final categoryId = data?['category'] as String? ?? 'default';
+        
+        // Esedékes kártyák lekérése
+        final dueIndices = await LearningService.getDueFlashcardIndicesForDeck(widget.deckId);
+        
         setState(() {
           _deckData = doc;
+          _categoryId = categoryId;
+          _dueCardIndices = dueIndices;
           _isLoading = false;
         });
       }
@@ -56,33 +71,98 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
     });
   }
 
-  void _evaluateCard(String evaluation) {
+  Future<void> _evaluateCard(String evaluation) async {
+    if (_isEvaluating) return;
+    
     setState(() {
-      switch (evaluation) {
-        case 'again':
-          _againCount++;
-          break;
-        case 'hard':
-          _hardCount++;
-          break;
-        case 'good':
-          _goodCount++;
-          break;
-        case 'easy':
-          _easyCount++;
-          break;
-      }
+      _isEvaluating = true;
     });
 
-    // Move to next card or finish
-    if (_currentIndex < _getFlashcards().length - 1) {
+    try {
+      final currentCardIndex = _dueCardIndices[_currentIndex];
+      final cardId = '${widget.deckId}#$currentCardIndex';
+      
+      // Optimista UI frissítés
       setState(() {
-        _currentIndex++;
-        _showAnswer = false;
+        switch (evaluation) {
+          case 'Again':
+            _againCount++;
+            break;
+          case 'Hard':
+            _hardCount++;
+            break;
+          case 'Good':
+            _goodCount++;
+            break;
+          case 'Easy':
+            _easyCount++;
+            break;
+        }
       });
-    } else {
-      // Show completion dialog or navigate back
-      _showCompletionDialog();
+
+      // Háttér mentés
+      await LearningService.updateUserLearningData(
+        cardId,
+        evaluation,
+        _categoryId!,
+      );
+
+      // "Újra" esetén a kártya visszakerül a sor végére
+      if (evaluation == 'Again') {
+        // A kártya marad a sorban, de a következőre lépünk
+        if (_currentIndex < _dueCardIndices.length - 1) {
+          setState(() {
+            _currentIndex++;
+            _showAnswer = false;
+          });
+        } else {
+          _showCompletionDialog();
+        }
+      } else {
+        // "Jó" vagy "Könnyű" esetén a kártya kikerül a sorból
+        setState(() {
+          _dueCardIndices.removeAt(_currentIndex);
+          if (_currentIndex >= _dueCardIndices.length) {
+            _currentIndex = 0;
+          }
+          _showAnswer = false;
+        });
+
+        // Ha nincs több kártya, befejezés
+        if (_dueCardIndices.isEmpty) {
+          _showCompletionDialog();
+        }
+      }
+
+    } catch (e) {
+      // Hibakezelés - UI visszaállítása
+      setState(() {
+        switch (evaluation) {
+          case 'Again':
+            _againCount--;
+            break;
+          case 'Hard':
+            _hardCount--;
+            break;
+          case 'Good':
+            _goodCount--;
+            break;
+          case 'Easy':
+            _easyCount--;
+            break;
+        }
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Hiba a mentés közben: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isEvaluating = false;
+      });
     }
   }
 
@@ -114,6 +194,59 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
         ],
       ),
     );
+  }
+
+  void _showResetDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Újrakezdés'),
+        content: const Text(
+          'Biztosan törölni szeretnéd a pakli tanulási előzményeit? '
+          'Ez a művelet nem vonható vissza.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Mégse'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await _resetDeckProgress();
+            },
+            child: const Text('Törlés', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _resetDeckProgress() async {
+    try {
+      final flashcards = _getFlashcards();
+      await LearningService.resetDeckProgress(widget.deckId, flashcards.length);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('A pakli tanulási adatai törölve.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        context.go('/deck/${widget.deckId}/view');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Hiba a törlés közben: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   List<Map<String, dynamic>> _getFlashcards() {
@@ -153,8 +286,35 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
 
     final data = _deckData!.data() as Map<String, dynamic>;
     final deckTitle = data['title'] as String? ?? 'Névtelen pakli';
-    final currentCard = flashcards[_currentIndex];
-    final totalCards = flashcards.length;
+    
+    // Ha nincs esedékes kártya
+    if (_dueCardIndices.isEmpty) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          title: Text(
+            deckTitle,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: const Color(0xFF1E3A8A),
+          foregroundColor: Colors.white,
+        ),
+        body: const Center(
+          child: Text(
+            'Nincs esedékes kártya a tanuláshoz!',
+            style: TextStyle(fontSize: 18),
+          ),
+        ),
+      );
+    }
+    
+    final currentCardIndex = _dueCardIndices[_currentIndex];
+    final currentCard = flashcards[currentCardIndex];
+    final totalCards = _dueCardIndices.length;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -170,11 +330,18 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
         backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
         leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
-            // Open drawer or menu
+            context.go('/deck/${widget.deckId}/view');
           },
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            tooltip: 'Újrakezdés',
+            onPressed: _showResetDialog,
+          ),
+        ],
         elevation: 0,
       ),
       body: Column(
@@ -315,7 +482,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
                         child: _buildEvaluationButton(
                           'Újra',
                           Colors.red,
-                          () => _evaluateCard('again'),
+                          () => _evaluateCard('Again'),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -323,7 +490,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
                         child: _buildEvaluationButton(
                           'Nehéz',
                           Colors.orange,
-                          () => _evaluateCard('hard'),
+                          () => _evaluateCard('Hard'),
                         ),
                       ),
                     ],
@@ -335,7 +502,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
                         child: _buildEvaluationButton(
                           'Jó',
                           Colors.green,
-                          () => _evaluateCard('good'),
+                          () => _evaluateCard('Good'),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -343,7 +510,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
                         child: _buildEvaluationButton(
                           'Könnyű',
                           Colors.blue,
-                          () => _evaluateCard('easy'),
+                          () => _evaluateCard('Easy'),
                         ),
                       ),
                     ],
