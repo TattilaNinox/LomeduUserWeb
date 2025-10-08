@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/sidebar.dart';
+import '../widgets/learning_status_badge.dart';
 import '../utils/filter_storage.dart';
 import 'package:orlomed_admin_web/widgets/flippable_card.dart';
 
@@ -18,6 +20,7 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
   DocumentSnapshot? _deckData;
   bool _isLoading = true;
   bool _reorderMode = false;
+  Map<int, Map<String, dynamic>> _learningData = {};
 
   @override
   void initState() {
@@ -31,9 +34,64 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
           .collection('notes')
           .doc(widget.deckId)
           .get();
+      
       if (mounted) {
+        final data = doc.data();
+        final categoryId = data?['category'] as String? ?? 'default';
+        final flashcards = List<Map<String, dynamic>>.from(data?['flashcards'] ?? []);
+        
+        // Tanulási adatok betöltése
+        Map<int, Map<String, dynamic>> learningData = {};
+        if (flashcards.isNotEmpty) {
+          try {
+            final user = FirebaseAuth.instance.currentUser;
+            if (user != null) {
+              // Batch lekérdezés a tanulási adatokhoz (10-es blokkokban)
+              final allCardIds = List.generate(flashcards.length, (i) => '${widget.deckId}#$i');
+              const chunkSize = 10;
+              final learningDocs = <QueryDocumentSnapshot>[];
+              
+              for (var i = 0; i < allCardIds.length; i += chunkSize) {
+                final chunk = allCardIds.sublist(i, (i + chunkSize).clamp(0, allCardIds.length));
+                final query = await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(user.uid)
+                    .collection('categories')
+                    .doc(categoryId)
+                    .collection('learning')
+                    .where(FieldPath.documentId, whereIn: chunk)
+                    .get();
+                learningDocs.addAll(query.docs);
+              }
+              
+              final now = Timestamp.now();
+              for (final doc in learningDocs) {
+                final cardId = doc.id;
+                final index = int.tryParse(cardId.split('#').last) ?? -1;
+                if (index >= 0) {
+                  final docData = doc.data() as Map<String, dynamic>?;
+                  final state = docData?['state'] as String? ?? 'NEW';
+                  final lastRating = docData?['lastRating'] as String? ?? 'Again';
+                  final nextReview = docData?['nextReview'] as Timestamp?;
+                  final isDue = state == 'NEW' || 
+                               (nextReview != null && nextReview.seconds <= now.seconds);
+                  
+                  learningData[index] = {
+                    'state': state,
+                    'lastRating': lastRating,
+                    'isDue': isDue,
+                  };
+                }
+              }
+            }
+          } catch (e) {
+            print('Error loading learning data: $e');
+          }
+        }
+        
         setState(() {
           _deckData = doc;
+          _learningData = learningData;
           _isLoading = false;
         });
       }
@@ -121,15 +179,32 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
                       flashcards.insert(newIndex, item);
                     });
                   },
-                  itemBuilder: (context, index) => ListTile(
-                    key: ValueKey(index),
-                    title: FlippableCard(
-                      frontText: flashcards[index]['front'] ?? '',
-                      backText: flashcards[index]['back'] ?? '',
-                      flipAxis: Axis.vertical,
-                      interactive: false,
-                    ),
-                  ),
+                  itemBuilder: (context, index) {
+                    final learningInfo = _learningData[index];
+                    return ListTile(
+                      key: ValueKey(index),
+                      title: Stack(
+                        children: [
+                          FlippableCard(
+                            frontText: flashcards[index]['front'] ?? '',
+                            backText: flashcards[index]['back'] ?? '',
+                            flipAxis: Axis.vertical,
+                            interactive: false,
+                          ),
+                          if (learningInfo != null)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: LearningStatusBadge(
+                                state: learningInfo['state'] as String,
+                                lastRating: learningInfo['lastRating'] as String,
+                                isDue: learningInfo['isDue'] as bool,
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
                 )
               : GridView.builder(
                   padding: const EdgeInsets.all(16),
@@ -148,9 +223,24 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
                         ),
                   itemCount: flashcards.length,
                   itemBuilder: (context, index) {
-                    return FlippableCard(
-                      frontText: flashcards[index]['front'] ?? '',
-                      backText: flashcards[index]['back'] ?? '',
+                    final learningInfo = _learningData[index];
+                    return Stack(
+                      children: [
+                        FlippableCard(
+                          frontText: flashcards[index]['front'] ?? '',
+                          backText: flashcards[index]['back'] ?? '',
+                        ),
+                        if (learningInfo != null)
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: LearningStatusBadge(
+                              state: learningInfo['state'] as String,
+                              lastRating: learningInfo['lastRating'] as String,
+                              isDue: learningInfo['isDue'] as bool,
+                            ),
+                          ),
+                      ],
                     );
                   },
                 );

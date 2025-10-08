@@ -183,7 +183,7 @@ class LearningService {
       const chunkSize = 10;
       final learningFutures = <Future>[];
       for (var i = 0; i < allCardIds.length; i += chunkSize) {
-        final chunk = allCardIds.sublist(i, (i + chunkSize).clamp(0, allCardIds.length) as int);
+        final chunk = allCardIds.sublist(i, (i + chunkSize).clamp(0, allCardIds.length));
         learningFutures.add(_firestore
             .collection('users')
             .doc(user.uid)
@@ -217,7 +217,7 @@ class LearningService {
         final legacyIds = missingIndices.map((i) => '${deckId}#$i').toList();
         final legacyFutures = <Future>[];
         for (var i = 0; i < legacyIds.length; i += chunkSize) {
-          final chunk = legacyIds.sublist(i, (i + chunkSize).clamp(0, legacyIds.length) as int);
+          final chunk = legacyIds.sublist(i, (i + chunkSize).clamp(0, legacyIds.length));
           legacyFutures.add(_firestore
               .collection('users')
               .doc(user.uid)
