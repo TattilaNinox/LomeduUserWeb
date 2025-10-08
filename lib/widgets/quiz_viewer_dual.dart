@@ -391,11 +391,13 @@ class _QuizViewerDualState extends State<QuizViewerDual> {
             Card(
               elevation: 4,
               child: Padding(
-                padding: const EdgeInsets.all(20.0),
+                padding: EdgeInsets.all(
+                  MediaQuery.of(context).size.width < 600 ? 17.0 : 20.0, // 15% kisebb padding mobil eszközön
+                ),
                 child: Text(
                   _currentQuestion.question,
-                  style: const TextStyle(
-                    fontSize: 18,
+                  style: TextStyle(
+                    fontSize: MediaQuery.of(context).size.width < 600 ? 15.3 : 18, // 15% kisebb font mobil eszközön
                     fontWeight: FontWeight.bold,
                   ),
                   textAlign: TextAlign.center,
@@ -416,10 +418,14 @@ class _QuizViewerDualState extends State<QuizViewerDual> {
                       onTap: () => _selectOption(index),
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: EdgeInsets.all(
+                          MediaQuery.of(context).size.width < 600 ? 13.6 : 16, // 15% kisebb padding mobil eszközön
+                        ),
                         decoration: BoxDecoration(
                           color: _getOptionColor(index),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(
+                            MediaQuery.of(context).size.width < 600 ? 10.2 : 12, // 15% kisebb border radius mobil eszközön
+                          ),
                           border: Border.all(
                             color: _getOptionBorderColor(index),
                             width: 2,
@@ -428,8 +434,8 @@ class _QuizViewerDualState extends State<QuizViewerDual> {
                         child: Row(
                           children: [
                             Container(
-                              width: 24,
-                              height: 24,
+                              width: MediaQuery.of(context).size.width < 600 ? 20.4 : 24, // 15% kisebb checkbox mobil eszközön
+                              height: MediaQuery.of(context).size.width < 600 ? 20.4 : 24,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
@@ -441,19 +447,19 @@ class _QuizViewerDualState extends State<QuizViewerDual> {
                                     : Colors.transparent,
                               ),
                               child: _selectedIndices.contains(index)
-                                  ? const Icon(
+                                  ? Icon(
                                       Icons.check,
                                       color: Colors.white,
-                                      size: 16,
+                                      size: MediaQuery.of(context).size.width < 600 ? 13.6 : 16, // 15% kisebb ikon mobil eszközön
                                     )
                                   : null,
                             ),
-                            const SizedBox(width: 16),
+                            SizedBox(width: MediaQuery.of(context).size.width < 600 ? 13.6 : 16), // 15% kisebb spacing mobil eszközön
                             Expanded(
                               child: Text(
                                 option.text,
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: MediaQuery.of(context).size.width < 600 ? 13.6 : 16, // 15% kisebb font mobil eszközön
                                   fontWeight: _selectedIndices.contains(index)
                                       ? FontWeight.bold
                                       : FontWeight.normal,
