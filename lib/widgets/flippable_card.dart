@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import 'dart:ui_web' as ui_web; // ignore: avoid_web_libraries_in_flutter
-import 'package:web/web.dart' as web;
 
 class FlippableCard extends StatefulWidget {
   final String frontText;
@@ -91,40 +89,24 @@ class _FlippableCardState extends State<FlippableCard> with SingleTickerProvider
                   style: const TextStyle(
                     color: Colors.black87,
                     fontSize: 18,
+                    fontFamily: 'Inter', // Jegyzet betűtípusa
                     fontWeight: FontWeight.bold,
                   ),
                 )
-              : CssHyphenatedText(text: text),
+              : Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Color(0xFF2D3748), // Jegyzet tartalom színe
+                    fontSize: 16,
+                    fontFamily: 'Inter', // Jegyzet betűtípusa
+                    fontWeight: FontWeight.w500,
+                    height: 1.6, // Jegyzet sormagasság
+                  ),
+                ),
         ),
       ),
     );
   }
 }
 
-class CssHyphenatedText extends StatelessWidget {
-  final String text;
-  const CssHyphenatedText({super.key, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    final String viewType = 'css-hyphenated-text-${text.hashCode}';
-
-    ui_web.platformViewRegistry.registerViewFactory(
-      viewType,
-      (int viewId) => web.HTMLDivElement()
-        ..style.width = '100%'
-        ..style.height = '100%'
-        ..style.display = 'flex'
-        ..style.alignItems = 'center'
-        ..append(web.HTMLParagraphElement()
-          ..text = text
-          ..style.textAlign = 'justify'
-          ..style.setProperty('hyphens', 'auto')
-          ..style.color = '#374151'
-          ..style.fontSize = '16px'
-          ..style.width = '100%'),
-    );
-
-    return IgnorePointer(child: HtmlElementView(viewType: viewType));
-  }
-}
