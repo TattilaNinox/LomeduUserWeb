@@ -26,7 +26,6 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
   // Learning data
   List<int> _dueCardIndices = [];
   String? _categoryId;
-  bool _isEvaluating = false;
 
   @override
   void initState() {
@@ -72,12 +71,6 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
   }
 
   Future<void> _evaluateCard(String evaluation) async {
-    if (_isEvaluating) return;
-    
-    setState(() {
-      _isEvaluating = true;
-    });
-
     try {
       final currentCardIndex = _dueCardIndices[_currentIndex];
       final cardId = '${widget.deckId}#$currentCardIndex';
@@ -159,10 +152,6 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
           backgroundColor: Colors.red,
         ),
       );
-    } finally {
-      setState(() {
-        _isEvaluating = false;
-      });
     }
   }
 
@@ -579,7 +568,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
   Widget _buildEvaluationButton(
       String text, Color color, VoidCallback onPressed) {
     return ElevatedButton(
-      onPressed: _isEvaluating ? null : onPressed,
+      onPressed: onPressed,
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
         foregroundColor: Colors.white,
@@ -589,22 +578,13 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
         ),
         elevation: 0,
       ),
-      child: _isEvaluating
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            )
-          : Text(
-              text,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
     );
   }
 }
