@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../services/learning_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class FlashcardStudyScreen extends StatefulWidget {
   final String deckId;
@@ -46,11 +47,33 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
         
         // Esedékes kártyák lekérése
         final dueIndices = await LearningService.getDueFlashcardIndicesForDeck(widget.deckId);
+        // Deck statisztikák betöltése a számlálókhoz
+        final user = FirebaseAuth.instance.currentUser;
+        int again = 0, hard = 0, good = 0, easy = 0;
+        if (user != null) {
+          final statsDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('deck_stats')
+              .doc(widget.deckId)
+              .get();
+          if (statsDoc.exists) {
+            final s = statsDoc.data() as Map<String, dynamic>;
+            again = s['again'] as int? ?? 0;
+            hard = s['hard'] as int? ?? 0;
+            good = s['good'] as int? ?? 0;
+            easy = s['easy'] as int? ?? 0;
+          }
+        }
         
         setState(() {
           _deckData = doc;
           _categoryId = categoryId;
           _dueCardIndices = dueIndices;
+          _againCount = again;
+          _hardCount = hard;
+          _goodCount = good;
+          _easyCount = easy;
           _isLoading = false;
         });
       }
