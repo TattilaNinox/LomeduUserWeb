@@ -199,6 +199,14 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
               },
             ),
             actions: [
+              if (!_reorderMode && flashcards.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.school),
+                  tooltip: 'Tanulás',
+                  onPressed: () {
+                    context.go('/deck/${widget.deckId}/study');
+                  },
+                ),
               IconButton(
                 icon: Icon(_reorderMode ? Icons.check : Icons.swap_vert),
                 tooltip: _reorderMode ? 'Rendezés mentése' : 'Átrendezés',
@@ -266,6 +274,14 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
             },
           ),
           actions: [
+            if (!_reorderMode && flashcards.isNotEmpty)
+              IconButton(
+                icon: const Icon(Icons.school),
+                tooltip: 'Tanulás',
+                onPressed: () {
+                  context.go('/deck/${widget.deckId}/study');
+                },
+              ),
             IconButton(
               icon: Icon(_reorderMode ? Icons.check : Icons.swap_vert),
               tooltip: _reorderMode ? 'Rendezés mentése' : 'Átrendezés',

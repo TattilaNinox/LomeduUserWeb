@@ -178,11 +178,11 @@ class _DeviceCheckerState extends State<DeviceChecker>
     try {
       debugPrint('DeviceChecker: ===== LOGOUT STARTED =====');
       debugPrint('DeviceChecker: Logging out user due to device mismatch');
-      
+
       // Kijelentkeztetjük a felhasználót
       await FirebaseAuth.instance.signOut();
       debugPrint('DeviceChecker: User signed out from Firebase');
-      
+
       // Navigálás a login oldalra - egyszerűbb megközelítés
       if (mounted) {
         try {
@@ -192,30 +192,33 @@ class _DeviceCheckerState extends State<DeviceChecker>
           debugPrint('DeviceChecker: Successfully navigated using GoRouter.of');
         } catch (routerError) {
           debugPrint('DeviceChecker: GoRouter.of failed: $routerError');
-          
+
           // Fallback: próbáljuk meg a context.go-val
           try {
             context.go('/login');
-            debugPrint('DeviceChecker: Successfully navigated using context.go');
+            debugPrint(
+                'DeviceChecker: Successfully navigated using context.go');
           } catch (contextError) {
             debugPrint('DeviceChecker: context.go also failed: $contextError');
-            
+
             // Utolsó fallback: web navigáció
             try {
               // Web-specifikus navigáció
               if (kIsWeb) {
                 html.window.location.href = '/login';
-                debugPrint('DeviceChecker: Successfully navigated using window.location');
+                debugPrint(
+                    'DeviceChecker: Successfully navigated using window.location');
               }
             } catch (webError) {
-              debugPrint('DeviceChecker: Web navigation also failed: $webError');
+              debugPrint(
+                  'DeviceChecker: Web navigation also failed: $webError');
             }
           }
         }
       } else {
         debugPrint('DeviceChecker: Widget is not mounted, cannot navigate');
       }
-      
+
       debugPrint('DeviceChecker: ===== LOGOUT COMPLETED =====');
     } catch (error) {
       debugPrint('DeviceChecker: Error during logout: $error');
@@ -227,7 +230,7 @@ class _DeviceCheckerState extends State<DeviceChecker>
     // Mindig jelenítsd meg a gyerek widget-et, a DeviceChecker csak háttérben fut
     return widget.child;
   }
-  
+
   /// Tesztelési metódus - manuálisan kijelentkeztet
   void testLogout() {
     debugPrint('DeviceChecker: Manual test logout triggered');

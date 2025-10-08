@@ -77,7 +77,7 @@ class Header extends StatelessWidget {
                       fontSize: 14,
                       fontWeight: FontWeight.w500)),
             ),
-            const SizedBox(width: 8            ),
+            const SizedBox(width: 8),
             const SizedBox(width: 8),
             OutlinedButton(
               onPressed: () async {

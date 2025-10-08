@@ -18,6 +18,7 @@ import 'screens/device_change_screen.dart';
 // public doc admin képernyők eltávolítva
 import 'screens/note_read_screen.dart';
 import 'screens/flashcard_deck_view_screen.dart';
+import 'screens/flashcard_study_screen.dart';
 import 'screens/interactive_note_view_screen.dart';
 import 'screens/dynamic_quiz_view_screen.dart';
 import 'widgets/device_checker.dart';
@@ -124,6 +125,14 @@ final _router = GoRouter(
       builder: (context, state) {
         final deckId = state.pathParameters['deckId']!;
         return FlashcardDeckViewScreen(deckId: deckId);
+      },
+    ),
+    // Flashcard deck tanulás útvonal
+    GoRoute(
+      path: '/deck/:deckId/study',
+      builder: (context, state) {
+        final deckId = state.pathParameters['deckId']!;
+        return FlashcardStudyScreen(deckId: deckId);
       },
     ),
   ],
