@@ -82,10 +82,68 @@ class AccountScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: () {
-                    // TODO: Implement upgrade/payment flow
+                  onPressed: () async {
+                    final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) {
+                            return AlertDialog(
+                              title: const Text('Teszt fizetés'),
+                              content: const Text(
+                                  'Ez csak teszt. A "Fizetés" gombbal imitáljuk a sikeres SimplePay tranzakciót.'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(false),
+                                  child: const Text('Mégse'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.of(ctx).pop(true),
+                                  child: const Text('Fizetés'),
+                                ),
+                              ],
+                            );
+                          },
+                        ) ??
+                        false;
+                    if (!confirmed) return;
+
+                    final now = DateTime.now();
+                    final expiry = now.add(const Duration(days: 30));
+                    try {
+                      await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(user.uid)
+                          .set(
+                        {
+                          'isSubscriptionActive': true,
+                          'subscriptionStatus': 'premium',
+                          'subscriptionEndDate': Timestamp.fromDate(expiry),
+                          'subscription': {
+                            'status': 'ACTIVE',
+                            'productId': 'test_web_monthly',
+                            'purchaseToken':
+                                'simulated_payment_${now.millisecondsSinceEpoch}',
+                            'endTime': expiry.toIso8601String(),
+                            'lastUpdateTime': now.toIso8601String(),
+                            'source': 'test_simulation',
+                          },
+                          'lastPaymentDate': FieldValue.serverTimestamp(),
+                          'updatedAt': FieldValue.serverTimestamp(),
+                        },
+                        SetOptions(merge: true),
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Sikeres teszt-fizetés!')));
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text('Hiba a teszt-fizetés során: $e')));
+                      }
+                    }
                   },
-                  child: const Text('Előfizetés frissítése'),
+                  child: const Text('Előfizetés frissítése (teszt)'),
                 ),
               ],
             ),
