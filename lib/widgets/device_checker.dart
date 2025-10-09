@@ -39,10 +39,36 @@ class _DeviceCheckerState extends State<DeviceChecker>
     // Figyeljük a Firebase Auth állapot változásait
     _authStateSubscription =
         FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      if (user != null) {
-        _initializeDeviceCheck();
-      } else {
+      if (!mounted) return;
+
+      if (user == null) {
+        // Kijelentkezett: mindent leállítunk, a központi router majd a /login-re visz.
         _cleanup();
+      } else if (!user.emailVerified) {
+        // Nincs még email-verifikálva → átirányítjuk a verify képernyőre, de
+        // várunk, amíg a GoRouter biztosan elérhető lesz.
+        _cleanup();
+        Future.delayed(Duration.zero, () {
+          if (!mounted) return;
+          try {
+            context.go('/verify-email');
+          } catch (e) {
+            // Ha még mindig nincs GoRouter, várunk még egy kicsit
+            Future.delayed(Duration(milliseconds: 100), () {
+              if (mounted) {
+                try {
+                  context.go('/verify-email');
+                } catch (e2) {
+                  debugPrint('DeviceChecker: Navigation failed: $e2');
+                }
+              }
+            });
+          }
+        });
+      } else {
+        // Ha van felhasználó ÉS meg is erősítette az emailjét,
+        // akkor elindítjuk a biztonsági ellenőrzést.
+        _initializeDeviceCheck();
       }
     });
   }
