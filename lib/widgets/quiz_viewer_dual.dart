@@ -392,12 +392,16 @@ class _QuizViewerDualState extends State<QuizViewerDual> {
               elevation: 4,
               child: Padding(
                 padding: EdgeInsets.all(
-                  MediaQuery.of(context).size.width < 600 ? 17.0 : 20.0, // 15% kisebb padding mobil eszközön
+                  MediaQuery.of(context).size.width < 600
+                      ? 17.0
+                      : 20.0, // 15% kisebb padding mobil eszközön
                 ),
                 child: Text(
                   _currentQuestion.question,
                   style: TextStyle(
-                    fontSize: MediaQuery.of(context).size.width < 600 ? 15.3 : 18, // 15% kisebb font mobil eszközön
+                    fontSize: MediaQuery.of(context).size.width < 600
+                        ? 15.3
+                        : 18, // 15% kisebb font mobil eszközön
                     fontWeight: FontWeight.bold,
                   ),
                   textAlign: TextAlign.center,
@@ -419,12 +423,16 @@ class _QuizViewerDualState extends State<QuizViewerDual> {
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
                         padding: EdgeInsets.all(
-                          MediaQuery.of(context).size.width < 600 ? 13.6 : 16, // 15% kisebb padding mobil eszközön
+                          MediaQuery.of(context).size.width < 600
+                              ? 13.6
+                              : 16, // 15% kisebb padding mobil eszközön
                         ),
                         decoration: BoxDecoration(
                           color: _getOptionColor(index),
                           borderRadius: BorderRadius.circular(
-                            MediaQuery.of(context).size.width < 600 ? 10.2 : 12, // 15% kisebb border radius mobil eszközön
+                            MediaQuery.of(context).size.width < 600
+                                ? 10.2
+                                : 12, // 15% kisebb border radius mobil eszközön
                           ),
                           border: Border.all(
                             color: _getOptionBorderColor(index),
@@ -434,8 +442,12 @@ class _QuizViewerDualState extends State<QuizViewerDual> {
                         child: Row(
                           children: [
                             Container(
-                              width: MediaQuery.of(context).size.width < 600 ? 20.4 : 24, // 15% kisebb checkbox mobil eszközön
-                              height: MediaQuery.of(context).size.width < 600 ? 20.4 : 24,
+                              width: MediaQuery.of(context).size.width < 600
+                                  ? 20.4
+                                  : 24, // 15% kisebb checkbox mobil eszközön
+                              height: MediaQuery.of(context).size.width < 600
+                                  ? 20.4
+                                  : 24,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
@@ -450,16 +462,25 @@ class _QuizViewerDualState extends State<QuizViewerDual> {
                                   ? Icon(
                                       Icons.check,
                                       color: Colors.white,
-                                      size: MediaQuery.of(context).size.width < 600 ? 13.6 : 16, // 15% kisebb ikon mobil eszközön
+                                      size: MediaQuery.of(context).size.width <
+                                              600
+                                          ? 13.6
+                                          : 16, // 15% kisebb ikon mobil eszközön
                                     )
                                   : null,
                             ),
-                            SizedBox(width: MediaQuery.of(context).size.width < 600 ? 13.6 : 16), // 15% kisebb spacing mobil eszközön
+                            SizedBox(
+                                width: MediaQuery.of(context).size.width < 600
+                                    ? 13.6
+                                    : 16), // 15% kisebb spacing mobil eszközön
                             Expanded(
                               child: Text(
                                 option.text,
                                 style: TextStyle(
-                                  fontSize: MediaQuery.of(context).size.width < 600 ? 13.6 : 16, // 15% kisebb font mobil eszközön
+                                  fontSize: MediaQuery.of(context).size.width <
+                                          600
+                                      ? 13.6
+                                      : 16, // 15% kisebb font mobil eszközön
                                   fontWeight: _selectedIndices.contains(index)
                                       ? FontWeight.bold
                                       : FontWeight.normal,

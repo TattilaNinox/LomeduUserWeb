@@ -1,61 +1,20 @@
-import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
-import { getAuth, connectAuthEmulator, type Auth } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator, type Firestore } from 'firebase/firestore';
-import { getFunctions, connectFunctionsEmulator, type Functions } from 'firebase/functions';
+import { initializeApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
-let app: FirebaseApp | null = null;
-let auth: Auth | null = null;
-let db: Firestore | null = null;
-let functions: Functions | null = null;
+const firebaseConfig = {
+  apiKey: "AIzaSyCWkH2x7ujj3xc8M1fhJAMphWo7pLBhV_k",
+  authDomain: "orlomed-f8f9f.firebaseapp.com",
+  projectId: "orlomed-f8f9f",
+  storageBucket: "orlomed-f8f9f.firebasestorage.app",
+  messagingSenderId: "673799768268",
+  appId: "1:673799768268:web:2313db56d5226e17c6da69",
+};
 
-export function initFirebase(): { app: FirebaseApp; auth: Auth; db: Firestore; functions: Functions } {
-  if (!app) {
-    app = initializeApp({
-      apiKey: 'AIzaSyCWkH2x7ujj3xc8M1fhJAMphWo7pLBhV_k',
-      authDomain: 'orlomed-f8f9f.firebaseapp.com',
-      projectId: 'orlomed-f8f9f',
-      storageBucket: 'orlomed-f8f9f.firebasestorage.app',
-      messagingSenderId: '673799768268',
-      appId: '1:673799768268:web:2313db56d5226e17c6da69',
-    });
+// Firebase inicializálás
+const app = initializeApp(firebaseConfig);
 
-    // App Check (reCAPTCHA v3) inicializálása KÖZVETLEN az app után,
-    // még bármely Firebase szolgáltatás példányosítása előtt.
-    if (typeof window !== 'undefined' && !(window as any).__APPCHECK_INITIALIZED__) {
-      try {
-        initializeAppCheck(app, {
-          provider: new ReCaptchaV3Provider('6LcgYuArAAAAAO3diSOO5tKAvP6HVZZQFh3PgDYl'),
-          isTokenAutoRefreshEnabled: true,
-        });
-        (window as any).__APPCHECK_INITIALIZED__ = true;
-      } catch {}
-    }
-  }
-
-  if (!auth) auth = getAuth(app);
-  if (!db) db = getFirestore(app);
-  if (!functions) functions = getFunctions(app, 'europe-west1');
-
-  // Emulátorok opcionális csatlakoztatása fejlesztéshez
-  if (typeof window !== 'undefined' && (window as any).__USE_FIREBASE_EMULATORS__) {
-    try {
-      connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
-      connectFirestoreEmulator(db, 'localhost', 8080);
-      connectFunctionsEmulator(functions, 'localhost', 5001);
-    } catch (_) {}
-  }
-
-
-
-  return { app, auth, db, functions } as { app: FirebaseApp; auth: Auth; db: Firestore; functions: Functions };
-}
-
-export function getFirebase() {
-  if (!app || !auth || !db || !functions) {
-    return initFirebase();
-  }
-  return { app, auth, db, functions } as { app: FirebaseApp; auth: Auth; db: Firestore; functions: Functions };
-}
-
-
+// Szolgáltatások exportálása
+export const db = getFirestore(app);
+export const auth = getAuth(app);
+export default app;

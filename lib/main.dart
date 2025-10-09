@@ -22,6 +22,8 @@ import 'screens/flashcard_study_screen.dart';
 import 'screens/interactive_note_view_screen.dart';
 import 'screens/dynamic_quiz_view_screen.dart';
 import 'widgets/device_checker.dart';
+import 'screens/account_screen.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 /// Az alkalmazás fő belépési pontja.
 void main() async {
@@ -32,6 +34,8 @@ void main() async {
   // Inicializálja a Firebase szolgáltatásokat az alkalmazás indulásakor.
   // Ez egy aszinkron művelet, ezért a `main` függvény `async`-ként van megjelölve.
   await FirebaseConfig.initialize();
+  // Initialize intl date formatting for Hungarian locale
+  await initializeDateFormatting('hu', null);
 
   // Elindítja az alkalmazást a gyökér widget (`MyApp`) megadásával.
   runApp(const MyApp());
@@ -134,6 +138,10 @@ final _router = GoRouter(
         final deckId = state.pathParameters['deckId']!;
         return FlashcardStudyScreen(deckId: deckId);
       },
+    ),
+    GoRoute(
+      path: '/account',
+      builder: (context, state) => const AccountScreen(),
     ),
   ],
 );

@@ -39,6 +39,7 @@ dependencies:
   cloud_functions: ^4.7.6
   shared_preferences: ^2.5.3
   flutter_svg: ^2.2.1
+  intl: ^0.18.1
 
   device_info_plus: any
 dev_dependencies:
