@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/device_fingerprint.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -12,27 +13,43 @@ class RegistrationScreen extends StatefulWidget {
 }
 
 class _RegistrationScreenState extends State<RegistrationScreen> {
-  final _lastNameController = TextEditingController();
-  final _firstNameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
+  final _lastNameController = TextEditingController(text: 'Tölgyesi');
+  final _firstNameController = TextEditingController(text: 'Attila');
+  final _emailController =
+      TextEditingController(text: 'attila.ninox@gmail.com');
+  final _passwordController = TextEditingController(text: 'Tolgyesi88');
+  final _confirmPasswordController = TextEditingController(text: 'Tolgyesi88');
   String? _errorMessage;
   bool _isLoading = false;
+
+  /// Külön segédfüggvény az email megerősítő levél küldésére.
+  /// A Flutter webes implementációja megköveteli az `ActionCodeSettings`-et,
+  /// ami megadja a Firebase-nek a visszatérési URL-t, enélkül a hívás hibát dobhat vagy lefagyhat.
+  Future<void> _sendVerificationEmail(User user) async {
+    try {
+      if (kIsWeb) {
+        // Weben kötelező megadni a visszatérési URL-t.
+        await user.sendEmailVerification(ActionCodeSettings(
+          // Ezt az URL-t a Firebase Hosting-ban is be kell állítani, ha van.
+          url: 'https://lomedu-user-web.web.app/notes',
+          handleCodeInApp: true,
+        ));
+      } else {
+        // Mobilon nincs szükség extra beállításokra.
+        await user.sendEmailVerification();
+      }
+    } catch (e) {
+      // Hiba esetén naplózzuk, de a felhasználót továbbengedjük a verify screen-re,
+      // ahol újra tudja küldeni.
+      debugPrint("Hiba a megerősítő email küldésekor: $e");
+    }
+  }
 
   bool _isValidEmail(String email) {
     // Javított regex: raw string + helyes egy backslash-es escape a regexben
     final regExp = RegExp(
         r"^(?:[a-zA-Z0-9_'^&/+-])+(?:\.(?:[a-zA-Z0-9_'^&/+-])+)*@(?:(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})$");
     return regExp.hasMatch(email);
-  }
-
-  String _deviceFingerprint() {
-    if (kIsWeb) {
-      // Egyszerű web fingerprint – nem írja felül később
-      return 'flutter_web_${DateTime.now().millisecondsSinceEpoch % 100000}';
-    }
-    return 'flutter_device_unknown';
   }
 
   Future<void> _register() async {
@@ -62,20 +79,31 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     });
 
     try {
-      // Create user in Firebase Authentication
+      debugPrint("1. Regisztráció megkezdése...");
+      // 1. Auth fiók létrehozása
       final userCredential =
           await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      // Kötelező/kezdeti mezők létrehozása/pótlása
+      final user = userCredential.user!;
+      debugPrint(
+          "2. Firebase Auth felhasználó sikeresen létrehozva: ${user.uid}");
+
+      // 2. Verifikációs email küldése AZONNAL
+      await _sendVerificationEmail(user);
+      debugPrint("3. Email megerősítő függvény lefutott.");
+
+      // 3. Próbaidőszak kiszámítása (most + 5 nap)
       final now = DateTime.now();
       final trialEnd = now.add(const Duration(days: 5));
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .set({
-        'email': _emailController.text.trim(),
+      debugPrint("4. Próbaidőszak adatai kiszámítva.");
+
+      // 4. Firestore adatok összeállítása a specifikáció szerint
+      final newUserDoc = {
+        'email': user.email,
+        'firstName': _firstNameController.text.trim(),
+        'lastName': _lastNameController.text.trim(),
         'userType': 'normal',
         'science': 'Alap',
         'subscriptionStatus': 'free',
@@ -85,29 +113,38 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         'freeTrialStartDate': Timestamp.fromDate(now),
         'freeTrialEndDate': Timestamp.fromDate(trialEnd),
         'deviceRegistrationDate': Timestamp.fromDate(now),
-        'authorizedDeviceFingerprint': _deviceFingerprint(),
+        'authorizedDeviceFingerprint':
+            await DeviceFingerprint.getCurrentFingerprint(),
+        'isActive': true,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
-        'isActive': true,
-        'firstName': _firstNameController.text.trim(),
-        'lastName': _lastNameController.text.trim(),
-      }, SetOptions(merge: true));
+      };
+      debugPrint("5. Firestore dokumentum összeállítva.");
 
-      // E-mail megerősítő levél küldése
-      await userCredential.user!.sendEmailVerification();
+      // 5. Firestore írás (merge: true opcióval)
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set(newUserDoc, SetOptions(merge: true));
+      debugPrint("6. Firestore dokumentum sikeresen elmentve.");
 
+      // 6. UI: irányítás a "Ellenőrizd az emailed!" képernyőre
       if (mounted) {
+        debugPrint("7. Átirányítás a /verify-email oldalra...");
         context.go('/verify-email');
       }
     } on FirebaseAuthException catch (e) {
+      debugPrint("!!! HIBA (FirebaseAuthException): ${e.code} - ${e.message}");
       setState(() {
         _errorMessage = e.message;
       });
     } catch (e) {
+      debugPrint("!!! HIBA (Általános Exception): $e");
       setState(() {
         _errorMessage = 'Hiba történt a regisztráció során: $e';
       });
     } finally {
+      debugPrint("8. Finally blokk lefutott.");
       setState(() {
         _isLoading = false;
       });
