@@ -162,7 +162,7 @@ class WebSubscriptionStatusCard extends StatelessWidget {
       text = 'Aktív Premium';
       icon = Icons.check_circle;
     } else if (status == 'expired' || (!isActive && status == 'premium')) {
-      backgroundColor = Colors.red;
+      backgroundColor = Colors.amber[700]!; // Barátságosabb sárga árnyalat
       textColor = Colors.white;
       text = 'Lejárt';
       icon = Icons.warning;
@@ -211,7 +211,7 @@ class WebSubscriptionStatusCard extends StatelessWidget {
       color = Colors.green[700]!;
     } else if (status == 'expired' || (!isActive && status == 'premium')) {
       description = 'Előfizetése lejárt, frissítse a fizetést a folytatáshoz';
-      color = Colors.red[700]!;
+      color = Colors.amber[700]!;
     } else if (status == 'free') {
       description = 'Korlátozott funkciók elérhetők';
       color = Colors.blue[700]!;
@@ -332,7 +332,7 @@ class WebSubscriptionStatusCard extends StatelessWidget {
               icon: const Icon(Icons.payment, size: 18),
               label: const Text('Előfizetés megújítása'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red[600],
+                backgroundColor: Colors.amber[600],
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),

@@ -194,7 +194,7 @@ class _SubscriptionReminderBannerState
       case SubscriptionStatusColor.warning:
         return Colors.orange;
       case SubscriptionStatusColor.expired:
-        return Colors.red;
+        return Colors.amber[700]!; // Barátságosabb sárga árnyalat
     }
   }
 

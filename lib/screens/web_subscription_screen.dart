@@ -285,14 +285,15 @@ class _WebSubscriptionScreenState extends State<WebSubscriptionScreen> {
                               // TODO: Navigálás a fizetési oldalra
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Fizetési oldal hamarosan elérhető'),
+                                  content:
+                                      Text('Fizetési oldal hamarosan elérhető'),
                                 ),
                               );
                             },
                             icon: const Icon(Icons.payment, size: 18),
                             label: const Text('Előfizetés megújítása'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red[600],
+                              backgroundColor: Colors.amber[600],
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),

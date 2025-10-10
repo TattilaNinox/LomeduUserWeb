@@ -175,7 +175,6 @@ class _EnhancedSubscriptionStatusCardState
     );
   }
 
-
   Widget _buildStatusDescription() {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -280,7 +279,7 @@ class _EnhancedSubscriptionStatusCardState
       counterColor = Colors.orange;
       counterText = 'Hátralévő napok: $_daysUntilExpiry nap';
     } else {
-      counterColor = Colors.red;
+      counterColor = Colors.amber[700]!;
       counterText = 'Hátralévő napok: $_daysUntilExpiry nap';
     }
 
@@ -360,7 +359,7 @@ class _EnhancedSubscriptionStatusCardState
               icon: const Icon(Icons.payment, size: 18),
               label: const Text('Előfizetés megújítása'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red[600],
+                backgroundColor: Colors.amber[600],
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
@@ -434,7 +433,7 @@ class _EnhancedSubscriptionStatusCardState
       case SubscriptionStatusColor.warning:
         return Colors.orange;
       case SubscriptionStatusColor.expired:
-        return Colors.red;
+        return Colors.amber[700]!; // Barátságosabb sárga árnyalat
     }
   }
 
