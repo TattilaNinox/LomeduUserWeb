@@ -288,9 +288,9 @@ class _EnhancedSubscriptionStatusCardState
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: counterColor.withOpacity(0.1),
+        color: counterColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: counterColor.withOpacity(0.3)),
+        border: Border.all(color: counterColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [

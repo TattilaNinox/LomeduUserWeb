@@ -155,7 +155,7 @@ class HybridPaymentService {
   static Future<PaymentInitiationResult> _initiateWebPayment(
       String planId, String userId) async {
     if (!isWeb) {
-      return PaymentInitiationResult(
+      return const PaymentInitiationResult(
         success: false,
         error: 'Webes fizetés csak webes platformon érhető el',
       );
@@ -171,7 +171,7 @@ class HybridPaymentService {
   static Future<PaymentInitiationResult> _initiateMobilePayment(
       String planId, String userId) async {
     if (!isMobile) {
-      return PaymentInitiationResult(
+      return const PaymentInitiationResult(
         success: false,
         error: 'Mobil fizetés csak mobil platformon érhető el',
       );
@@ -179,7 +179,7 @@ class HybridPaymentService {
 
     // TODO: Implementáljuk a Google Play Billing integrációt
     // Ez a meglévő subscription service része lesz
-    return PaymentInitiationResult(
+    return const PaymentInitiationResult(
       success: false,
       error: 'Mobil fizetés még nincs implementálva',
     );

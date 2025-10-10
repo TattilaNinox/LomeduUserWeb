@@ -63,21 +63,21 @@ class WebPaymentService {
 
       // Environment változók ellenőrzése
       if (_merchantId.isEmpty || _secretKey.isEmpty) {
-        throw PaymentException(
+        throw const PaymentException(
             'SimplePay konfiguráció hiányzik. Ellenőrizze az environment változókat.');
       }
 
       // Felhasználó adatok lekérése
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        throw PaymentException('Nincs bejelentkezett felhasználó');
+        throw const PaymentException('Nincs bejelentkezett felhasználó');
       }
 
       final email = customerEmail ?? user.email;
       final name = customerName ?? user.displayName;
 
       if (email == null || email.isEmpty) {
-        throw PaymentException('Email cím szükséges a fizetéshez');
+        throw const PaymentException('Email cím szükséges a fizetéshez');
       }
 
       // Egyedi rendelés azonosító generálása (userId-t tartalmazza)

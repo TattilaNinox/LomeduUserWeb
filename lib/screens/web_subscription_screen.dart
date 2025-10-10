@@ -221,8 +221,8 @@ class _WebSubscriptionScreenState extends State<WebSubscriptionScreen> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: WebPaymentService.isConfigured
-                            ? Colors.green.withOpacity(0.1)
-                            : Colors.orange.withOpacity(0.1),
+                            ? Colors.green.withValues(alpha: 0.1)
+                            : Colors.orange.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: WebPaymentService.isConfigured
@@ -304,10 +304,10 @@ class _WebSubscriptionScreenState extends State<WebSubscriptionScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.05),
+                  color: Colors.blue.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.blue.withOpacity(0.2),
+                    color: Colors.blue.withValues(alpha: 0.2),
                     width: 1,
                   ),
                 ),

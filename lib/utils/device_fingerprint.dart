@@ -42,7 +42,7 @@ class DeviceFingerprint {
       const userAgent = 'flutter_web'; // Stabil érték
 
       // Kombinált string - NINCS timestamp benne!
-      final combined = '${platform}_${timezone}_${language}_${userAgent}';
+      final combined = '${platform}_$timezone_$language_$userAgent';
 
       // Hash generálása
       final hash = _simpleHash(combined);

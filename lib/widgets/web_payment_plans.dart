@@ -41,7 +41,7 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -76,8 +76,7 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
 
           // Csomagok listája
           ...WebPaymentService.availablePlans
-              .map((plan) => _buildPlanCard(plan))
-              .toList(),
+              .map((plan) => _buildPlanCard(plan)),
 
           const SizedBox(height: 20),
 
@@ -134,7 +133,7 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -292,8 +291,7 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
                               ),
                             ],
                           ),
-                        ))
-                    .toList(),
+                        )),
 
                 const SizedBox(height: 20),
 

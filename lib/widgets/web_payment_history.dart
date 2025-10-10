@@ -71,7 +71,7 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -329,7 +329,7 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
           ),
 
           // Rows
-          ..._payments.map((payment) => _buildTableRow(payment)).toList(),
+          ..._payments.map((payment) => _buildTableRow(payment)),
         ],
       ),
     );
