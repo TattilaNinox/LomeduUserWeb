@@ -182,8 +182,6 @@ class AccountScreen extends StatelessWidget {
                   ),
 
                   const SizedBox(height: 12),
-
-                  // Email teszt gombok
                   Row(
                     children: [
                       Expanded(
@@ -360,81 +358,6 @@ class AccountScreen extends StatelessWidget {
 
                   const SizedBox(height: 12),
 
-                  // Duplikátum védelem teszt gombok
-                  const Text(
-                    'Duplikátum védelem teszt (nem törli lastReminder-t):',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            try {
-                              final emailSent = await EmailNotificationService.sendTestEmail(
-                                testType: 'expiry_warning',
-                                daysLeft: 3,
-                              );
-
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                  content: Text(emailSent
-                                      ? '3 napos email elküldve (duplikátum védelem teszt)!'
-                                      : '3 napos email küldése sikertelen!'),
-                                ));
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Hiba: $e')),
-                                );
-                              }
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange[600],
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text('3 napos (duplikátum teszt)'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            try {
-                              final emailSent = await EmailNotificationService.sendTestEmail(
-                                testType: 'expired',
-                              );
-
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                  content: Text(emailSent
-                                      ? 'Lejárt email elküldve (duplikátum védelem teszt)!'
-                                      : 'Lejárt email küldése sikertelen!'),
-                                ));
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Hiba: $e')),
-                                );
-                              }
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red[600],
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text('Lejárt (duplikátum teszt)'),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
                   // Reset gomb
                   ElevatedButton(
                     onPressed: () async {
@@ -442,8 +365,7 @@ class AccountScreen extends StatelessWidget {
                             context: context,
                             builder: (ctx) {
                               return AlertDialog(
-                                title:
-                                    const Text('Teszt állapot visszaállítása'),
+                                title: const Text('Teszt állapot visszaállítása'),
                                 content: const Text(
                                     'Ez visszaállítja az előfizetést ingyenes állapotra.'),
                                 actions: [
@@ -499,6 +421,7 @@ class AccountScreen extends StatelessWidget {
                     ),
                     child: const Text('Reset (ingyenes állapot)'),
                   ),
+
                 ],
               ],
             ),
