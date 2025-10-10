@@ -3,10 +3,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 /// Email értesítési szolgáltatás
-/// 
+///
 /// Kezeli az előfizetési emlékeztetők és értesítések küldését
 class EmailNotificationService {
-  static final FirebaseFunctions _functions = FirebaseFunctions.instance;
+  // A Cloud Functions függvényeink az "europe-west1" régióban futnak,
+  // ezért kifejezetten oda kell irányítani a hívásokat, különben
+  // NOT_FOUND hibát kapnánk.
+  static final FirebaseFunctions _functions =
+      FirebaseFunctions.instanceFor(region: 'europe-west1');
 
   /// Lejárat előtti emlékeztető email küldése
   static Future<bool> sendExpiryWarningEmail({
@@ -15,7 +19,7 @@ class EmailNotificationService {
   }) async {
     try {
       final callable = _functions.httpsCallable('sendSubscriptionReminder');
-      
+
       final result = await callable.call({
         'userId': userId,
         'reminderType': 'expiry_warning',
@@ -41,7 +45,7 @@ class EmailNotificationService {
   }) async {
     try {
       final callable = _functions.httpsCallable('sendSubscriptionReminder');
-      
+
       final result = await callable.call({
         'userId': userId,
         'reminderType': 'expired',
@@ -64,12 +68,13 @@ class EmailNotificationService {
   static Future<bool> checkSubscriptionExpiry() async {
     try {
       final callable = _functions.httpsCallable('checkSubscriptionExpiry');
-      
+
       final result = await callable.call();
 
       if (result.data['success'] == true) {
         final emailsSent = result.data['emailsSent'] ?? 0;
-        debugPrint('Subscription expiry check completed. $emailsSent emails sent.');
+        debugPrint(
+            'Subscription expiry check completed. $emailsSent emails sent.');
         return true;
       } else {
         debugPrint('Failed to check subscription expiry: ${result.data}');
