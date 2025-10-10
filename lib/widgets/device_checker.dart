@@ -158,6 +158,16 @@ class _DeviceCheckerState extends State<DeviceChecker>
       if (!userDoc.exists) return;
 
       final data = userDoc.data();
+      
+      // Admin ellenőrzés
+      final userType = data?['userType'] as String? ?? '';
+      final isAdmin = userType.toLowerCase() == 'admin';
+      
+      if (isAdmin) {
+        debugPrint('DeviceChecker: Periodic check - User is admin, skipping');
+        return;
+      }
+      
       final authorizedFingerprint =
           data?['authorizedDeviceFingerprint'] as String?;
 
@@ -188,6 +198,16 @@ class _DeviceCheckerState extends State<DeviceChecker>
       }
 
       final data = snapshot.data() as Map<String, dynamic>?;
+      
+      // Admin ellenőrzés - ha admin, kihagyjuk az eszköz ellenőrzést
+      final userType = data?['userType'] as String? ?? '';
+      final isAdmin = userType.toLowerCase() == 'admin';
+      
+      if (isAdmin) {
+        debugPrint('DeviceChecker: User is admin, skipping device check');
+        return; // Admin felhasználóknál ne ellenőrizzük az eszközt
+      }
+      
       final authorizedFingerprint =
           data?['authorizedDeviceFingerprint'] as String?;
 
