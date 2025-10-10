@@ -14,20 +14,20 @@ class DeviceFingerprint {
       final stored = prefs.getString(key);
 
       if (stored != null && stored.isNotEmpty) {
-        print('DeviceFingerprint: Using stored fingerprint: $stored');
+        debugPrint('DeviceFingerprint: Using stored fingerprint: $stored');
         return stored; // VISSZAADNI a mentett értéket!
       }
 
       // Új fingerprint generálása - böngésző jellemzők alapján
       final fingerprint = await _generateStableWebFingerprint();
       await prefs.setString(key, fingerprint);
-      print(
+      debugPrint(
           'DeviceFingerprint: Generated new stable fingerprint: $fingerprint');
       return fingerprint;
     } catch (e) {
       // Hiba esetén is új generálás
       final fingerprint = await _generateStableWebFingerprint();
-      print('DeviceFingerprint: Generated fallback fingerprint: $fingerprint');
+      debugPrint('DeviceFingerprint: Generated fallback fingerprint: $fingerprint');
       return fingerprint;
     }
   }
@@ -98,9 +98,9 @@ class DeviceFingerprint {
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('device_fingerprint');
-        print('DeviceFingerprint: Cleared stored fingerprint');
+        debugPrint('DeviceFingerprint: Cleared stored fingerprint');
       } catch (e) {
-        print('DeviceFingerprint: Failed to clear fingerprint: $e');
+        debugPrint('DeviceFingerprint: Failed to clear fingerprint: $e');
       }
     }
   }

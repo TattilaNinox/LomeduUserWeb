@@ -94,7 +94,7 @@ class _SubscriptionReminderBannerState
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: _getBannerColor().withOpacity(0.3),
+            color: _getBannerColor().withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -133,7 +133,7 @@ class _SubscriptionReminderBannerState
                       Text(
                         _getBannerMessage(),
                         style: TextStyle(
-                          color: _getBannerTextColor().withOpacity(0.9),
+                          color: _getBannerTextColor().withValues(alpha: 0.9),
                           fontSize: 14,
                         ),
                       ),
@@ -173,7 +173,7 @@ class _SubscriptionReminderBannerState
                   },
                   icon: Icon(
                     Icons.close,
-                    color: _getBannerTextColor().withOpacity(0.7),
+                    color: _getBannerTextColor().withValues(alpha: 0.7),
                     size: 20,
                   ),
                 ),

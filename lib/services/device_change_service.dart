@@ -1,4 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter/foundation.dart';
 
 class DeviceChangeService {
   static final FirebaseFunctions _functions =
@@ -22,10 +23,10 @@ class DeviceChangeService {
     required String newFingerprint,
   }) async {
     try {
-      print('=== DEVICE CHANGE DEBUG ===');
-      print('Email: $email');
-      print('Code: $code');
-      print('New Fingerprint: $newFingerprint');
+      debugPrint('=== DEVICE CHANGE DEBUG ===');
+      debugPrint('Email: $email');
+      debugPrint('Code: $code');
+      debugPrint('New Fingerprint: $newFingerprint');
 
       final callable = _functions.httpsCallable('verifyAndChangeDevice');
       final result = await callable.call({
@@ -34,10 +35,10 @@ class DeviceChangeService {
         'fingerprint': newFingerprint,
       });
 
-      print('Cloud Function result: ${result.data}');
+      debugPrint('Cloud Function result: ${result.data}');
       return {'success': true, 'data': result.data};
     } catch (e) {
-      print('Cloud Function error: $e');
+      debugPrint('Cloud Function error: $e');
       return {'success': false, 'error': e.toString()};
     }
   }

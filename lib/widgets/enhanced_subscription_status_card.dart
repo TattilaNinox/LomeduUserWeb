@@ -27,7 +27,6 @@ class EnhancedSubscriptionStatusCard extends StatefulWidget {
 
 class _EnhancedSubscriptionStatusCardState
     extends State<EnhancedSubscriptionStatusCard> {
-  String _statusText = '';
   SubscriptionStatusColor _statusColor = SubscriptionStatusColor.free;
   int? _daysUntilExpiry;
   bool _isLoading = true;
@@ -82,7 +81,7 @@ class _EnhancedSubscriptionStatusCardState
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -164,7 +163,7 @@ class _EnhancedSubscriptionStatusCardState
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -180,31 +179,14 @@ class _EnhancedSubscriptionStatusCardState
     );
   }
 
-  Widget _buildStatusBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: _getStatusColor(),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        _statusText,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-          fontSize: 12,
-        ),
-      ),
-    );
-  }
 
   Widget _buildStatusDescription() {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: _getStatusColor().withOpacity(0.1),
+        color: _getStatusColor().withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _getStatusColor().withOpacity(0.3)),
+        border: Border.all(color: _getStatusColor().withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [

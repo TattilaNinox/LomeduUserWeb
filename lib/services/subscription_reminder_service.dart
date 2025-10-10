@@ -248,7 +248,7 @@ class SubscriptionReminderService {
           final days = endDateTime.difference(now).inDays;
 
           if (days > 0) {
-            return 'Premium (${days} nap hátra)';
+            return 'Premium ($days nap hátra)';
           } else if (days == 0) {
             return 'Premium (ma jár le)';
           } else {
