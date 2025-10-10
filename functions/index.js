@@ -488,3 +488,185 @@ exports.simplepayWebhook = onRequest(async (req, res) => {
   }
 });
 
+// Előfizetési emlékeztető email küldése
+exports.sendSubscriptionReminder = onCall(async (request) => {
+  const { userId, reminderType, daysLeft } = request.data || {};
+  
+  if (!userId || !reminderType) {
+    throw new Error('invalid-argument: userId és reminderType szükséges');
+  }
+
+  try {
+    // Felhasználó adatainak lekérése
+    const userDoc = await db.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+      throw new Error('not-found: Felhasználó nem található');
+    }
+
+    const userData = userDoc.data();
+    const email = userData.email;
+    const name = userData.name || userData.displayName || 'Felhasználó';
+    
+    if (!email) {
+      throw new Error('invalid-argument: Felhasználó email címe nem található');
+    }
+
+    let subject, text, html;
+    
+    if (reminderType === 'expiry_warning') {
+      // Lejárat előtti figyelmeztetés
+      subject = `Előfizetésed hamarosan lejár - ${daysLeft} nap hátra`;
+      text = `Kedves ${name}!\n\nElőfizetésed ${daysLeft} nap múlva lejár. Ne maradj le a prémium funkciókról!\n\nÚjítsd meg előfizetésedet: https://lomedu-user-web.web.app/subscription\n\nÜdvözlettel,\nA Lomedu csapat`;
+      html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #1E3A8A;">Előfizetésed hamarosan lejár</h2>
+          <p>Kedves ${name}!</p>
+          <p>Előfizetésed <strong>${daysLeft} nap múlva lejár</strong>. Ne maradj le a prémium funkciókról!</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://lomedu-user-web.web.app/subscription" 
+               style="background-color: #1E3A8A; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+              Újítsd meg előfizetésedet
+            </a>
+          </div>
+          <p>Üdvözlettel,<br>A Lomedu csapat</p>
+        </div>
+      `;
+    } else if (reminderType === 'expired') {
+      // Lejárat utáni értesítés
+      subject = 'Előfizetésed lejárt - Újítsd meg most!';
+      text = `Kedves ${name}!\n\nElőfizetésed lejárt. Újítsd meg most, hogy ne maradj le a prémium funkciókról!\n\nÚjítsd meg előfizetésedet: https://lomedu-user-web.web.app/subscription\n\nÜdvözlettel,\nA Lomedu csapat`;
+      html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #DC2626;">Előfizetésed lejárt</h2>
+          <p>Kedves ${name}!</p>
+          <p>Előfizetésed <strong>lejárt</strong>. Újítsd meg most, hogy ne maradj le a prémium funkciókról!</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://lomedu-user-web.web.app/subscription" 
+               style="background-color: #DC2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+              Újítsd meg előfizetésedet
+            </a>
+          </div>
+          <p>Üdvözlettel,<br>A Lomedu csapat</p>
+        </div>
+      `;
+    } else {
+      throw new Error('invalid-argument: Érvénytelen reminderType');
+    }
+
+    // Email küldés
+    await transport.sendMail({
+      from: 'Lomedu <info@lomedu.hu>',
+      to: email,
+      subject: subject,
+      text: text,
+      html: html,
+    });
+
+    console.log(`Subscription reminder email sent to ${email}, type: ${reminderType}`);
+    
+    return { success: true, message: 'Email sikeresen elküldve' };
+    
+  } catch (error) {
+    console.error('Subscription reminder email error:', error);
+    throw new Error(`internal: Email küldése sikertelen: ${error.message}`);
+  }
+});
+
+// Automatikus emlékeztető ellenőrzés (cron job)
+exports.checkSubscriptionExpiry = onCall(async (request) => {
+  try {
+    const now = new Date();
+    const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const oneDayFromNow = new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000);
+    
+    // Aktív előfizetések lekérése, amelyek 1-3 nap múlva lejárnak
+    const expiringSoon = await db.collection('users')
+      .where('isSubscriptionActive', '==', true)
+      .where('subscriptionStatus', '==', 'premium')
+      .where('subscriptionEndDate', '>=', now)
+      .where('subscriptionEndDate', '<=', threeDaysFromNow)
+      .get();
+    
+    // Lejárt előfizetések lekérése
+    const expired = await db.collection('users')
+      .where('isSubscriptionActive', '==', false)
+      .where('subscriptionStatus', '==', 'expired')
+      .where('subscriptionEndDate', '<', now)
+      .get();
+    
+    let emailsSent = 0;
+    
+    // Lejárat előtti emlékeztetők
+    for (const doc of expiringSoon.docs) {
+      const userData = doc.data();
+      const endDate = userData.subscriptionEndDate.toDate();
+      const daysLeft = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+      
+      if (daysLeft <= 3 && daysLeft > 0) {
+        try {
+          await transport.sendMail({
+            from: 'Lomedu <info@lomedu.hu>',
+            to: userData.email,
+            subject: `Előfizetésed hamarosan lejár - ${daysLeft} nap hátra`,
+            text: `Kedves ${userData.name || 'Felhasználó'}!\n\nElőfizetésed ${daysLeft} nap múlva lejár. Ne maradj le a prémium funkciókról!\n\nÚjítsd meg előfizetésedet: https://lomedu-user-web.web.app/subscription\n\nÜdvözlettel,\nA Lomedu csapat`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #1E3A8A;">Előfizetésed hamarosan lejár</h2>
+                <p>Kedves ${userData.name || 'Felhasználó'}!</p>
+                <p>Előfizetésed <strong>${daysLeft} nap múlva lejár</strong>. Ne maradj le a prémium funkciókról!</p>
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="https://lomedu-user-web.web.app/subscription" 
+                     style="background-color: #1E3A8A; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                    Újítsd meg előfizetésedet
+                  </a>
+                </div>
+                <p>Üdvözlettel,<br>A Lomedu csapat</p>
+              </div>
+            `,
+          });
+          emailsSent++;
+        } catch (emailError) {
+          console.error(`Failed to send reminder email to ${userData.email}:`, emailError);
+        }
+      }
+    }
+    
+    // Lejárat utáni értesítések
+    for (const doc of expired.docs) {
+      const userData = doc.data();
+      try {
+        await transport.sendMail({
+          from: 'Lomedu <info@lomedu.hu>',
+          to: userData.email,
+          subject: 'Előfizetésed lejárt - Újítsd meg most!',
+          text: `Kedves ${userData.name || 'Felhasználó'}!\n\nElőfizetésed lejárt. Újítsd meg most, hogy ne maradj le a prémium funkciókról!\n\nÚjítsd meg előfizetésedet: https://lomedu-user-web.web.app/subscription\n\nÜdvözlettel,\nA Lomedu csapat`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #DC2626;">Előfizetésed lejárt</h2>
+              <p>Kedves ${userData.name || 'Felhasználó'}!</p>
+              <p>Előfizetésed <strong>lejárt</strong>. Újítsd meg most, hogy ne maradj le a prémium funkciókról!</p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="https://lomedu-user-web.web.app/subscription" 
+                   style="background-color: #DC2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                  Újítsd meg előfizetésedet
+                </a>
+              </div>
+              <p>Üdvözlettel,<br>A Lomedu csapat</p>
+            </div>
+          `,
+        });
+        emailsSent++;
+      } catch (emailError) {
+        console.error(`Failed to send expiry email to ${userData.email}:`, emailError);
+      }
+    }
+    
+    console.log(`Subscription expiry check completed. ${emailsSent} emails sent.`);
+    return { success: true, emailsSent };
+    
+  } catch (error) {
+    console.error('Subscription expiry check error:', error);
+    throw new Error(`internal: Emlékeztető ellenőrzés sikertelen: ${error.message}`);
+  }
+});
+

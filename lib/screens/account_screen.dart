@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import '../services/email_notification_service.dart';
 import '../widgets/subscription_reminder_banner.dart';
 import '../widgets/enhanced_subscription_status_card.dart';
 import '../widgets/subscription_renewal_button.dart';
@@ -234,10 +235,18 @@ class AccountScreen extends StatelessWidget {
                                 },
                                 SetOptions(merge: true),
                               );
+                              // Email küldése
+                              final emailSent = await EmailNotificationService.sendTestEmail(
+                                testType: 'expiry_warning',
+                                daysLeft: 3,
+                              );
+                              
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content: Text('Előfizetés beállítva 3 napos lejáratra!')));
+                                    SnackBar(
+                                        content: Text(emailSent 
+                                          ? 'Előfizetés beállítva 3 napos lejáratra és email elküldve!'
+                                          : 'Előfizetés beállítva 3 napos lejáratra, de email küldése sikertelen!')));
                               }
                             } catch (e) {
                               if (context.mounted) {
@@ -306,10 +315,17 @@ class AccountScreen extends StatelessWidget {
                                 },
                                 SetOptions(merge: true),
                               );
+                              // Email küldése
+                              final emailSent = await EmailNotificationService.sendTestEmail(
+                                testType: 'expired',
+                              );
+                              
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content: Text('Előfizetés beállítva lejárt állapotra!')));
+                                    SnackBar(
+                                        content: Text(emailSent 
+                                          ? 'Előfizetés beállítva lejárt állapotra és email elküldve!'
+                                          : 'Előfizetés beállítva lejárt állapotra, de email küldése sikertelen!')));
                               }
                             } catch (e) {
                               if (context.mounted) {
