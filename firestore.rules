@@ -114,6 +114,15 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if false; // Cloud Functions service account-tal ír
     }
+    
+    // ────────── Webes fizetések (SimplePay) ──────────
+    match /web_payments/{paymentId} {
+      // Felhasználó csak a saját fizetéseit olvashatja
+      allow read: if request.auth != null && 
+        (isAdmin() || resource.data.userId == request.auth.uid);
+      // Írás csak Cloud Functions
+      allow write: if false; // Cloud Functions service account-tal ír
+    }
 
     // ────────── Device Change Codes ──────────
     match /device_change_codes/{codeId} {
