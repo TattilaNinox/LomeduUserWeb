@@ -123,8 +123,7 @@ class _EnhancedSubscriptionStatusCardState
                   ],
                 ),
               ),
-              // Státusz badge
-              _buildStatusBadge(),
+              // Státusz badge eltávolítva a fejlécből
             ],
           ),
 
@@ -140,6 +139,9 @@ class _EnhancedSubscriptionStatusCardState
             _buildSubscriptionDetails(),
             const SizedBox(height: 20),
           ],
+
+          // Ár információ
+          _buildPriceInfo(),
 
           // Hátralévő napok számláló
           if (_daysUntilExpiry != null && _daysUntilExpiry! > 0) ...[
@@ -321,6 +323,48 @@ class _EnhancedSubscriptionStatusCardState
               color: counterColor,
               fontWeight: FontWeight.w600,
               fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriceInfo() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: Colors.grey[700], size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Havi előfizetés',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[700],
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '4,350 Ft / hó',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+              ],
             ),
           ),
         ],

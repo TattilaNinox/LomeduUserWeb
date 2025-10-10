@@ -27,7 +27,7 @@ const SIMPLEPAY_CONFIG = {
 const PAYMENT_PLANS = {
   monthly_web: {
     name: 'Havi előfizetés',
-    price: 2990,
+    price: 4350,
     description: 'Teljes hozzáférés minden funkcióhoz',
     subscriptionDays: 30,
   },

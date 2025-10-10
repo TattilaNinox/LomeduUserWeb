@@ -28,7 +28,7 @@ class WebPaymentService {
     'monthly_web': PaymentPlan(
       id: 'monthly_web',
       name: 'Havi előfizetés',
-      price: 2990,
+      price: 4350,
       period: 'hó',
       description: 'Teljes hozzáférés minden funkcióhoz',
       features: [
