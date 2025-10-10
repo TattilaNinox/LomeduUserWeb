@@ -1,4 +1,5 @@
 const { onCall, onRequest } = require('firebase-functions/v2/https');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { setGlobalOptions } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
@@ -511,6 +512,21 @@ exports.sendSubscriptionReminder = onCall(async (request) => {
       throw new Error('invalid-argument: Felhasználó email címe nem található');
     }
 
+    // Duplikátum védelem - ellenőrizzük, hogy már küldtünk-e ilyen típusú emailt
+    const lastReminder = userData.lastReminder || {};
+    const reminderKey = reminderType === 'expiry_warning' ? 'expiry_warning' : 'expired';
+    
+    if (lastReminder[reminderKey]) {
+      const lastSent = lastReminder[reminderKey].toDate();
+      const hoursSinceLastSent = (Date.now() - lastSent.getTime()) / (1000 * 60 * 60);
+      
+      // Ha 23 órán belül már küldtünk ilyen emailt, ne küldjünk újat
+      if (hoursSinceLastSent < 23) {
+        console.log(`Skipping ${reminderType} email for ${userId} - already sent ${hoursSinceLastSent.toFixed(1)} hours ago`);
+        return { success: true, message: 'Email már elküldve (duplikátum védelem)', skipped: true };
+      }
+    }
+
     let subject, text, html;
     
     if (reminderType === 'expiry_warning') {
@@ -537,6 +553,15 @@ exports.sendSubscriptionReminder = onCall(async (request) => {
         html: html,
       });
       console.log(`Subscription reminder email sent to ${email}, type: ${reminderType}`);
+      
+      // Frissítsük a lastReminder mezőt, hogy ne küldjünk duplikát emailt
+      await db.collection('users').doc(userId).set({
+        lastReminder: {
+          [reminderKey]: admin.firestore.FieldValue.serverTimestamp(),
+        }
+      }, { merge: true });
+      
+      console.log(`Updated lastReminder.${reminderKey} for user ${userId}`);
     } catch (mailErr) {
       console.error('Email sending failed:', mailErr);
       throw new Error(`internal: Email küldése sikertelen: ${mailErr.message}`);
@@ -683,6 +708,142 @@ exports.handlePlayRtdn = onCall(async (request) => {
   } catch (error) {
     console.error('Handle Play RTDN error:', error);
     throw new Error(`internal: Handle Play RTDN failed: ${error.message}`);
+  }
+});
+
+// ============================================================================
+// ÜTEMEZETT ELŐFIZETÉSI EMLÉKEZTETŐK
+// ============================================================================
+
+/**
+ * Naponta futó ütemezett feladat - előfizetési emlékeztetők küldése
+ * Időzítés: Minden nap 02:00 (Europe/Budapest)
+ */
+exports.checkSubscriptionExpiryScheduled = onSchedule({
+  schedule: '0 2 * * *', // Cron: minden nap 02:00-kor
+  timeZone: 'Europe/Budapest',
+  memory: '256MiB',
+  timeoutSeconds: 540, // 9 perc (elegendő időt hagyunk az emaileknek)
+}, async (event) => {
+  console.log('Scheduled subscription expiry check started at:', new Date().toISOString());
+  
+  try {
+    const now = new Date();
+    const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+    
+    let emailsSent = 0;
+    let emailsSkipped = 0;
+    
+    // 1. LEJÁRAT ELŐTTI EMLÉKEZTETŐK (1-3 nap múlva lejáró előfizetések)
+    const expiringSoon = await db.collection('users')
+      .where('isSubscriptionActive', '==', true)
+      .where('subscriptionStatus', '==', 'premium')
+      .where('subscriptionEndDate', '>=', admin.firestore.Timestamp.fromDate(now))
+      .where('subscriptionEndDate', '<=', admin.firestore.Timestamp.fromDate(threeDaysFromNow))
+      .get();
+    
+    console.log(`Found ${expiringSoon.size} users with subscriptions expiring in 1-3 days`);
+    
+    for (const doc of expiringSoon.docs) {
+      const userData = doc.data();
+      const endDate = userData.subscriptionEndDate.toDate();
+      const daysLeft = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+      
+      if (daysLeft <= 3 && daysLeft > 0) {
+        // Ellenőrizzük a lastReminder mezőt
+        const lastReminder = userData.lastReminder || {};
+        
+        if (lastReminder.expiry_warning) {
+          const lastSent = lastReminder.expiry_warning.toDate();
+          const hoursSinceLastSent = (Date.now() - lastSent.getTime()) / (1000 * 60 * 60);
+          
+          if (hoursSinceLastSent < 23) {
+            console.log(`Skipping expiry_warning for ${doc.id} - already sent ${hoursSinceLastSent.toFixed(1)} hours ago`);
+            emailsSkipped++;
+            continue;
+          }
+        }
+        
+        // Email küldése
+        try {
+          await transport.sendMail({
+            from: 'Lomedu <info@lomedu.hu>',
+            to: userData.email,
+            subject: `Előfizetésed hamarosan lejár - ${daysLeft} nap hátra`,
+            text: `Kedves ${userData.name || 'Felhasználó'}!\n\nElőfizetésed ${daysLeft} nap múlva lejár. Ne maradj le a prémium funkciókról!\n\nÚjítsd meg előfizetésedet: https://lomedu-user-web.web.app/subscription\n\nÜdvözlettel,\nA Lomedu csapat`,
+            html: `<p>Kedves ${userData.name || 'Felhasználó'}!</p><p>Előfizetésed <strong>${daysLeft} nap múlva lejár</strong>. Ne maradj le a prémium funkciókról!</p><p><a href="https://lomedu-user-web.web.app/subscription">Újítsd meg előfizetésedet</a></p><p>Üdvözlettel,<br>A Lomedu csapat</p>`,
+          });
+          
+          // Frissítsük a lastReminder mezőt
+          await db.collection('users').doc(doc.id).set({
+            lastReminder: {
+              expiry_warning: admin.firestore.FieldValue.serverTimestamp(),
+            }
+          }, { merge: true });
+          
+          emailsSent++;
+          console.log(`Sent expiry_warning to ${userData.email} (${daysLeft} days left)`);
+        } catch (emailError) {
+          console.error(`Failed to send expiry_warning to ${userData.email}:`, emailError);
+        }
+      }
+    }
+    
+    // 2. LEJÁRT ELŐFIZETÉSEK ÉRTESÍTÉSE
+    const expired = await db.collection('users')
+      .where('isSubscriptionActive', '==', false)
+      .where('subscriptionStatus', '==', 'premium')
+      .where('subscriptionEndDate', '<', admin.firestore.Timestamp.fromDate(now))
+      .get();
+    
+    console.log(`Found ${expired.size} users with expired subscriptions`);
+    
+    for (const doc of expired.docs) {
+      const userData = doc.data();
+      
+      // Ellenőrizzük a lastReminder mezőt
+      const lastReminder = userData.lastReminder || {};
+      
+      if (lastReminder.expired) {
+        const lastSent = lastReminder.expired.toDate();
+        const hoursSinceLastSent = (Date.now() - lastSent.getTime()) / (1000 * 60 * 60);
+        
+        if (hoursSinceLastSent < 23) {
+          console.log(`Skipping expired notification for ${doc.id} - already sent ${hoursSinceLastSent.toFixed(1)} hours ago`);
+          emailsSkipped++;
+          continue;
+        }
+      }
+      
+      // Email küldése
+      try {
+        await transport.sendMail({
+          from: 'Lomedu <info@lomedu.hu>',
+          to: userData.email,
+          subject: 'Előfizetésed lejárt - Újítsd meg most!',
+          text: `Kedves ${userData.name || 'Felhasználó'}!\n\nElőfizetésed lejárt. Újítsd meg most, hogy ne maradj le a prémium funkciókról!\n\nÚjítsd meg előfizetésedet: https://lomedu-user-web.web.app/subscription\n\nÜdvözlettel,\nA Lomedu csapat`,
+          html: `<p>Kedves ${userData.name || 'Felhasználó'}!</p><p>Előfizetésed <strong>lejárt</strong>. Újítsd meg most, hogy ne maradj le a prémium funkciókról!</p><p><a href="https://lomedu-user-web.web.app/subscription">Újítsd meg előfizetésedet</a></p><p>Üdvözlettel,<br>A Lomedu csapat</p>`,
+        });
+        
+        // Frissítsük a lastReminder mezőt
+        await db.collection('users').doc(doc.id).set({
+          lastReminder: {
+            expired: admin.firestore.FieldValue.serverTimestamp(),
+          }
+        }, { merge: true });
+        
+        emailsSent++;
+        console.log(`Sent expired notification to ${userData.email}`);
+      } catch (emailError) {
+        console.error(`Failed to send expired notification to ${userData.email}:`, emailError);
+      }
+    }
+    
+    console.log(`Scheduled subscription expiry check completed. ${emailsSent} emails sent, ${emailsSkipped} skipped (duplicates).`);
+    
+  } catch (error) {
+    console.error('Scheduled subscription expiry check error:', error);
+    throw error;
   }
 });
 
