@@ -80,17 +80,20 @@ class AccountScreen extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // Megújítási gomb (csak havi)
-                SubscriptionRenewalButton(
-                  showAsCard: false,
-                  onPaymentInitiated: () {
-                    // TODO: Navigálás a fizetési oldalra
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Fizetési oldal hamarosan elérhető'),
-                      ),
-                    );
-                  },
+                // Megújítási gomb (csak havi) - teljes szélességű, kiemelt
+                Container(
+                  width: double.infinity,
+                  child: SubscriptionRenewalButton(
+                    showAsCard: false,
+                    onPaymentInitiated: () {
+                      // TODO: Navigálás a fizetési oldalra
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Fizetési oldal hamarosan elérhető'),
+                        ),
+                      );
+                    },
+                  ),
                 ),
 
                 const SizedBox(height: 20),

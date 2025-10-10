@@ -270,9 +270,35 @@ class _WebSubscriptionScreenState extends State<WebSubscriptionScreen> {
                   // Előfizetési státusz (2/3 szélesség)
                   Expanded(
                     flex: 2,
-                    child: WebSubscriptionStatusCard(
-                      userData: _userData,
-                      onRefresh: _refreshData,
+                    child: Column(
+                      children: [
+                        WebSubscriptionStatusCard(
+                          userData: _userData,
+                          onRefresh: _refreshData,
+                        ),
+                        const SizedBox(height: 20),
+                        // Megújítási gomb a státusz kártya alatt
+                        Container(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              // TODO: Navigálás a fizetési oldalra
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Fizetési oldal hamarosan elérhető'),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.payment, size: 18),
+                            label: const Text('Előfizetés megújítása'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red[600],
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 

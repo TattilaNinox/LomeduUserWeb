@@ -145,8 +145,7 @@ class _EnhancedSubscriptionStatusCardState
             const SizedBox(height: 20),
           ],
 
-          // Akció gombok
-          _buildActionButtons(),
+          // Akció gombok eltávolítva - a megújítási gombok a fő képernyőn jelennek meg
         ],
       ),
     );
