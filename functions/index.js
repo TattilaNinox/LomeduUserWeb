@@ -336,6 +336,11 @@ exports.processWebPaymentWebhook = onCall(async (request) => {
     // Felhasználói dokumentum frissítése
     await db.collection('users').doc(userId).set(subscriptionData, { merge: true });
     
+    // Új előfizetés esetén töröljük a lastReminder mezőket, hogy újra küldhessünk emailt
+    await db.collection('users').doc(userId).update({
+      lastReminder: admin.firestore.FieldValue.delete(),
+    });
+    
     // Fizetési rekord frissítése
     await paymentRef.update({
       status: 'completed',
@@ -470,6 +475,11 @@ exports.simplepayWebhook = onRequest(async (req, res) => {
     // Felhasználói dokumentum frissítése
     await db.collection('users').doc(userId).set(subscriptionData, { merge: true });
     
+    // Új előfizetés esetén töröljük a lastReminder mezőket, hogy újra küldhessünk emailt
+    await db.collection('users').doc(userId).update({
+      lastReminder: admin.firestore.FieldValue.delete(),
+    });
+    
     // Fizetési rekord frissítése
     await paymentRef.update({
       status: 'completed',
@@ -517,14 +527,8 @@ exports.sendSubscriptionReminder = onCall(async (request) => {
     const reminderKey = reminderType === 'expiry_warning' ? 'expiry_warning' : 'expired';
     
     if (lastReminder[reminderKey]) {
-      const lastSent = lastReminder[reminderKey].toDate();
-      const hoursSinceLastSent = (Date.now() - lastSent.getTime()) / (1000 * 60 * 60);
-      
-      // Ha 23 órán belül már küldtünk ilyen emailt, ne küldjünk újat
-      if (hoursSinceLastSent < 23) {
-        console.log(`Skipping ${reminderType} email for ${userId} - already sent ${hoursSinceLastSent.toFixed(1)} hours ago`);
-        return { success: true, message: 'Email már elküldve (duplikátum védelem)', skipped: true };
-      }
+      console.log(`Skipping ${reminderType} email for ${userId} - already sent on ${lastReminder[reminderKey].toDate().toISOString()}`);
+      return { success: true, message: 'Email már elküldve (duplikátum védelem)', skipped: true };
     }
 
     let subject, text, html;
@@ -754,14 +758,9 @@ exports.checkSubscriptionExpiryScheduled = onSchedule({
         const lastReminder = userData.lastReminder || {};
         
         if (lastReminder.expiry_warning) {
-          const lastSent = lastReminder.expiry_warning.toDate();
-          const hoursSinceLastSent = (Date.now() - lastSent.getTime()) / (1000 * 60 * 60);
-          
-          if (hoursSinceLastSent < 23) {
-            console.log(`Skipping expiry_warning for ${doc.id} - already sent ${hoursSinceLastSent.toFixed(1)} hours ago`);
-            emailsSkipped++;
-            continue;
-          }
+          console.log(`Skipping expiry_warning for ${doc.id} - already sent on ${lastReminder.expiry_warning.toDate().toISOString()}`);
+          emailsSkipped++;
+          continue;
         }
         
         // Email küldése
@@ -805,14 +804,9 @@ exports.checkSubscriptionExpiryScheduled = onSchedule({
       const lastReminder = userData.lastReminder || {};
       
       if (lastReminder.expired) {
-        const lastSent = lastReminder.expired.toDate();
-        const hoursSinceLastSent = (Date.now() - lastSent.getTime()) / (1000 * 60 * 60);
-        
-        if (hoursSinceLastSent < 23) {
-          console.log(`Skipping expired notification for ${doc.id} - already sent ${hoursSinceLastSent.toFixed(1)} hours ago`);
-          emailsSkipped++;
-          continue;
-        }
+        console.log(`Skipping expired notification for ${doc.id} - already sent on ${lastReminder.expired.toDate().toISOString()}`);
+        emailsSkipped++;
+        continue;
       }
       
       // Email küldése
