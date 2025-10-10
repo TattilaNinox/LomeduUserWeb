@@ -238,6 +238,8 @@ class AccountScreen extends StatelessWidget {
                                   'lastPaymentDate':
                                       FieldValue.serverTimestamp(),
                                   'updatedAt': FieldValue.serverTimestamp(),
+                                  // Töröljük a lastReminder mezőt, hogy újra küldhessünk emailt
+                                  'lastReminder': FieldValue.delete(),
                                 },
                                 SetOptions(merge: true),
                               );
@@ -322,6 +324,8 @@ class AccountScreen extends StatelessWidget {
                                   'lastPaymentDate':
                                       FieldValue.serverTimestamp(),
                                   'updatedAt': FieldValue.serverTimestamp(),
+                                  // Töröljük a lastReminder mezőt, hogy újra küldhessünk emailt
+                                  'lastReminder': FieldValue.delete(),
                                 },
                                 SetOptions(merge: true),
                               );
