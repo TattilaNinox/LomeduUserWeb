@@ -13,12 +13,11 @@ class RegistrationScreen extends StatefulWidget {
 }
 
 class _RegistrationScreenState extends State<RegistrationScreen> {
-  final _lastNameController = TextEditingController(text: 'Tölgyesi');
-  final _firstNameController = TextEditingController(text: 'Attila');
-  final _emailController =
-      TextEditingController(text: 'attila.ninox@gmail.com');
-  final _passwordController = TextEditingController(text: 'Tolgyesi88');
-  final _confirmPasswordController = TextEditingController(text: 'Tolgyesi88');
+  final _lastNameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   String? _errorMessage;
   bool _isLoading = false;
 

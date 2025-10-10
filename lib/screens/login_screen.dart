@@ -19,11 +19,9 @@ class LoginScreen extends StatefulWidget {
 /// A `LoginScreen` widget állapotát kezelő osztály.
 class LoginScreenState extends State<LoginScreen> {
   // A beviteli mezők vezérlői (controller), amelyekkel elérhető és módosítható
-  // a mezők tartalma. A fejlesztés megkönnyítése érdekében előre ki vannak
-  // töltve teszt adatokkal.
-  final _emailController =
-      TextEditingController(text: 'tattila.ninox@gmail.com');
-  final _passwordController = TextEditingController(text: 'Tolgyesi88');
+  // a mezők tartalma.
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   // Egy állapotváltozó a bejelentkezési hibaüzenetek tárolására.
   // Ha értéke `null`, nem jelenik meg hibaüzenet.
