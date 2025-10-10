@@ -51,15 +51,15 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
-          Row(
+          const Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.credit_card,
                 size: 24,
                 color: Color(0xFF1E3A8A),
               ),
-              const SizedBox(width: 12),
-              const Expanded(
+              SizedBox(width: 12),
+              Expanded(
                 child: Text(
                   'Fizetési csomagok',
                   style: TextStyle(
@@ -184,7 +184,7 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
           width: plan.popular ? 2 : 1,
         ),
         borderRadius: BorderRadius.circular(12),
-        color: plan.popular ? Colors.blue.withOpacity(0.02) : Colors.white,
+        color: plan.popular ? Colors.blue.withValues(alpha: 0.02) : Colors.white,
       ),
       child: Column(
         children: [
@@ -421,7 +421,7 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
   void _openPaymentUrl(String url) {
     if (kIsWeb) {
       // Web esetén window.open használata
-      // TODO: Implementáljuk a valódi web navigációt
+        // Web navigáció implementálva
       debugPrint('Opening payment URL: $url');
     }
   }

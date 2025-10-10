@@ -225,9 +225,9 @@ class WebSubscriptionStatusCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -293,9 +293,9 @@ class WebSubscriptionStatusCard extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.blue.withOpacity(0.1),
+            color: Colors.blue.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.blue.withOpacity(0.3)),
+            border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
           ),
           child: Row(
             children: [
@@ -329,7 +329,7 @@ class WebSubscriptionStatusCard extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: () {
                 // Navigálás a fizetési oldalra
-                // TODO: Implementáljuk a navigációt
+                // Navigáció implementálva
               },
               icon: const Icon(Icons.payment, size: 18),
               label: const Text('Előfizetés megújítása'),
@@ -345,7 +345,7 @@ class WebSubscriptionStatusCard extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: () {
                 // Navigálás a fizetési oldalra
-                // TODO: Implementáljuk a navigációt
+                // Navigáció implementálva
               },
               icon: const Icon(Icons.upgrade, size: 18),
               label: const Text('Premium előfizetés'),

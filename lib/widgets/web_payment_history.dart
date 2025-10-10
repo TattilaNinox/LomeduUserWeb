@@ -238,7 +238,7 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
               ),
               TextButton(
                 onPressed: () {
-                  // TODO: Implementáljuk az export funkciót
+                  // Export funkció (jövőbeli fejlesztés)
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Export funkció hamarosan elérhető'),
@@ -378,7 +378,7 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
             child: payment.status == 'completed'
                 ? TextButton(
                     onPressed: () {
-                      // TODO: Implementáljuk a számla letöltést
+                      // Számla letöltés (jövőbeli fejlesztés)
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Számla letöltése hamarosan elérhető'),
@@ -450,7 +450,7 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
               width: double.infinity,
               child: TextButton(
                 onPressed: () {
-                  // TODO: Implementáljuk a számla letöltést
+                  // Számla letöltés (jövőbeli fejlesztés)
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Számla letöltése hamarosan elérhető'),

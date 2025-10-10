@@ -22,7 +22,7 @@ class _QuizViewerDualState extends State<QuizViewerDual> {
   int _currentQuestionIndex = 0;
   List<int> _selectedIndices = [];
   bool _isAnswered = false;
-  List<QuestionResult> _questionResults = [];
+  final List<QuestionResult> _questionResults = [];
   String? _noteContentPreview;
   bool _isLoadingPreview = false;
 

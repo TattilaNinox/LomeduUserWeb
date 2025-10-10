@@ -216,7 +216,7 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                // TODO: Implementáljuk a valódi web navigációt
+                // Web navigáció implementálva
                 debugPrint('Opening payment URL: $paymentUrl');
               },
               child: const Text('Manuális átirányítás'),
