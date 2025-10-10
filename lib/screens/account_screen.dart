@@ -401,6 +401,8 @@ class AccountScreen extends StatelessWidget {
                             'subscription': null,
                             'lastPaymentDate': null,
                             'updatedAt': FieldValue.serverTimestamp(),
+                            // Töröljük a lastReminder mezőt, hogy újra küldhessünk emailt
+                            'lastReminder': FieldValue.delete(),
                           },
                           SetOptions(merge: true),
                         );
