@@ -106,6 +106,7 @@ class AccountScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
+                  // Teszt fizetés gomb
                   ElevatedButton(
                     onPressed: () async {
                       final confirmed = await showDialog<bool>(
@@ -175,6 +176,221 @@ class AccountScreen extends StatelessWidget {
                       foregroundColor: Colors.white,
                     ),
                     child: const Text('Előfizetés frissítése (teszt)'),
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  // Email teszt gombok
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) {
+                                    return AlertDialog(
+                                      title: const Text('Lejárat előtti email teszt'),
+                                      content: const Text(
+                                          'Ez beállítja az előfizetést 3 napos lejáratra, hogy tesztelhessük a lejárat előtti email értesítéseket.'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(false),
+                                          child: const Text('Mégse'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(true),
+                                          child: const Text('Beállítás'),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ) ??
+                                false;
+                            if (!confirmed) return;
+
+                            final now = DateTime.now();
+                            final expiry = now.add(const Duration(days: 3));
+                            try {
+                              await FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(user.uid)
+                                  .set(
+                                {
+                                  'isSubscriptionActive': true,
+                                  'subscriptionStatus': 'premium',
+                                  'subscriptionEndDate': Timestamp.fromDate(expiry),
+                                  'subscription': {
+                                    'status': 'ACTIVE',
+                                    'productId': 'test_web_monthly',
+                                    'purchaseToken': 'test_expiry_3_days',
+                                    'endTime': expiry.toIso8601String(),
+                                    'lastUpdateTime': now.toIso8601String(),
+                                    'source': 'test_simulation',
+                                  },
+                                  'lastPaymentDate': FieldValue.serverTimestamp(),
+                                  'updatedAt': FieldValue.serverTimestamp(),
+                                },
+                                SetOptions(merge: true),
+                              );
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text('Előfizetés beállítva 3 napos lejáratra!')));
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                    content: Text('Hiba: $e')));
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange[600],
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('3 napos lejárat'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) {
+                                    return AlertDialog(
+                                      title: const Text('Lejárat utáni email teszt'),
+                                      content: const Text(
+                                          'Ez beállítja az előfizetést lejárt állapotra, hogy tesztelhessük a lejárat utáni email értesítéseket.'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(false),
+                                          child: const Text('Mégse'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(true),
+                                          child: const Text('Beállítás'),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ) ??
+                                false;
+                            if (!confirmed) return;
+
+                            final now = DateTime.now();
+                            final expiredDate = now.subtract(const Duration(days: 1));
+                            try {
+                              await FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(user.uid)
+                                  .set(
+                                {
+                                  'isSubscriptionActive': false,
+                                  'subscriptionStatus': 'expired',
+                                  'subscriptionEndDate': Timestamp.fromDate(expiredDate),
+                                  'subscription': {
+                                    'status': 'EXPIRED',
+                                    'productId': 'test_web_monthly',
+                                    'purchaseToken': 'test_expired',
+                                    'endTime': expiredDate.toIso8601String(),
+                                    'lastUpdateTime': now.toIso8601String(),
+                                    'source': 'test_simulation',
+                                  },
+                                  'lastPaymentDate': FieldValue.serverTimestamp(),
+                                  'updatedAt': FieldValue.serverTimestamp(),
+                                },
+                                SetOptions(merge: true),
+                              );
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text('Előfizetés beállítva lejárt állapotra!')));
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                    content: Text('Hiba: $e')));
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red[600],
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Lejárt állapot'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  // Reset gomb
+                  ElevatedButton(
+                    onPressed: () async {
+                      final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) {
+                              return AlertDialog(
+                                title: const Text('Teszt állapot visszaállítása'),
+                                content: const Text(
+                                    'Ez visszaállítja az előfizetést ingyenes állapotra.'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(ctx).pop(false),
+                                    child: const Text('Mégse'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () =>
+                                        Navigator.of(ctx).pop(true),
+                                    child: const Text('Visszaállítás'),
+                                  ),
+                                ],
+                              );
+                            },
+                          ) ??
+                          false;
+                      if (!confirmed) return;
+
+                      try {
+                        await FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(user.uid)
+                            .set(
+                          {
+                            'isSubscriptionActive': false,
+                            'subscriptionStatus': 'free',
+                            'subscriptionEndDate': null,
+                            'subscription': null,
+                            'lastPaymentDate': null,
+                            'updatedAt': FieldValue.serverTimestamp(),
+                          },
+                          SetOptions(merge: true),
+                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Előfizetés visszaállítva ingyenes állapotra!')));
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text('Hiba: $e')));
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue[600],
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Reset (ingyenes állapot)'),
                   ),
                 ],
               ],
