@@ -14,38 +14,43 @@ class DeviceFingerprint {
       final stored = prefs.getString(key);
 
       if (stored != null && stored.isNotEmpty) {
+        print('DeviceFingerprint: Using stored fingerprint: $stored');
         return stored; // VISSZAADNI a mentett értéket!
       }
 
       // Új fingerprint generálása - böngésző jellemzők alapján
       final fingerprint = await _generateStableWebFingerprint();
       await prefs.setString(key, fingerprint);
+      print(
+          'DeviceFingerprint: Generated new stable fingerprint: $fingerprint');
       return fingerprint;
     } catch (e) {
       // Hiba esetén is új generálás
-      return await _generateStableWebFingerprint();
+      final fingerprint = await _generateStableWebFingerprint();
+      print('DeviceFingerprint: Generated fallback fingerprint: $fingerprint');
+      return fingerprint;
     }
   }
 
   /// Stabil web fingerprint generálása
   static Future<String> _generateStableWebFingerprint() async {
     try {
-      // Böngésző jellemzők összegyűjtése
+      // Stabil böngésző jellemzők összegyűjtése
       final timezone = DateTime.now().timeZoneOffset.inHours;
       const language = 'hu'; // Magyar nyelv
       const platform = 'web';
+      const userAgent = 'flutter_web'; // Stabil érték
 
-      // Kombinált string
-      final combined =
-          '${platform}_${timezone}_${language}_${DateTime.now().millisecondsSinceEpoch}';
+      // Kombinált string - NINCS timestamp benne!
+      final combined = '${platform}_${timezone}_${language}_${userAgent}';
 
       // Hash generálása
       final hash = _simpleHash(combined);
 
       return 'web_$hash';
     } catch (e) {
-      // Hiba esetén egyszerű generálás
-      return 'web_${DateTime.now().millisecondsSinceEpoch}';
+      // Hiba esetén is stabil generálás
+      return 'web_${_simpleHash('flutter_web_stable')}';
     }
   }
 
@@ -84,6 +89,19 @@ class DeviceFingerprint {
       return await getIOSFingerprint();
     } else {
       return 'unknown_${DateTime.now().millisecondsSinceEpoch}';
+    }
+  }
+
+  /// Webes ujjlenyomat törlése (új generáláshoz)
+  static Future<void> clearWebFingerprint() async {
+    if (kIsWeb) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('device_fingerprint');
+        print('DeviceFingerprint: Cleared stored fingerprint');
+      } catch (e) {
+        print('DeviceFingerprint: Failed to clear fingerprint: $e');
+      }
     }
   }
 }

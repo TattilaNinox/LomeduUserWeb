@@ -27,17 +27,28 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   /// ami megadja a Firebase-nek a visszatérési URL-t, enélkül a hívás hibát dobhat vagy lefagyhat.
   Future<void> _sendVerificationEmail(User user) async {
     try {
+      debugPrint("=== EMAIL VERIFICATION DEBUG ===");
+      debugPrint("User email: ${user.email}");
+      debugPrint("User emailVerified: ${user.emailVerified}");
+
       if (kIsWeb) {
+        debugPrint("Sending email verification for web...");
         // Weben kötelező megadni a visszatérési URL-t.
         await user.sendEmailVerification(ActionCodeSettings(
           // Ezt az URL-t a Firebase Hosting-ban is be kell állítani, ha van.
           url: 'https://lomedu-user-web.web.app/notes',
           handleCodeInApp: true,
         ));
+        debugPrint("Email verification sent successfully for web");
       } else {
+        debugPrint("Sending email verification for mobile...");
         // Mobilon nincs szükség extra beállításokra.
         await user.sendEmailVerification();
+        debugPrint("Email verification sent successfully for mobile");
       }
+    } on TypeError catch (e) {
+      // MFA related TypeError kezelése
+      debugPrint("MFA TypeError elkapva (nem kritikus): $e");
     } catch (e) {
       // Hiba esetén naplózzuk, de a felhasználót továbbengedjük a verify screen-re,
       // ahol újra tudja küldeni.
@@ -91,8 +102,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           "2. Firebase Auth felhasználó sikeresen létrehozva: ${user.uid}");
 
       // 2. Verifikációs email küldése AZONNAL
-      await _sendVerificationEmail(user);
-      debugPrint("3. Email megerősítő függvény lefutott.");
+      try {
+        await _sendVerificationEmail(user);
+        debugPrint("3. Email megerősítő függvény lefutott.");
+      } catch (e) {
+        debugPrint("3. Email megerősítő hiba (de folytatjuk): $e");
+        // Folytatjuk a regisztrációt, még ha az email küldés hibás is
+      }
 
       // 3. Próbaidőszak kiszámítása (most + 5 nap)
       final now = DateTime.now();
@@ -100,6 +116,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       debugPrint("4. Próbaidőszak adatai kiszámítva.");
 
       // 4. Firestore adatok összeállítása a specifikáció szerint
+      // Először töröljük a korábbi ujjlenyomatot, hogy új stabilat generáljon
+      await DeviceFingerprint.clearWebFingerprint();
+      final deviceFingerprint = await DeviceFingerprint.getCurrentFingerprint();
+      debugPrint('=== REGISTRATION DEBUG ===');
+      debugPrint('Generated Device Fingerprint: $deviceFingerprint');
+
       final newUserDoc = {
         'email': user.email,
         'firstName': _firstNameController.text.trim(),
@@ -113,8 +135,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         'freeTrialStartDate': Timestamp.fromDate(now),
         'freeTrialEndDate': Timestamp.fromDate(trialEnd),
         'deviceRegistrationDate': Timestamp.fromDate(now),
-        'authorizedDeviceFingerprint':
-            await DeviceFingerprint.getCurrentFingerprint(),
+        'authorizedDeviceFingerprint': deviceFingerprint,
         'isActive': true,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -131,7 +152,29 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       // 6. UI: irányítás a "Ellenőrizd az emailed!" képernyőre
       if (mounted) {
         debugPrint("7. Átirányítás a /verify-email oldalra...");
-        context.go('/verify-email');
+        // Kis késleltetés, hogy a DeviceChecker ne zavarjon
+        Future.delayed(Duration(milliseconds: 500), () {
+          if (mounted) {
+            try {
+              context.go('/verify-email');
+              debugPrint("8. Sikeres átirányítás a /verify-email oldalra");
+            } catch (e) {
+              debugPrint("8. Átirányítási hiba: $e");
+              // Fallback: próbáljuk meg újra
+              Future.delayed(Duration(milliseconds: 1000), () {
+                if (mounted) {
+                  try {
+                    context.go('/verify-email');
+                    debugPrint("9. Második átirányítási kísérlet sikeres");
+                  } catch (e2) {
+                    debugPrint(
+                        "9. Második átirányítási kísérlet is hibás: $e2");
+                  }
+                }
+              });
+            }
+          }
+        });
       }
     } on FirebaseAuthException catch (e) {
       debugPrint("!!! HIBA (FirebaseAuthException): ${e.code} - ${e.message}");

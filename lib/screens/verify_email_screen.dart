@@ -20,9 +20,17 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     _timer = Timer.periodic(const Duration(seconds: 5), (_) async {
       final u = FirebaseAuth.instance.currentUser;
       if (u == null) return;
-      await u.reload();
-      if (u.emailVerified && mounted) {
-        context.go('/notes');
+
+      try {
+        await u.reload();
+        final reloadedUser = FirebaseAuth.instance.currentUser;
+        if (reloadedUser != null && reloadedUser.emailVerified && mounted) {
+          context.go('/notes');
+        }
+      } on TypeError catch (e) {
+        debugPrint("MFA TypeError during reload (nem kritikus): $e");
+      } catch (e) {
+        debugPrint("User reload hiba: $e");
       }
     });
   }
@@ -37,9 +45,19 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     if (_cooldown > 0) return;
     final u = FirebaseAuth.instance.currentUser;
     if (u == null) return;
-    await u.sendEmailVerification();
-    setState(() => _cooldown = 30);
-    _tickCooldown();
+
+    try {
+      await u.sendEmailVerification();
+      setState(() => _cooldown = 30);
+      _tickCooldown();
+    } on TypeError catch (e) {
+      debugPrint("MFA TypeError during resend (nem kritikus): $e");
+      // Folytatjuk a cooldown-t, mintha sikeres lett volna
+      setState(() => _cooldown = 30);
+      _tickCooldown();
+    } catch (e) {
+      debugPrint("Email resend hiba: $e");
+    }
   }
 
   void _tickCooldown() {

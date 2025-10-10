@@ -1,7 +1,8 @@
 import 'package:cloud_functions/cloud_functions.dart';
 
 class DeviceChangeService {
-  static final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(region: 'europe-west1');
+  static final FirebaseFunctions _functions =
+      FirebaseFunctions.instanceFor(region: 'europe-west1');
 
   /// Eszközváltási kód igénylése
   static Future<Map<String, dynamic>> requestDeviceChange(String email) async {
@@ -21,14 +22,22 @@ class DeviceChangeService {
     required String newFingerprint,
   }) async {
     try {
+      print('=== DEVICE CHANGE DEBUG ===');
+      print('Email: $email');
+      print('Code: $code');
+      print('New Fingerprint: $newFingerprint');
+
       final callable = _functions.httpsCallable('verifyAndChangeDevice');
       final result = await callable.call({
         'email': email.trim().toLowerCase(),
         'code': code.trim(),
         'fingerprint': newFingerprint,
       });
+
+      print('Cloud Function result: ${result.data}');
       return {'success': true, 'data': result.data};
     } catch (e) {
+      print('Cloud Function error: $e');
       return {'success': false, 'error': e.toString()};
     }
   }

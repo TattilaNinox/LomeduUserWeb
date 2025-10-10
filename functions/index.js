@@ -89,20 +89,34 @@ exports.verifyAndChangeDevice = onCall(async (request) => {
   }
 
   try {
+    // A Firebase Auth UID-t használjuk a dokumentum ID-ként
+    const userData = userDoc.data();
+    const firebaseAuthUid = userData.firebaseAuthUid || userDoc.id;
+    
+    console.log(`Found user with email ${email}, Firestore ID: ${userDoc.id}, Firebase Auth UID: ${firebaseAuthUid}`);
+    
+    // A Firebase Auth UID-val frissítjük a dokumentumot
+    const targetDoc = db.collection('users').doc(firebaseAuthUid);
+    
     // Először frissítjük a fingerprint-et
-    await userDoc.ref.set({
+    await targetDoc.set({
       authorizedDeviceFingerprint: newFingerprint,
       deviceChangeDate: admin.firestore.FieldValue.serverTimestamp(),
       deviceChange: admin.firestore.FieldValue.delete(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
     
-    console.log(`Device changed for user ${userDoc.id}, new fingerprint: ${newFingerprint}`);
+    console.log(`Device changed for user ${firebaseAuthUid}, new fingerprint: ${newFingerprint}`);
     
-    // Majd invalidáljuk a tokeneket
+    // Majd invalidáljuk a tokeneket - Firebase Auth user ID-t használunk
     try {
-      await admin.auth().revokeRefreshTokens(userDoc.id);
-      console.log(`Refresh tokens revoked for user ${userDoc.id}`);
+      // A Firestore user dokumentumban keressük a Firebase Auth UID-t
+      const userData = userDoc.data();
+      const firebaseAuthUid = userData.firebaseAuthUid || userDoc.id; // Fallback a Firestore ID-re
+      
+      console.log(`Attempting to revoke tokens for Firebase Auth UID: ${firebaseAuthUid}`);
+      await admin.auth().revokeRefreshTokens(firebaseAuthUid);
+      console.log(`Refresh tokens revoked for user ${firebaseAuthUid}`);
     } catch (revokeError) {
       console.error('Failed to revoke refresh tokens:', revokeError);
       // Folytatjuk, még ha a token invalidálás sikertelen is

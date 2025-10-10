@@ -32,6 +32,10 @@ class LoginScreenState extends State<LoginScreen> {
   /// A bejelentkezési folyamatot kezelő aszinkron metódus.
   Future<void> _signIn() async {
     try {
+      debugPrint('=== BEJELENTKEZÉS KEZDETE ===');
+      debugPrint('Email: ${_emailController.text.trim()}');
+      debugPrint('Password length: ${_passwordController.text.trim().length}');
+
       setState(() {
         _errorMessage = null;
       });
@@ -39,11 +43,13 @@ class LoginScreenState extends State<LoginScreen> {
       // Megpróbál bejelentkezni a Firebase Authentication szolgáltatással,
       // az e-mail és jelszó mezők aktuális értékét használva.
       // A `.trim()` metódus eltávolítja a felesleges szóközöket a szöveg elejéről és végéről.
+      debugPrint('Firebase Auth bejelentkezés megkezdése...');
       final userCredential =
           await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
+      debugPrint('Firebase Auth bejelentkezés sikeres!');
 
       // Ellenőrizzük, hogy a felhasználó aktív-e
       if (userCredential.user != null) {
@@ -56,6 +62,14 @@ class LoginScreenState extends State<LoginScreen> {
         final authorizedDeviceFingerprint =
             userDoc.data()?['authorizedDeviceFingerprint'] as String?;
 
+        // DEBUG: Eszköz ujjlenyomatok kiírása
+        debugPrint('=== LOGIN DEBUG ===');
+        debugPrint('Firebase Auth UID: ${userCredential.user!.uid}');
+        debugPrint('Firestore Document ID: ${userDoc.id}');
+        debugPrint('UserType: $userType');
+        debugPrint(
+            'Authorized Device Fingerprint: $authorizedDeviceFingerprint');
+
         // Admin felhasználók eszköz-függetlenül beléphetnek
         final isAdmin = userType.toLowerCase() == 'admin';
 
@@ -63,8 +77,13 @@ class LoginScreenState extends State<LoginScreen> {
         if (!isAdmin &&
             authorizedDeviceFingerprint != null &&
             authorizedDeviceFingerprint.isNotEmpty) {
+          // NE töröljük a fingerprint-et, használjuk a mentettet
           final currentFingerprint =
               await DeviceFingerprint.getCurrentFingerprint();
+
+          debugPrint('Current Device Fingerprint: $currentFingerprint');
+          debugPrint(
+              'Match: ${currentFingerprint == authorizedDeviceFingerprint}');
 
           if (currentFingerprint != authorizedDeviceFingerprint) {
             // Ha van regisztrált eszköz, de ez nem az, akkor eszközváltásra irányítjuk
@@ -90,9 +109,13 @@ class LoginScreenState extends State<LoginScreen> {
 
         // Sikeres bejelentkezés után ellenőrzi, hogy a widget még a fán van-e
         // (`mounted` tulajdonság), mielőtt navigálna.
+        debugPrint('Bejelentkezés sikeres, navigálás a /notes oldalra...');
         if (mounted) {
           // 2FA nincs a felhasználói webben: közvetlenül a főoldalra navigálunk
           context.go('/notes');
+          debugPrint('Navigálás sikeres!');
+        } else {
+          debugPrint('Widget nincs mounted, navigálás nem lehetséges');
         }
       }
     } on FirebaseAuthException catch (e) {
@@ -102,6 +125,11 @@ class LoginScreenState extends State<LoginScreen> {
       // hibaüzenetet, ami ezután megjelenik a UI-n.
       setState(() {
         _errorMessage = e.message;
+      });
+    } on TypeError catch (e) {
+      debugPrint("MFA TypeError during login (nem kritikus): $e");
+      setState(() {
+        _errorMessage = 'Bejelentkezési hiba történt. Kérlek próbáld újra.';
       });
     } catch (e) {
       setState(() {

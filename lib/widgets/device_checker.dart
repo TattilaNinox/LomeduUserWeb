@@ -48,18 +48,24 @@ class _DeviceCheckerState extends State<DeviceChecker>
         // Nincs még email-verifikálva → átirányítjuk a verify képernyőre, de
         // várunk, amíg a GoRouter biztosan elérhető lesz.
         _cleanup();
-        Future.delayed(Duration.zero, () {
+        // Várunk, amíg a GoRouter biztosan elérhető lesz
+        Future.delayed(Duration(milliseconds: 1000), () {
           if (!mounted) return;
           try {
             context.go('/verify-email');
+            debugPrint('DeviceChecker: Successfully navigated to verify-email');
           } catch (e) {
-            // Ha még mindig nincs GoRouter, várunk még egy kicsit
-            Future.delayed(Duration(milliseconds: 100), () {
+            debugPrint('DeviceChecker: Navigation failed: $e');
+            // Ha még mindig nem megy, várunk még
+            Future.delayed(Duration(milliseconds: 2000), () {
               if (mounted) {
                 try {
                   context.go('/verify-email');
+                  debugPrint(
+                      'DeviceChecker: Second navigation attempt successful');
                 } catch (e2) {
-                  debugPrint('DeviceChecker: Navigation failed: $e2');
+                  debugPrint(
+                      'DeviceChecker: Second navigation attempt failed: $e2');
                 }
               }
             });
@@ -122,6 +128,9 @@ class _DeviceCheckerState extends State<DeviceChecker>
       _periodicCheckTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
         _checkDevicePeriodically();
       });
+    } on TypeError catch (e) {
+      debugPrint(
+          'DeviceChecker: MFA TypeError during initialization (nem kritikus): $e');
     } catch (error) {
       debugPrint('DeviceChecker: Error initializing device check: $error');
     }
@@ -182,6 +191,14 @@ class _DeviceCheckerState extends State<DeviceChecker>
       final authorizedFingerprint =
           data?['authorizedDeviceFingerprint'] as String?;
 
+      // Ha van deviceChangeDate, akkor frissítsük a current fingerprint-et
+      final deviceChangeDate = data?['deviceChangeDate'];
+      if (deviceChangeDate != null) {
+        debugPrint(
+            'DeviceChecker: Device change detected, refreshing current fingerprint');
+        _refreshCurrentFingerprint();
+      }
+
       debugPrint(
           'DeviceChecker: Current fingerprint: $_currentFingerprint, Allowed: $authorizedFingerprint');
 
@@ -196,6 +213,17 @@ class _DeviceCheckerState extends State<DeviceChecker>
       }
     } catch (error) {
       debugPrint('DeviceChecker: Error checking device: $error');
+    }
+  }
+
+  /// Frissíti a jelenlegi eszköz ujjlenyomatát
+  Future<void> _refreshCurrentFingerprint() async {
+    try {
+      _currentFingerprint = await DeviceFingerprint.getCurrentFingerprint();
+      debugPrint(
+          'DeviceChecker: Refreshed current fingerprint: $_currentFingerprint');
+    } catch (error) {
+      debugPrint('DeviceChecker: Error refreshing fingerprint: $error');
     }
   }
 
