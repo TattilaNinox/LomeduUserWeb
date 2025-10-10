@@ -43,7 +43,7 @@ class DeviceFingerprint {
       const timezone = 1; // Magyar időzóna (CET/CEST)
 
       // Kombinált string - NINCS timestamp benne!
-      final combined = '${platform}_$timezone_${language}_$userAgent';
+      final combined = '${platform}_${timezone}_${language}_$userAgent';
 
       // Hash generálása
       final hash = _simpleHash(combined);
