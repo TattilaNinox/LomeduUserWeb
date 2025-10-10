@@ -70,7 +70,7 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-            color: _getButtonColor().withValues(alpha: 0.1),
+        color: _getButtonColor().withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: _getButtonColor().withValues(alpha: 0.3),
@@ -266,7 +266,7 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
       case SubscriptionStatusColor.premium:
         return Colors.green;
       case SubscriptionStatusColor.warning:
-        return Colors.orange;
+        return Colors.lightBlue[600]!; // Világos kék a hamarosan lejáró előfizetéshez
       case SubscriptionStatusColor.expired:
         return Colors.amber[700]!; // Barátságosabb sárga árnyalat
     }

@@ -276,7 +276,7 @@ class _EnhancedSubscriptionStatusCardState
       counterColor = Colors.green;
       counterText = 'Hátralévő napok: $_daysUntilExpiry nap';
     } else if (_daysUntilExpiry! > 3) {
-      counterColor = Colors.orange;
+      counterColor = Colors.lightBlue[600]!;
       counterText = 'Hátralévő napok: $_daysUntilExpiry nap';
     } else {
       counterColor = Colors.amber[700]!;
@@ -385,7 +385,7 @@ class _EnhancedSubscriptionStatusCardState
               icon: const Icon(Icons.refresh, size: 18),
               label: const Text('Előfizetés megújítása'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange[600],
+                backgroundColor: Colors.lightBlue[600],
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
@@ -431,7 +431,7 @@ class _EnhancedSubscriptionStatusCardState
       case SubscriptionStatusColor.premium:
         return Colors.green;
       case SubscriptionStatusColor.warning:
-        return Colors.orange;
+        return Colors.lightBlue[600]!; // Világos kék a hamarosan lejáró előfizetéshez
       case SubscriptionStatusColor.expired:
         return Colors.amber[700]!; // Barátságosabb sárga árnyalat
     }
