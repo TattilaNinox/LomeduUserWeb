@@ -180,9 +180,9 @@ class AccountScreen extends StatelessWidget {
                     ),
                     child: const Text('Előfizetés frissítése (teszt)'),
                   ),
-                  
+
                   const SizedBox(height: 12),
-                  
+
                   // Email teszt gombok
                   Row(
                     children: [
@@ -193,7 +193,8 @@ class AccountScreen extends StatelessWidget {
                                   context: context,
                                   builder: (ctx) {
                                     return AlertDialog(
-                                      title: const Text('Lejárat előtti email teszt'),
+                                      title: const Text(
+                                          'Lejárat előtti email teszt'),
                                       content: const Text(
                                           'Ez beállítja az előfizetést 3 napos lejáratra, hogy tesztelhessük a lejárat előtti email értesítéseket.'),
                                       actions: [
@@ -224,7 +225,8 @@ class AccountScreen extends StatelessWidget {
                                 {
                                   'isSubscriptionActive': true,
                                   'subscriptionStatus': 'premium',
-                                  'subscriptionEndDate': Timestamp.fromDate(expiry),
+                                  'subscriptionEndDate':
+                                      Timestamp.fromDate(expiry),
                                   'subscription': {
                                     'status': 'ACTIVE',
                                     'productId': 'test_web_monthly',
@@ -233,28 +235,29 @@ class AccountScreen extends StatelessWidget {
                                     'lastUpdateTime': now.toIso8601String(),
                                     'source': 'test_simulation',
                                   },
-                                  'lastPaymentDate': FieldValue.serverTimestamp(),
+                                  'lastPaymentDate':
+                                      FieldValue.serverTimestamp(),
                                   'updatedAt': FieldValue.serverTimestamp(),
                                 },
                                 SetOptions(merge: true),
                               );
                               // Email küldése
-                              final emailSent = await EmailNotificationService.sendTestEmail(
+                              final emailSent =
+                                  await EmailNotificationService.sendTestEmail(
                                 testType: 'expiry_warning',
                                 daysLeft: 3,
                               );
-                              
+
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content: Text(emailSent 
-                                          ? 'Előfizetés beállítva 3 napos lejáratra és email elküldve!'
-                                          : 'Előfizetés beállítva 3 napos lejáratra, de email küldése sikertelen!')));
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                    content: Text(emailSent
+                                        ? 'Előfizetés beállítva 3 napos lejáratra és email elküldve!'
+                                        : 'Előfizetés beállítva 3 napos lejáratra, de email küldése sikertelen!')));
                               }
                             } catch (e) {
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                    content: Text('Hiba: $e')));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Hiba: $e')));
                               }
                             }
                           },
@@ -273,7 +276,8 @@ class AccountScreen extends StatelessWidget {
                                   context: context,
                                   builder: (ctx) {
                                     return AlertDialog(
-                                      title: const Text('Lejárat utáni email teszt'),
+                                      title: const Text(
+                                          'Lejárat utáni email teszt'),
                                       content: const Text(
                                           'Ez beállítja az előfizetést lejárt állapotra, hogy tesztelhessük a lejárat utáni email értesítéseket.'),
                                       actions: [
@@ -295,7 +299,8 @@ class AccountScreen extends StatelessWidget {
                             if (!confirmed) return;
 
                             final now = DateTime.now();
-                            final expiredDate = now.subtract(const Duration(days: 1));
+                            final expiredDate =
+                                now.subtract(const Duration(days: 1));
                             try {
                               await FirebaseFirestore.instance
                                   .collection('users')
@@ -304,7 +309,8 @@ class AccountScreen extends StatelessWidget {
                                 {
                                   'isSubscriptionActive': false,
                                   'subscriptionStatus': 'expired',
-                                  'subscriptionEndDate': Timestamp.fromDate(expiredDate),
+                                  'subscriptionEndDate':
+                                      Timestamp.fromDate(expiredDate),
                                   'subscription': {
                                     'status': 'EXPIRED',
                                     'productId': 'test_web_monthly',
@@ -313,27 +319,28 @@ class AccountScreen extends StatelessWidget {
                                     'lastUpdateTime': now.toIso8601String(),
                                     'source': 'test_simulation',
                                   },
-                                  'lastPaymentDate': FieldValue.serverTimestamp(),
+                                  'lastPaymentDate':
+                                      FieldValue.serverTimestamp(),
                                   'updatedAt': FieldValue.serverTimestamp(),
                                 },
                                 SetOptions(merge: true),
                               );
                               // Email küldése
-                              final emailSent = await EmailNotificationService.sendTestEmail(
+                              final emailSent =
+                                  await EmailNotificationService.sendTestEmail(
                                 testType: 'expired',
                               );
-                              
+
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content: Text(emailSent 
-                                          ? 'Előfizetés beállítva lejárt állapotra és email elküldve!'
-                                          : 'Előfizetés beállítva lejárt állapotra, de email küldése sikertelen!')));
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                    content: Text(emailSent
+                                        ? 'Előfizetés beállítva lejárt állapotra és email elküldve!'
+                                        : 'Előfizetés beállítva lejárt állapotra, de email küldése sikertelen!')));
                               }
                             } catch (e) {
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                    content: Text('Hiba: $e')));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Hiba: $e')));
                               }
                             }
                           },
@@ -346,9 +353,9 @@ class AccountScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 12),
-                  
+
                   // Reset gomb
                   ElevatedButton(
                     onPressed: () async {
@@ -356,7 +363,8 @@ class AccountScreen extends StatelessWidget {
                             context: context,
                             builder: (ctx) {
                               return AlertDialog(
-                                title: const Text('Teszt állapot visszaállítása'),
+                                title:
+                                    const Text('Teszt állapot visszaállítása'),
                                 content: const Text(
                                     'Ez visszaállítja az előfizetést ingyenes állapotra.'),
                                 actions: [
@@ -393,14 +401,14 @@ class AccountScreen extends StatelessWidget {
                           SetOptions(merge: true),
                         );
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Előfizetés visszaállítva ingyenes állapotra!')));
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                              content: Text(
+                                  'Előfizetés visszaállítva ingyenes állapotra!')));
                         }
                       } catch (e) {
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text('Hiba: $e')));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Hiba: $e')));
                         }
                       }
                     },

@@ -789,8 +789,8 @@ exports.checkSubscriptionExpiryScheduled = onSchedule({
     }
     
     // 2. LEJÁRT ELŐFIZETÉSEK ÉRTESÍTÉSE
+    // Keresünk minden felhasználót, aki premium előfizetéssel rendelkezik és lejárt
     const expired = await db.collection('users')
-      .where('isSubscriptionActive', '==', false)
       .where('subscriptionStatus', '==', 'premium')
       .where('subscriptionEndDate', '<', admin.firestore.Timestamp.fromDate(now))
       .get();
@@ -799,6 +799,7 @@ exports.checkSubscriptionExpiryScheduled = onSchedule({
     
     for (const doc of expired.docs) {
       const userData = doc.data();
+      console.log(`Processing expired user ${doc.id}: email=${userData.email}, isActive=${userData.isSubscriptionActive}, endDate=${userData.subscriptionEndDate?.toDate()?.toISOString()}`);
       
       // Ellenőrizzük a lastReminder mezőt
       const lastReminder = userData.lastReminder || {};
