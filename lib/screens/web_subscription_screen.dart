@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
@@ -26,6 +27,7 @@ class _WebSubscriptionScreenState extends State<WebSubscriptionScreen> {
   Map<String, dynamic>? _userData;
   bool _isLoading = true;
   String? _error;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSubscription;
 
   @override
   void initState() {
@@ -33,11 +35,34 @@ class _WebSubscriptionScreenState extends State<WebSubscriptionScreen> {
     _initializeUser();
   }
 
+  @override
+  void dispose() {
+    _userSubscription?.cancel();
+    super.dispose();
+  }
+
   Future<void> _initializeUser() async {
     try {
       _user = _auth.currentUser;
       if (_user != null) {
-        await _loadUserData();
+        // Real-time feliratkozás a felhasználói dokumentumra
+        _userSubscription = _firestore
+            .collection('users')
+            .doc(_user!.uid)
+            .snapshots()
+            .listen((doc) {
+          if (!mounted) return;
+          setState(() {
+            _userData = doc.data();
+            _isLoading = false;
+          });
+        }, onError: (e) {
+          if (!mounted) return;
+          setState(() {
+            _error = 'Hiba történt a valós idejű betöltés során: $e';
+            _isLoading = false;
+          });
+        });
       }
     } catch (e) {
       setState(() {
@@ -50,34 +75,11 @@ class _WebSubscriptionScreenState extends State<WebSubscriptionScreen> {
     }
   }
 
-  Future<void> _loadUserData() async {
-    if (_user == null) return;
-
-    try {
-      final doc = await _firestore.collection('users').doc(_user!.uid).get();
-
-      if (doc.exists) {
-        setState(() {
-          _userData = doc.data();
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _error = 'Hiba történt a felhasználói adatok betöltése során: $e';
-      });
-    }
-  }
-
   Future<void> _refreshData() async {
+    // Valós idejű feliratkozás mellett nincs szükség manuális frissítésre,
+    // de meghagyjuk a hibák törlésére és vizuális visszajelzésre.
     setState(() {
-      _isLoading = true;
       _error = null;
-    });
-
-    await _loadUserData();
-
-    setState(() {
-      _isLoading = false;
     });
   }
 
@@ -270,36 +272,9 @@ class _WebSubscriptionScreenState extends State<WebSubscriptionScreen> {
                   // Előfizetési státusz (2/3 szélesség)
                   Expanded(
                     flex: 2,
-                    child: Column(
-                      children: [
-                        WebSubscriptionStatusCard(
-                          userData: _userData,
-                          onRefresh: _refreshData,
-                        ),
-                        const SizedBox(height: 20),
-                        // Megújítási gomb a státusz kártya alatt
-                        Container(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              // TODO: Navigálás a fizetési oldalra
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content:
-                                      Text('Fizetési oldal hamarosan elérhető'),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.payment, size: 18),
-                            label: const Text('Előfizetés megújítása'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.amber[600],
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: WebSubscriptionStatusCard(
+                      userData: _userData,
+                      onRefresh: _refreshData,
                     ),
                   ),
 

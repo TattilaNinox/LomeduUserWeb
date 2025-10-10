@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart';
 import '../services/email_notification_service.dart';
 import '../widgets/subscription_reminder_banner.dart';
@@ -44,14 +45,7 @@ class AccountScreen extends StatelessWidget {
               children: [
                 // Emlékeztető banner
                 SubscriptionReminderBanner(
-                  onRenewPressed: () {
-                    // TODO: Navigálás a fizetési oldalra
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Fizetési oldal hamarosan elérhető'),
-                      ),
-                    );
-                  },
+                  onRenewPressed: () => context.go('/subscription'),
                 ),
 
                 // Felhasználói adatok
@@ -68,31 +62,17 @@ class AccountScreen extends StatelessWidget {
                 // Fejlesztett előfizetési státusz kártya
                 EnhancedSubscriptionStatusCard(
                   userData: data,
-                  onRenewPressed: () {
-                    // TODO: Navigálás a fizetési oldalra
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Fizetési oldal hamarosan elérhető'),
-                      ),
-                    );
-                  },
+                  onRenewPressed: () => context.go('/subscription'),
                 ),
 
                 const SizedBox(height: 20),
 
                 // Megújítási gomb (csak havi) - teljes szélességű, kiemelt
-                Container(
+                SizedBox(
                   width: double.infinity,
                   child: SubscriptionRenewalButton(
                     showAsCard: false,
-                    onPaymentInitiated: () {
-                      // TODO: Navigálás a fizetési oldalra
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Fizetési oldal hamarosan elérhető'),
-                        ),
-                      );
-                    },
+                    onPaymentInitiated: () => context.go('/subscription'),
                   ),
                 ),
 
@@ -365,7 +345,8 @@ class AccountScreen extends StatelessWidget {
                             context: context,
                             builder: (ctx) {
                               return AlertDialog(
-                                title: const Text('Teszt állapot visszaállítása'),
+                                title:
+                                    const Text('Teszt állapot visszaállítása'),
                                 content: const Text(
                                     'Ez visszaállítja az előfizetést ingyenes állapotra.'),
                                 actions: [
@@ -421,7 +402,6 @@ class AccountScreen extends StatelessWidget {
                     ),
                     child: const Text('Reset (ingyenes állapot)'),
                   ),
-
                 ],
               ],
             ),

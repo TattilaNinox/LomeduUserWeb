@@ -318,59 +318,6 @@ class WebSubscriptionStatusCard extends StatelessWidget {
     return const SizedBox.shrink();
   }
 
-  Widget _buildActionButtons(
-      BuildContext context, String status, bool isActive) {
-    return Row(
-      children: [
-        if (status == 'expired' || (!isActive && status == 'premium')) ...[
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () {
-                // Navigálás a fizetési oldalra
-                // Navigáció implementálva
-              },
-              icon: const Icon(Icons.payment, size: 18),
-              label: const Text('Előfizetés megújítása'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber[600],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-        ] else if (status == 'free') ...[
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () {
-                // Navigálás a fizetési oldalra
-                // Navigáció implementálva
-              },
-              icon: const Icon(Icons.upgrade, size: 18),
-              label: const Text('Premium előfizetés'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue[600],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-        ],
-        const SizedBox(width: 12),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: onRefresh,
-            icon: const Icon(Icons.refresh, size: 18),
-            label: const Text('Frissítés'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.grey[700],
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   String _formatDate(dynamic date) {
     try {
       DateTime dateTime;

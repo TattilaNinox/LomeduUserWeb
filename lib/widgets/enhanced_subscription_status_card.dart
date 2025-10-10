@@ -1,8 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import '../services/subscription_reminder_service.dart';
+
+enum SubscriptionStatusColor {
+  free,
+  premium,
+  warning,
+  expired;
+
+  String get description {
+    switch (this) {
+      case SubscriptionStatusColor.free:
+        return 'Jelenleg az ingyenes verziót használod.';
+      case SubscriptionStatusColor.premium:
+        return 'Prémium előfizetésed aktív.';
+      case SubscriptionStatusColor.warning:
+        return 'Előfizetésed hamarosan lejár!';
+      case SubscriptionStatusColor.expired:
+        return 'Előfizetésed lejárt.';
+    }
+  }
+}
 
 /// Fejlesztett előfizetési státusz kártya widget
 ///
@@ -29,45 +47,76 @@ class _EnhancedSubscriptionStatusCardState
     extends State<EnhancedSubscriptionStatusCard> {
   SubscriptionStatusColor _statusColor = SubscriptionStatusColor.free;
   int? _daysUntilExpiry;
-  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadSubscriptionStatus();
+    _recomputeFromUserData();
   }
 
-  Future<void> _loadSubscriptionStatus() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      setState(() {
-        _isLoading = false;
-      });
-      return;
+  @override
+  void didUpdateWidget(covariant EnhancedSubscriptionStatusCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userData != widget.userData) {
+      _recomputeFromUserData();
     }
+  }
+
+  void _recomputeFromUserData() {
+    final data = widget.userData;
+    if (data == null) return;
 
     try {
-      final statusColor =
-          await SubscriptionReminderService.getSubscriptionStatusColor(
-              user.uid);
-      final daysUntilExpiry =
-          await SubscriptionReminderService.getDaysUntilExpiry(user.uid);
+      final String subscriptionStatus = data['subscriptionStatus'] ?? 'free';
+      final bool isSubscriptionActive = data['isSubscriptionActive'] ?? false;
+      final dynamic subscriptionEndDate = data['subscriptionEndDate'];
+
+      int? daysUntilExpiry;
+      if (subscriptionEndDate != null) {
+        DateTime endDateTime;
+        if (subscriptionEndDate is Timestamp) {
+          endDateTime = subscriptionEndDate.toDate();
+        } else if (subscriptionEndDate is String) {
+          endDateTime = DateTime.parse(subscriptionEndDate);
+        } else {
+          endDateTime = DateTime.now();
+        }
+        final now = DateTime.now();
+        daysUntilExpiry = endDateTime.difference(now).inDays;
+      }
+
+      SubscriptionStatusColor color;
+      if (subscriptionStatus == 'premium' && isSubscriptionActive) {
+        if (daysUntilExpiry != null) {
+          if (daysUntilExpiry <= 3 && daysUntilExpiry > 0) {
+            color = SubscriptionStatusColor.warning;
+          } else if (daysUntilExpiry > 3) {
+            color = SubscriptionStatusColor.premium;
+          } else {
+            color = SubscriptionStatusColor.expired;
+          }
+        } else {
+          color = SubscriptionStatusColor.premium;
+        }
+      } else if (subscriptionStatus == 'expired' ||
+          (!isSubscriptionActive && subscriptionStatus == 'premium')) {
+        color = SubscriptionStatusColor.expired;
+      } else {
+        color = SubscriptionStatusColor.free;
+      }
 
       setState(() {
-        _statusColor = statusColor;
+        _statusColor = color;
         _daysUntilExpiry = daysUntilExpiry;
-        _isLoading = false;
       });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+    } catch (_) {
+      // hagyjuk az alapértékeket
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    if (widget.userData == null) {
       return _buildLoadingCard();
     }
 
@@ -144,7 +193,6 @@ class _EnhancedSubscriptionStatusCardState
             _buildDaysCounter(),
             const SizedBox(height: 20),
           ],
-
           // Akció gombok eltávolítva - a megújítási gombok a fő képernyőn jelennek meg
         ],
       ),
@@ -349,67 +397,7 @@ class _EnhancedSubscriptionStatusCardState
     );
   }
 
-  Widget _buildActionButtons() {
-    return Row(
-      children: [
-        if (_statusColor == SubscriptionStatusColor.expired) ...[
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: widget.onRenewPressed,
-              icon: const Icon(Icons.payment, size: 18),
-              label: const Text('Előfizetés megújítása'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber[600],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-        ] else if (_statusColor == SubscriptionStatusColor.free) ...[
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: widget.onRenewPressed,
-              icon: const Icon(Icons.upgrade, size: 18),
-              label: const Text('Premium előfizetés'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue[600],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-        ] else if (_statusColor == SubscriptionStatusColor.warning) ...[
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: widget.onRenewPressed,
-              icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Előfizetés megújítása'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.lightBlue[600],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-        ],
-        const SizedBox(width: 12),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () async {
-              await _loadSubscriptionStatus();
-              widget.onRefresh?.call();
-            },
-            icon: const Icon(Icons.refresh, size: 18),
-            label: const Text('Frissítés'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.grey[700],
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  // Eltávolítottuk a korábbi, teljes szélességű akciógombokat.
 
   IconData _getStatusIcon() {
     switch (_statusColor) {
@@ -431,7 +419,8 @@ class _EnhancedSubscriptionStatusCardState
       case SubscriptionStatusColor.premium:
         return Colors.green;
       case SubscriptionStatusColor.warning:
-        return Colors.lightBlue[600]!; // Világos kék a hamarosan lejáró előfizetéshez
+        return Colors
+            .lightBlue[600]!; // Világos kék a hamarosan lejáró előfizetéshez
       case SubscriptionStatusColor.expired:
         return Colors.amber[700]!; // Barátságosabb sárga árnyalat
     }

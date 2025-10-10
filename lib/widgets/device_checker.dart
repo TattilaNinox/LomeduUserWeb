@@ -5,8 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart';
 import '../utils/device_fingerprint.dart';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import 'package:web/web.dart' as web;
 
 /// A DeviceChecker widget globálisan figyeli a felhasználó eszközének ujjlenyomatát
 /// és kijelentkezteti a felhasználót, ha az nem egyezik a Firestore-ban tárolttal.
@@ -279,7 +278,7 @@ class _DeviceCheckerState extends State<DeviceChecker>
             try {
               // Web-specifikus navigáció
               if (kIsWeb) {
-                html.window.location.href = '/login';
+                web.window.location.href = '/login';
                 debugPrint(
                     'DeviceChecker: Successfully navigated using window.location');
               }
