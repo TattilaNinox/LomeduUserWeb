@@ -47,8 +47,6 @@ class _EnhancedSubscriptionStatusCardState
     }
 
     try {
-      final statusText =
-          await SubscriptionReminderService.getSubscriptionStatusText(user.uid);
       final statusColor =
           await SubscriptionReminderService.getSubscriptionStatusColor(
               user.uid);
@@ -56,7 +54,6 @@ class _EnhancedSubscriptionStatusCardState
           await SubscriptionReminderService.getDaysUntilExpiry(user.uid);
 
       setState(() {
-        _statusText = statusText;
         _statusColor = statusColor;
         _daysUntilExpiry = daysUntilExpiry;
         _isLoading = false;
