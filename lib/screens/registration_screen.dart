@@ -152,7 +152,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       if (mounted) {
         debugPrint("7. Átirányítás a /verify-email oldalra...");
         // Kis késleltetés, hogy a DeviceChecker ne zavarjon
-        Future.delayed(Duration(milliseconds: 500), () {
+        Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted) {
             try {
               context.go('/verify-email');
@@ -160,7 +160,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             } catch (e) {
               debugPrint("8. Átirányítási hiba: $e");
               // Fallback: próbáljuk meg újra
-              Future.delayed(Duration(milliseconds: 1000), () {
+              Future.delayed(const Duration(milliseconds: 1000), () {
                 if (mounted) {
                   try {
                     context.go('/verify-email');

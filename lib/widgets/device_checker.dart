@@ -49,7 +49,7 @@ class _DeviceCheckerState extends State<DeviceChecker>
         // várunk, amíg a GoRouter biztosan elérhető lesz.
         _cleanup();
         // Várunk, amíg a GoRouter biztosan elérhető lesz
-        Future.delayed(Duration(milliseconds: 1000), () {
+        Future.delayed(const Duration(milliseconds: 1000), () {
           if (!mounted) return;
           try {
             context.go('/verify-email');
@@ -57,7 +57,7 @@ class _DeviceCheckerState extends State<DeviceChecker>
           } catch (e) {
             debugPrint('DeviceChecker: Navigation failed: $e');
             // Ha még mindig nem megy, várunk még
-            Future.delayed(Duration(milliseconds: 2000), () {
+            Future.delayed(const Duration(milliseconds: 2000), () {
               if (mounted) {
                 try {
                   context.go('/verify-email');

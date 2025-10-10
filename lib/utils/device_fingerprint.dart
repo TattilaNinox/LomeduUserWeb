@@ -36,13 +36,13 @@ class DeviceFingerprint {
   static Future<String> _generateStableWebFingerprint() async {
     try {
       // Stabil böngésző jellemzők összegyűjtése
-      final timezone = DateTime.now().timeZoneOffset.inHours;
+      const timezone = 1; // Magyar időzóna (CET/CEST)
       const language = 'hu'; // Magyar nyelv
       const platform = 'web';
       const userAgent = 'flutter_web'; // Stabil érték
 
       // Kombinált string - NINCS timestamp benne!
-      final combined = '${platform}_${timezone}_${language}_${userAgent}';
+      final combined = '${platform}_$timezone_${language}_$userAgent';
 
       // Hash generálása
       final hash = _simpleHash(combined);
