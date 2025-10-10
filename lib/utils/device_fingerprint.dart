@@ -27,7 +27,8 @@ class DeviceFingerprint {
     } catch (e) {
       // Hiba esetén is új generálás
       final fingerprint = await _generateStableWebFingerprint();
-      debugPrint('DeviceFingerprint: Generated fallback fingerprint: $fingerprint');
+      debugPrint(
+          'DeviceFingerprint: Generated fallback fingerprint: $fingerprint');
       return fingerprint;
     }
   }
@@ -36,10 +37,10 @@ class DeviceFingerprint {
   static Future<String> _generateStableWebFingerprint() async {
     try {
       // Stabil böngésző jellemzők összegyűjtése
-      const timezone = 1; // Magyar időzóna (CET/CEST)
       const language = 'hu'; // Magyar nyelv
       const platform = 'web';
       const userAgent = 'flutter_web'; // Stabil érték
+      const timezone = 1; // Magyar időzóna (CET/CEST)
 
       // Kombinált string - NINCS timestamp benne!
       final combined = '${platform}_$timezone_${language}_$userAgent';
