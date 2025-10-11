@@ -1,9 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 // import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import '../utils/device_fingerprint.dart';
 
 /// A bejelentkezési képernyőt megvalósító widget.
 ///
@@ -49,72 +47,9 @@ class LoginScreenState extends State<LoginScreen> {
       );
       debugPrint('Firebase Auth bejelentkezés sikeres!');
 
-      // Ellenőrizzük, hogy a felhasználó aktív-e
+      // Sikeres bejelentkezés: a router redirect fog dönteni (guard)
       if (userCredential.user != null) {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userCredential.user!.uid)
-            .get();
-
-        final userType = userDoc.data()?['userType'] as String? ?? '';
-        final authorizedDeviceFingerprint =
-            userDoc.data()?['authorizedDeviceFingerprint'] as String?;
-
-        // DEBUG: Eszköz ujjlenyomatok kiírása
-        debugPrint('=== LOGIN DEBUG ===');
-        debugPrint('Firebase Auth UID: ${userCredential.user!.uid}');
-        debugPrint('Firestore Document ID: ${userDoc.id}');
-        debugPrint('UserType: $userType');
-        debugPrint(
-            'Authorized Device Fingerprint: $authorizedDeviceFingerprint');
-
-        // Admin felhasználók eszköz-függetlenül beléphetnek
-        final isAdmin = userType.toLowerCase() == 'admin';
-
-        // Eszköz ellenőrzés - csak nem-adminnál
-        if (!isAdmin &&
-            authorizedDeviceFingerprint != null &&
-            authorizedDeviceFingerprint.isNotEmpty) {
-          // NE töröljük a fingerprint-et, használjuk a mentettet
-          final currentFingerprint =
-              await DeviceFingerprint.getCurrentFingerprint();
-
-          debugPrint('Current Device Fingerprint: $currentFingerprint');
-          debugPrint(
-              'Match: ${currentFingerprint == authorizedDeviceFingerprint}');
-
-          if (currentFingerprint != authorizedDeviceFingerprint) {
-            // Ha van regisztrált eszköz, de ez nem az, akkor eszközváltásra irányítjuk
-            await FirebaseAuth.instance.signOut();
-            setState(() {
-              _errorMessage =
-                  'Ez az eszköz nincs regisztrálva a fiókodhoz. Használd az eszközváltás funkciót.';
-            });
-            return;
-          }
-        } else if (!isAdmin) {
-          // Ha nincs regisztrált eszköz, akkor regisztráljuk az aktuális eszközt
-          final currentFingerprint =
-              await DeviceFingerprint.getCurrentFingerprint();
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(userCredential.user!.uid)
-              .update({
-            'authorizedDeviceFingerprint': currentFingerprint,
-            'deviceRegistrationDate': FieldValue.serverTimestamp(),
-          });
-        }
-
-        // Sikeres bejelentkezés után ellenőrzi, hogy a widget még a fán van-e
-        // (`mounted` tulajdonság), mielőtt navigálna.
-        debugPrint('Bejelentkezés sikeres, navigálás a /notes oldalra...');
-        if (mounted) {
-          // 2FA nincs a felhasználói webben: közvetlenül a főoldalra navigálunk
-          context.go('/notes');
-          debugPrint('Navigálás sikeres!');
-        } else {
-          debugPrint('Widget nincs mounted, navigálás nem lehetséges');
-        }
+        debugPrint('Bejelentkezés sikeres, router dönt a célképernyőről');
       }
     } on FirebaseAuthException catch (e) {
       // Ha a bejelentkezés során a Firebase hibát dob (pl. rossz jelszó),

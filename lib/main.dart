@@ -21,7 +21,8 @@ import 'screens/flashcard_deck_view_screen.dart';
 import 'screens/flashcard_study_screen.dart';
 import 'screens/interactive_note_view_screen.dart';
 import 'screens/dynamic_quiz_view_screen.dart';
-import 'widgets/device_checker.dart';
+import 'core/session_guard.dart';
+import 'screens/guard_splash_screen.dart';
 import 'screens/account_screen.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -44,9 +45,44 @@ void main() async {
 /// Az alkalmazás navigációs útvonalait kezeli a `go_router` csomag segítségével.
 /// Ez a router határozza meg, hogy melyik URL (útvonal) melyik képernyőt (widgetet) töltse be.
 final _router = GoRouter(
-  // A kezdő útvonal, ahova az alkalmazás induláskor navigál.
   initialLocation: '/login',
-  // Az alkalmazásban elérhető útvonalak listája.
+  refreshListenable: SessionGuard.instance,
+  redirect: (context, state) {
+    // Gondoskodunk róla, hogy a guard inicializálva legyen
+    SessionGuard.instance.ensureInitialized();
+
+    final auth = SessionGuard.instance.authStatus;
+    final device = SessionGuard.instance.deviceAccess;
+    final loc = state.uri.path;
+    final isAuthRoute = {
+      '/login',
+      '/register',
+      '/verify-email',
+      '/guard',
+    }.contains(loc);
+
+    if (auth == AuthStatus.loggedOut) {
+      return loc == '/login' ? null : '/login';
+    }
+
+    if (auth == AuthStatus.emailUnverified) {
+      return loc == '/verify-email' ? null : '/verify-email';
+    }
+
+    if (device == DeviceAccess.loading) {
+      return loc == '/guard' ? null : '/guard';
+    }
+
+    if (device == DeviceAccess.denied) {
+      return loc == '/device-change' ? null : '/device-change';
+    }
+
+    if (isAuthRoute) {
+      return '/notes';
+    }
+
+    return null;
+  },
   routes: [
     // Bejelentkezési képernyő útvonala.
     GoRoute(
@@ -62,6 +98,11 @@ final _router = GoRouter(
     GoRoute(
       path: '/verify-email',
       builder: (context, state) => const VerifyEmailScreen(),
+    ),
+    // Guard / splash képernyő
+    GoRoute(
+      path: '/guard',
+      builder: (context, state) => const GuardSplashScreen(),
     ),
     // Eszközváltás képernyő
     GoRoute(
@@ -158,17 +199,13 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     // A `MaterialApp.router` a `go_router` használatához szükséges.
     // Ez köti össze a router konfigurációt az alkalmazás vizuális rétegével.
-    return DeviceChecker(
-      child: MaterialApp.router(
-        title: 'Lomedu Admin',
-        // Az alkalmazás központi vizuális témájának beállítása.
-        theme: AppTheme.lightTheme,
-        // A "debug" szalag eltávolítása a jobb felső sarokból.
-        debugShowCheckedModeBanner: false,
-        scaffoldMessengerKey: AppMessenger.key,
-        // A korábban definiált router konfiguráció átadása az alkalmazásnak.
-        routerConfig: _router,
-      ),
+    // A DeviceChecker wrappert kivesszük: a router redirect dönti el a képernyőt
+    return MaterialApp.router(
+      title: 'Lomedu Admin',
+      theme: AppTheme.lightTheme,
+      debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: AppMessenger.key,
+      routerConfig: _router,
     );
   }
 }

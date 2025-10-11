@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';
 import '../services/device_change_service.dart';
@@ -123,7 +124,10 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.go('/login'),
+          onPressed: () async {
+            await FirebaseAuth.instance.signOut();
+            if (mounted) context.go('/login');
+          },
         ),
       ),
       body: SafeArea(
@@ -314,7 +318,10 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
                   SizedBox(height: isMobile ? 16 : 24),
                   // Vissza a bejelentkezéshez link
                   TextButton(
-                    onPressed: () => context.go('/login'),
+                    onPressed: () async {
+                      await FirebaseAuth.instance.signOut();
+                      if (mounted) context.go('/login');
+                    },
                     child: Text(
                       'Vissza a bejelentkezéshez',
                       style: TextStyle(
