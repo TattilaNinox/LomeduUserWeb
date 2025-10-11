@@ -63,7 +63,12 @@ final _router = GoRouter(
     }.contains(loc);
 
     if (auth == AuthStatus.loggedOut) {
-      return loc == '/login' ? null : '/login';
+      final publicRoutes = {
+        '/login',
+        '/register',
+        '/device-change',
+      };
+      return publicRoutes.contains(loc) ? null : '/login';
     }
 
     if (auth == AuthStatus.emailUnverified) {
