@@ -141,17 +141,18 @@ class _CategorySectionState extends State<_CategorySection> {
         color: Colors.white,
         borderRadius:
             _isExpanded ? BorderRadius.circular(20) : BorderRadius.circular(16),
+        // Visszafogottabb kiemelés – inkább beágyazott gomb hatás
         border: _isExpanded
             ? null
             : Border.all(
-                color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
-                width: 1.5,
+                color: const Color(0xFFE5E7EB),
+                width: 1,
               ),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withValues(alpha: _isExpanded ? 0.08 : 0.12),
-            blurRadius: _isExpanded ? 12 : 8,
-            offset: const Offset(0, 4),
+            color: Color.fromARGB(20, 0, 0, 0), // ~0.08 átlátszóság
+            blurRadius: 6,
+            offset: Offset(0, 2),
           ),
         ],
       ),
