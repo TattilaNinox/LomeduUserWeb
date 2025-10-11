@@ -113,7 +113,7 @@ class _QuizViewerDualState extends State<QuizViewerDual> {
         title: const Text('Magyarázat'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
               option.text,
@@ -121,12 +121,14 @@ class _QuizViewerDualState extends State<QuizViewerDual> {
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             if (option.rationale.isNotEmpty)
               Text(
                 option.rationale,
                 style: const TextStyle(fontSize: 14),
+                textAlign: TextAlign.center,
               )
             else
               Text(
@@ -136,6 +138,7 @@ class _QuizViewerDualState extends State<QuizViewerDual> {
                   color: Colors.grey[600],
                   fontStyle: FontStyle.italic,
                 ),
+                textAlign: TextAlign.center,
               ),
           ],
         ),
@@ -157,11 +160,12 @@ class _QuizViewerDualState extends State<QuizViewerDual> {
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
                 _currentQuestion.question,
                 style: const TextStyle(fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               ..._currentQuestion.options.asMap().entries.map((entry) {
@@ -192,6 +196,7 @@ class _QuizViewerDualState extends State<QuizViewerDual> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
                             isCorrect ? Icons.check_circle : Icons.cancel,
@@ -219,6 +224,7 @@ class _QuizViewerDualState extends State<QuizViewerDual> {
                         Text(
                           option.rationale,
                           style: const TextStyle(fontSize: 14),
+                          textAlign: TextAlign.center,
                         ),
                       ],
                     ],
@@ -440,6 +446,7 @@ class _QuizViewerDualState extends State<QuizViewerDual> {
                           ),
                         ),
                         child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Container(
                               width: MediaQuery.of(context).size.width < 600
@@ -485,6 +492,7 @@ class _QuizViewerDualState extends State<QuizViewerDual> {
                                       ? FontWeight.bold
                                       : FontWeight.normal,
                                 ),
+                                textAlign: TextAlign.center,
                               ),
                             ),
                             if (_isAnswered) ...[
