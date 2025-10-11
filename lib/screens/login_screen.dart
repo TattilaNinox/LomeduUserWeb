@@ -25,6 +25,17 @@ class LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  // Magyar Firebase Auth hibaüzenetek
+  static const Map<String, String> _firebaseErrorHu = {
+    'wrong-password': 'Helytelen jelszó.',
+    'user-not-found': 'Ez az e-mail cím nem szerepel a rendszerben.',
+    'invalid-email': 'Érvénytelen e-mail cím formátum.',
+    'user-disabled': 'A fiók le lett tiltva.',
+    'too-many-requests':
+        'Túl sok sikertelen próbálkozás. Kérlek, próbáld meg később.',
+    'invalid-credential': 'A megadott bejelentkezési adatok helytelenek.',
+  };
+
   // Egy állapotváltozó a bejelentkezési hibaüzenetek tárolására.
   // Ha értéke `null`, nem jelenik meg hibaüzenet.
   String? _errorMessage;
@@ -79,7 +90,7 @@ class LoginScreenState extends State<LoginScreen> {
       // A `setState` metódus frissíti a widget állapotát, és beállítja a
       // hibaüzenetet, ami ezután megjelenik a UI-n.
       setState(() {
-        _errorMessage = e.message;
+        _errorMessage = _firebaseErrorHu[e.code] ?? 'Ismeretlen hiba történt.';
       });
     } on TypeError catch (e) {
       debugPrint("MFA TypeError during login (nem kritikus): $e");
