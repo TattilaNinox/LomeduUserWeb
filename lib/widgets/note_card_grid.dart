@@ -51,7 +51,8 @@ class NoteCardGrid extends StatelessWidget {
         if (snapshot.hasError) {
           return const Center(child: Text('Hiba az adatok betöltésekor.'));
         }
-        final docs = (snapshot.data?.docs ?? const <QueryDocumentSnapshot<Map<String, dynamic>>>[])
+        final docs = (snapshot.data?.docs ??
+                const <QueryDocumentSnapshot<Map<String, dynamic>>>[])
             .where((d) => !(d.data()['deletedAt'] != null))
             .where((d) => (d.data()['title'] ?? '')
                 .toString()
@@ -59,7 +60,8 @@ class NoteCardGrid extends StatelessWidget {
                 .contains(searchText.toLowerCase()))
             .toList();
 
-        if (!snapshot.hasData && snapshot.connectionState != ConnectionState.active) {
+        if (!snapshot.hasData &&
+            snapshot.connectionState != ConnectionState.active) {
           return const Center(child: CircularProgressIndicator());
         }
 
@@ -188,6 +190,8 @@ class _CategorySectionState extends State<_CategorySection> {
                       decoration: BoxDecoration(
                         color: Theme.of(context).primaryColor,
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                            color: const Color(0xFF960018), width: 1),
                       ),
                       child: Icon(
                         _isExpanded ? Icons.folder_open : Icons.folder_outlined,

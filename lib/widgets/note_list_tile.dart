@@ -118,7 +118,8 @@ class NoteListTile extends StatelessWidget {
       }
 
       questions.shuffle();
-      final selected = questions.take(10).map((q) => Question.fromMap(q)).toList();
+      final selected =
+          questions.take(10).map((q) => Question.fromMap(q)).toList();
 
       if (!context.mounted) return;
       showDialog(
@@ -135,12 +136,14 @@ class NoteListTile extends StatelessWidget {
                       Navigator.of(context).pop();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Kvíz eredménye: ${result.score}/${result.totalQuestions}'),
+                          content: Text(
+                              'Kvíz eredménye: ${result.score}/${result.totalQuestions}'),
                         ),
                       );
                     },
                   )
-                : QuizViewer(questions: selected.map((q) => q.toMap()).toList()),
+                : QuizViewer(
+                    questions: selected.map((q) => q.toMap()).toList()),
           ),
           actions: [
             TextButton(
@@ -163,10 +166,9 @@ class NoteListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     const Color cardColor =
         Color(0xFFF5F7F6); // elegáns zöldesbarna árnyalatú szürke
-    const Color borderColor =
-        Color(0xFFE8EDE9); // finomabb zöldesbarna keret szín
+    const Color borderColor = Color(0xFFE8EDE9); // finom keret (visszaállítva)
     final Color shadowColor =
-        Colors.black.withValues(alpha: 0.05); // finom árnyék
+        Colors.black.withValues(alpha: 0.03); // még finomabb árnyék mobilon is
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -178,8 +180,8 @@ class NoteListTile extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: shadowColor,
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              blurRadius: 6,
+              offset: const Offset(0, 1),
             ),
           ],
         ),
@@ -245,6 +247,7 @@ class NoteListTile extends StatelessWidget {
                                     .primaryColor
                                     .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(10),
+                                // ikon körül NINCS karmazsin keret a jegyzet-listában
                               ),
                               child: Icon(
                                 _typeIcon(),
@@ -274,6 +277,7 @@ class NoteListTile extends StatelessWidget {
                               .primaryColor
                               .withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
+                          // ikon körül NINCS karmazsin keret a jegyzet-listában
                         ),
                         child: Icon(
                           _typeIcon(),
