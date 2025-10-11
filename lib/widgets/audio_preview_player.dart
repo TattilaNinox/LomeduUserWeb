@@ -21,26 +21,24 @@ class AudioPreviewPlayer extends StatefulWidget {
 class _AudioPreviewPlayerState extends State<AudioPreviewPlayer> {
   // Az `audioplayers` csomag lejátszó példánya.
   late AudioPlayer _audioPlayer;
-  
+
   // Állapotváltozók a lejátszó állapotának követésére.
   PlayerState _playerState = PlayerState.stopped;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
+  bool _hasPlayedOnce = false;
+  bool _isConfigured = false;
 
   @override
   void initState() {
     super.initState();
     _audioPlayer = AudioPlayer();
-    _initializePlayer();
   }
 
   /// Inicializálja a lejátszót és feliratkozik a releváns eseményfigyelőkre.
-  Future<void> _initializePlayer() async {
+  Future<void> _ensureConfigured() async {
+    if (_isConfigured) return;
     try {
-      // Beállítja a forrás URL-t. Fontos, hogy a lejátszás (`play`) előtt
-      // a forrás már be legyen állítva.
-      await _audioPlayer.setSourceUrl(widget.audioUrl);
-      
       // Feliratkozás a lejátszó eseményeire (listenerek), hogy az UI
       // valós időben frissüljön az állapotváltozásoknak megfelelően.
       _audioPlayer.onDurationChanged.listen((d) {
@@ -50,8 +48,18 @@ class _AudioPreviewPlayerState extends State<AudioPreviewPlayer> {
         if (mounted) setState(() => _position = p);
       });
       _audioPlayer.onPlayerStateChanged.listen((s) {
-        if (mounted) setState(() => _playerState = s);
+        if (!mounted) return;
+        setState(() {
+          _playerState = s;
+          if (s == PlayerState.playing) {
+            _hasPlayedOnce = true;
+          }
+        });
       });
+
+      await _audioPlayer.setVolume(1.0);
+      await _audioPlayer.setSourceUrl(widget.audioUrl);
+      _isConfigured = true;
     } catch (e) {
       // Hibakezelés, ha a forrás URL beállítása sikertelen.
       if (mounted) {
@@ -86,7 +94,9 @@ class _AudioPreviewPlayerState extends State<AudioPreviewPlayer> {
       children: [
         // Csúszka a lejátszási pozíció jelzésére és a tekerésre.
         Slider(
-          value: _position.inSeconds.toDouble().clamp(0.0, _duration.inSeconds.toDouble()),
+          value: _position.inSeconds
+              .toDouble()
+              .clamp(0.0, _duration.inSeconds.toDouble()),
           max: _duration.inSeconds.toDouble(),
           onChanged: (value) async {
             final position = Duration(seconds: value.toInt());
@@ -123,33 +133,46 @@ class _AudioPreviewPlayerState extends State<AudioPreviewPlayer> {
               icon: const Icon(Icons.replay_10),
               onPressed: () {
                 final newPosition = _position - const Duration(seconds: 10);
-                _audioPlayer.seek(newPosition > Duration.zero ? newPosition : Duration.zero);
+                _audioPlayer.seek(
+                    newPosition > Duration.zero ? newPosition : Duration.zero);
               },
             ),
             IconButton(
               iconSize: isNarrow ? 40 : 48,
               icon: Icon(
-                _playerState == PlayerState.playing ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                _playerState == PlayerState.playing
+                    ? Icons.pause_circle_filled
+                    : Icons.play_circle_filled,
               ),
-              onPressed: () {
+              onPressed: () async {
+                await _ensureConfigured();
+
                 if (_playerState == PlayerState.playing) {
-                  _audioPlayer.pause();
-                } else {
-                  _audioPlayer.resume();
+                  await _audioPlayer.pause();
+                  return;
                 }
+
+                if (_playerState == PlayerState.paused && _hasPlayedOnce) {
+                  await _audioPlayer.resume();
+                  return;
+                }
+
+                await _audioPlayer.play(UrlSource(widget.audioUrl));
               },
             ),
             IconButton(
               icon: const Icon(Icons.forward_10),
               onPressed: () {
                 final newPosition = _position + const Duration(seconds: 10);
-                _audioPlayer.seek(newPosition < _duration ? newPosition : _duration);
+                _audioPlayer
+                    .seek(newPosition < _duration ? newPosition : _duration);
               },
             ),
-             IconButton(
+            IconButton(
               icon: const Icon(Icons.stop),
-              onPressed: () {
-                _audioPlayer.stop();
+              onPressed: () async {
+                await _ensureConfigured();
+                await _audioPlayer.stop();
               },
             ),
           ],
