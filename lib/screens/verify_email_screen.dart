@@ -15,6 +15,28 @@ class VerifyEmailScreen extends StatefulWidget {
 class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   Timer? _timer;
   int _cooldown = 0;
+  bool _triedAutoClose = false;
+
+  /// Megpróbálja bezárni az aktuális böngészőablakot (weben).
+  /// Visszatér: sikerült-e.
+  bool _attemptCloseWindow() {
+    if (!kIsWeb) return false;
+    try {
+      // 1) about:blank-re váltás majd zárás
+      web.window.open('about:blank', '_self');
+      web.window.close();
+    } catch (_) {}
+    try {
+      // 2) Alternatív: self close
+      web.window.close();
+    } catch (_) {}
+    try {
+      // 3) Fallback: üres oldal megnyitása és zárása
+      web.window.open('', '_self')?.close();
+    } catch (_) {}
+    // Ha idáig eljutottunk, nincs megbízható visszajelzés; jelezzük, hogy próbálkoztunk
+    return true;
+  }
 
   @override
   void initState() {
@@ -27,15 +49,13 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         await u.reload();
         final reloadedUser = FirebaseAuth.instance.currentUser;
         if (reloadedUser != null && reloadedUser.emailVerified && mounted) {
-          // Email megerősítve: próbáljuk bezárni ezt az ablakot weben
-          if (kIsWeb) {
-            try {
-              web.window.close();
-            } catch (_) {}
-            try {
-              // Alternatív bezárási kísérlet
-              web.window.open('', '_self')?.close();
-            } catch (_) {}
+          if (!_triedAutoClose) {
+            _triedAutoClose = true;
+            // Többszöri kísérlet a bezárásra rövid késleltetéssel
+            for (int i = 0; i < 3; i++) {
+              _attemptCloseWindow();
+              await Future.delayed(const Duration(milliseconds: 200));
+            }
           }
           // Biztonsági lépés: jelentkezzünk ki, és menjünk a login képernyőre
           try {
@@ -91,7 +111,11 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E3A8A),
-        title: const Text('E-mail megerősítés'),
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          'E-mail megerősítés',
+          style: TextStyle(color: Colors.white),
+        ),
       ),
       body: Center(
         child: Padding(
@@ -175,6 +199,13 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                     onPressed: () => context.go('/login'),
                     child: const Text('Vissza a bejelentkezéshez'),
                   ),
+                  const SizedBox(height: 4),
+                  if (kIsWeb)
+                    TextButton.icon(
+                      onPressed: _attemptCloseWindow,
+                      icon: const Icon(Icons.close),
+                      label: const Text('Ablak bezárása'),
+                    ),
                 ],
               ),
             ),
