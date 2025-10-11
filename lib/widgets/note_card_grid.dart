@@ -82,6 +82,13 @@ class NoteCardGrid extends StatelessWidget {
           value.sort((a, b) {
             final typeA = a.data()['type'] as String? ?? '';
             final typeB = b.data()['type'] as String? ?? '';
+            // 'source' típus mindig a lista végére kerüljön
+            final bool isSourceA = typeA == 'source';
+            final bool isSourceB = typeB == 'source';
+            if (isSourceA != isSourceB) {
+              return isSourceA ? 1 : -1; // source után soroljuk
+            }
+            // ha mindkettő ugyanaz a forrás státusz, marad a korábbi logika
             final typeCompare = typeA.compareTo(typeB);
             if (typeCompare != 0) {
               return typeCompare;

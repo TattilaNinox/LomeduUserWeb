@@ -253,7 +253,7 @@ class _NoteTableState extends State<NoteTable> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey)),
+        border: Border(bottom: BorderSide(color: Color(0xFF960018))),
         color: Color.fromARGB(255, 244, 245, 247),
       ),
       child: Row(
@@ -298,6 +298,8 @@ class _NoteTableState extends State<NoteTable> {
           return Icons.quiz;
         case 'dynamic_quiz_dual':
           return Icons.quiz_outlined;
+        case 'source':
+          return Icons.source;
         default:
           return Icons.menu_book;
       }
@@ -756,7 +758,8 @@ class _NoteTableState extends State<NoteTable> {
     final bank = bankDoc.data()!;
     final questions = List<Map<String, dynamic>>.from(bank['questions'] ?? []);
     questions.shuffle();
-    final selectedQuestions = questions.take(10).map((q) => Question.fromMap(q)).toList();
+    final selectedQuestions =
+        questions.take(10).map((q) => Question.fromMap(q)).toList();
 
     if (selectedQuestions.isEmpty) {
       if (context.mounted) {
@@ -781,12 +784,15 @@ class _NoteTableState extends State<NoteTable> {
                       Navigator.of(context).pop();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Kvíz eredménye: ${result.score}/${result.totalQuestions}'),
+                          content: Text(
+                              'Kvíz eredménye: ${result.score}/${result.totalQuestions}'),
                         ),
                       );
                     },
                   )
-                : QuizViewer(questions: selectedQuestions.map((q) => q.toMap()).toList()),
+                : QuizViewer(
+                    questions:
+                        selectedQuestions.map((q) => q.toMap()).toList()),
           ),
           actions: [
             TextButton(

@@ -41,6 +41,8 @@ class NoteListTile extends StatelessWidget {
         return Icons.quiz;
       case 'dynamic_quiz_dual':
         return Icons.quiz_outlined;
+      case 'source':
+        return Icons.source;
       default:
         return Icons.menu_book;
     }
