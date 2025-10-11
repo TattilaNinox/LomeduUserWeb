@@ -140,7 +140,7 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
                               data: currentPage,
                               style: {
                                 "body": Style(
-                                  fontSize: FontSize(isMobile ? 14 : 18),
+                                  fontSize: FontSize(isMobile ? 15 : 18),
                                   lineHeight: const LineHeight(1.6),
                                   color: const Color(0xFF2D3748),
                                   fontFamily: 'Inter',
@@ -164,7 +164,7 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
                                   margin: Margins.only(bottom: 10),
                                 ),
                                 "p": Style(
-                                  fontSize: FontSize(isMobile ? 13 : 17),
+                                  fontSize: FontSize(isMobile ? 14 : 17),
                                   lineHeight: const LineHeight(1.6),
                                   color: const Color(0xFF2D3748),
                                   margin: Margins.only(bottom: 12),
@@ -176,7 +176,7 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
                                   margin: Margins.only(bottom: 12),
                                 ),
                                 "li": Style(
-                                  fontSize: FontSize(isMobile ? 13 : 17),
+                                  fontSize: FontSize(isMobile ? 14 : 17),
                                   lineHeight: const LineHeight(1.5),
                                   color: const Color(0xFF2D3748),
                                   margin: Margins.only(bottom: 6),
@@ -200,7 +200,7 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
                                   backgroundColor: const Color(0xFFF7FAFC),
                                   color: const Color(0xFFE53E3E),
                                   fontFamily: 'monospace',
-                                  fontSize: FontSize(isMobile ? 11 : 15),
+                                  fontSize: FontSize(isMobile ? 12 : 15),
                                   padding: HtmlPaddings.symmetric(
                                       horizontal: 4, vertical: 2),
                                 ),
