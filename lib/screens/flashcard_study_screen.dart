@@ -25,7 +25,8 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
   int _easyCount = 0;
 
   // Megjelenjen-e a nullázó ikon?
-  bool get _hasProgress => _againCount + _hardCount + _goodCount + _easyCount > 0;
+  bool get _hasProgress =>
+      _againCount + _hardCount + _goodCount + _easyCount > 0;
 
   // Learning data
   List<int> _dueCardIndices = [];
@@ -472,42 +473,14 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
               ),
               child: Padding(
                 padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Question section
-                    const Text(
-                      'Kérdés:',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      currentCard['front'] ?? '',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.black87,
-                        height: 1.4,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-
-                    if (_showAnswer) ...[
-                      const SizedBox(height: 16),
-                      Divider(
-                        color: Colors.grey,
-                        thickness: 1,
-                        indent: 8,
-                        endIndent: 8,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Answer section
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Question section
                       const Text(
-                        'Válasz:',
+                        'Kérdés:',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -516,7 +489,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        currentCard['back'] ?? '',
+                        currentCard['front'] ?? '',
                         style: const TextStyle(
                           fontSize: 16,
                           color: Colors.black87,
@@ -524,32 +497,63 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
                         ),
                         textAlign: TextAlign.center,
                       ),
-                    ] else ...[
-                      const SizedBox(height: 24),
-                      // Show answer button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _showAnswerPressed,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1E3A8A),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+
+                      if (_showAnswer) ...[
+                        const SizedBox(height: 16),
+                        Divider(
+                          color: Colors.grey,
+                          thickness: 1,
+                          indent: 8,
+                          endIndent: 8,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Answer section
+                        const Text(
+                          'Válasz:',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
                           ),
-                          child: const Text(
-                            'Válasz megtekintése',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          currentCard['back'] ?? '',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.black87,
+                            height: 1.4,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ] else ...[
+                        const SizedBox(height: 24),
+                        // Show answer button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _showAnswerPressed,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1E3A8A),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text(
+                              'Válasz megtekintése',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
