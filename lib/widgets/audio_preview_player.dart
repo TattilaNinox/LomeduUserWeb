@@ -80,6 +80,7 @@ class _AudioPreviewPlayerState extends State<AudioPreviewPlayer> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isNarrow = MediaQuery.of(context).size.width < 360;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -95,15 +96,28 @@ class _AudioPreviewPlayerState extends State<AudioPreviewPlayer> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(_formatDuration(_position)),
-              Text(_formatDuration(_duration - _position)),
+              Expanded(
+                child: Text(
+                  _formatDuration(_position),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _formatDuration(_duration - _position),
+                  textAlign: TextAlign.right,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 4,
+          runSpacing: 4,
           children: [
             IconButton(
               icon: const Icon(Icons.replay_10),
@@ -113,7 +127,7 @@ class _AudioPreviewPlayerState extends State<AudioPreviewPlayer> {
               },
             ),
             IconButton(
-              iconSize: 48,
+              iconSize: isNarrow ? 40 : 48,
               icon: Icon(
                 _playerState == PlayerState.playing ? Icons.pause_circle_filled : Icons.play_circle_filled,
               ),
