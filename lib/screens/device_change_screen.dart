@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/device_change_service.dart';
 import '../utils/device_fingerprint.dart';
 
@@ -134,167 +134,141 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isMobile = constraints.maxWidth < 600;
-            return Padding(
+            return SingleChildScrollView(
               padding: EdgeInsets.all(isMobile ? 16 : 24),
-              child: Column(
-                children: [
-                  const Spacer(),
-                  // Nagy ikon
-                  Container(
-                    width: isMobile ? 100 : 120,
-                    height: isMobile ? 100 : 120,
-                    decoration: BoxDecoration(
-                      color: const Color(0x1A1E3A8A),
-                      borderRadius: BorderRadius.circular(isMobile ? 50 : 60),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - (isMobile ? 32 : 48),
+                ),
+                child: Column(
+                  children: [
+                    SizedBox(height: isMobile ? 24 : 32),
+                    // Nagy ikon
+                    Container(
+                      width: isMobile ? 100 : 120,
+                      height: isMobile ? 100 : 120,
+                      decoration: BoxDecoration(
+                        color: const Color(0x1A1E3A8A),
+                        borderRadius: BorderRadius.circular(isMobile ? 50 : 60),
+                      ),
+                      child: Icon(
+                        Icons.devices,
+                        size: isMobile ? 50 : 60,
+                        color: const Color(0xFF1E3A8A),
+                      ),
                     ),
-                    child: Icon(
-                      Icons.devices,
-                      size: isMobile ? 50 : 60,
-                      color: const Color(0xFF1E3A8A),
-                    ),
-                  ),
-                  SizedBox(height: isMobile ? 24 : 32),
-                  // Cím
-                  Text(
-                    'Eszköz váltása',
-                    style: TextStyle(
-                      fontSize: isMobile ? 24 : 28,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: isMobile ? 12 : 16),
-                  // Leírás
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 0),
-                    child: Text(
-                      'Adja meg az email címét az eszközváltáshoz szükséges kód igényléséhez.',
+                    SizedBox(height: isMobile ? 24 : 32),
+                    // Cím
+                    Text(
+                      'Eszköz váltása',
                       style: TextStyle(
-                        fontSize: isMobile ? 14 : 16,
-                        color: const Color(0xFF6B7280),
-                        height: 1.5,
+                        fontSize: isMobile ? 24 : 28,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
                       ),
                       textAlign: TextAlign.center,
                     ),
-                  ),
-                  SizedBox(height: isMobile ? 32 : 48),
-                  // E-mail mező
-                  TextField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(
-                      hintText: 'Email cím',
-                      prefixIcon:
-                          Icon(Icons.email_outlined, color: Color(0xFF6B7280)),
-                      border: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Color(0xFFE5E7EB)),
-                      ),
-                      focusedBorder: UnderlineInputBorder(
-                        borderSide:
-                            BorderSide(color: Color(0xFF1E3A8A), width: 2),
+                    SizedBox(height: isMobile ? 12 : 16),
+                    // Leírás
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 0),
+                      child: Text(
+                        'Adja meg az email címét az eszközváltáshoz szükséges kód igényléséhez.',
+                        style: TextStyle(
+                          fontSize: isMobile ? 14 : 16,
+                          color: const Color(0xFF6B7280),
+                          height: 1.5,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-                  SizedBox(height: isMobile ? 24 : 32),
-                  // Kód mező (csak akkor jelenik meg, ha kódot kért)
-                  if (_successMessage != null) ...[
-                    Pinput(
-                      controller: _codeController,
-                      length: 6,
-                      focusNode: _codeFocusNode,
-                      defaultPinTheme: PinTheme(
-                        width: isMobile ? 45 : 56,
-                        height: isMobile ? 45 : 56,
-                        textStyle: TextStyle(
-                          fontSize: isMobile ? 18 : 22,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF1E3A8A),
+                    SizedBox(height: isMobile ? 32 : 48),
+                    // E-mail mező
+                    TextField(
+                      controller: _emailController,
+                      decoration: const InputDecoration(
+                        hintText: 'Email cím',
+                        prefixIcon:
+                            Icon(Icons.email_outlined, color: Color(0xFF6B7280)),
+                        border: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Color(0xFFE5E7EB)),
                         ),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: const Color(0xFFE5E7EB)),
-                          borderRadius: BorderRadius.circular(8),
-                          color: Colors.white,
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide:
+                              BorderSide(color: Color(0xFF1E3A8A), width: 2),
                         ),
                       ),
-                      focusedPinTheme: PinTheme(
-                        width: isMobile ? 45 : 56,
-                        height: isMobile ? 45 : 56,
-                        textStyle: TextStyle(
-                          fontSize: isMobile ? 18 : 22,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF1E3A8A),
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                              color: const Color(0xFF1E3A8A), width: 2),
-                          borderRadius: BorderRadius.circular(8),
-                          color: Colors.white,
-                        ),
-                      ),
-                      submittedPinTheme: PinTheme(
-                        width: isMobile ? 45 : 56,
-                        height: isMobile ? 45 : 56,
-                        textStyle: TextStyle(
-                          fontSize: isMobile ? 18 : 22,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF1E3A8A),
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: const Color(0xFF1E3A8A)),
-                          borderRadius: BorderRadius.circular(8),
-                          color: const Color(0x1A1E3A8A),
-                        ),
-                      ),
-                      keyboardType: TextInputType.number,
-                      onCompleted: (pin) {
-                        // Automatikus ellenőrzés, ha 6 számjegy be van írva
-                        if (pin.length == 6) {
-                          _verifyAndChange();
-                        }
-                      },
+                      keyboardType: TextInputType.emailAddress,
                     ),
                     SizedBox(height: isMobile ? 24 : 32),
-                  ],
-                  // Kód kérése gomb
-                  SizedBox(
-                    width: double.infinity,
-                    height: isMobile ? 48 : 56,
-                    child: ElevatedButton(
-                      onPressed:
-                          _isLoading || _cooldown > 0 ? null : _requestCode,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1E3A8A),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(isMobile ? 24 : 28),
+                    // Kód mező (csak akkor jelenik meg, ha kódot kért)
+                    if (_successMessage != null) ...[
+                      Pinput(
+                        controller: _codeController,
+                        length: 6,
+                        focusNode: _codeFocusNode,
+                        defaultPinTheme: PinTheme(
+                          width: isMobile ? 45 : 56,
+                          height: isMobile ? 45 : 56,
+                          textStyle: TextStyle(
+                            fontSize: isMobile ? 18 : 22,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF1E3A8A),
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: const Color(0xFFE5E7EB)),
+                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.white,
+                          ),
                         ),
-                        elevation: 0,
+                        focusedPinTheme: PinTheme(
+                          width: isMobile ? 45 : 56,
+                          height: isMobile ? 45 : 56,
+                          textStyle: TextStyle(
+                            fontSize: isMobile ? 18 : 22,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF1E3A8A),
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                                color: const Color(0xFF1E3A8A), width: 2),
+                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.white,
+                          ),
+                        ),
+                        submittedPinTheme: PinTheme(
+                          width: isMobile ? 45 : 56,
+                          height: isMobile ? 45 : 56,
+                          textStyle: TextStyle(
+                            fontSize: isMobile ? 18 : 22,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF1E3A8A),
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: const Color(0xFF1E3A8A)),
+                            borderRadius: BorderRadius.circular(8),
+                            color: const Color(0x1A1E3A8A),
+                          ),
+                        ),
+                        keyboardType: TextInputType.number,
+                        onCompleted: (pin) {
+                          // Automatikus ellenőrzés, ha 6 számjegy be van írva
+                          if (pin.length == 6) {
+                            _verifyAndChange();
+                          }
+                        },
                       ),
-                      child: _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : Text(
-                              _cooldown > 0
-                                  ? 'Újraküldés $_cooldown s'
-                                  : 'Kód kérése',
-                              style: TextStyle(
-                                fontSize: isMobile ? 14 : 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                    ),
-                  ),
-                  // Váltás gomb (csak akkor jelenik meg, ha kódot kért)
-                  if (_successMessage != null) ...[
-                    SizedBox(height: isMobile ? 12 : 16),
+                      SizedBox(height: isMobile ? 24 : 32),
+                    ],
+                    // Kód kérése gomb
                     SizedBox(
                       width: double.infinity,
                       height: isMobile ? 48 : 56,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _verifyAndChange,
+                        onPressed:
+                            _isLoading || _cooldown > 0 ? null : _requestCode,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
+                          backgroundColor: const Color(0xFF1E3A8A),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius:
@@ -303,10 +277,11 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
                           elevation: 0,
                         ),
                         child: _isLoading
-                            ? const CircularProgressIndicator(
-                                color: Colors.white)
+                            ? const CircularProgressIndicator(color: Colors.white)
                             : Text(
-                                'Eszköz váltása',
+                                _cooldown > 0
+                                    ? 'Újraküldés $_cooldown s'
+                                    : 'Kód kérése',
                                 style: TextStyle(
                                   fontSize: isMobile ? 14 : 16,
                                   fontWeight: FontWeight.w600,
@@ -314,76 +289,106 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
                               ),
                       ),
                     ),
-                  ],
-                  SizedBox(height: isMobile ? 16 : 24),
-                  // Vissza a bejelentkezéshez link
-                  TextButton(
-                    onPressed: () async {
-                      await FirebaseAuth.instance.signOut();
-                      if (mounted) context.go('/login');
-                    },
-                    child: Text(
-                      'Vissza a bejelentkezéshez',
-                      style: TextStyle(
-                        color: const Color(0xFF1E3A8A),
-                        fontSize: isMobile ? 14 : 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  // Hiba/siker üzenetek
-                  if (_errorMessage != null) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFFECACA)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.error_outline,
-                              color: Color(0xFFDC2626), size: 20),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              _errorMessage!,
-                              style: const TextStyle(
-                                  color: Color(0xFFDC2626), fontSize: 14),
+                    // Váltás gomb (csak akkor jelenik meg, ha kódot kért)
+                    if (_successMessage != null) ...[
+                      SizedBox(height: isMobile ? 12 : 16),
+                      SizedBox(
+                        width: double.infinity,
+                        height: isMobile ? 48 : 56,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _verifyAndChange,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(isMobile ? 24 : 28),
                             ),
+                            elevation: 0,
                           ),
-                        ],
+                          child: _isLoading
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white)
+                              : Text(
+                                  'Eszköz váltása',
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 14 : 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                    SizedBox(height: isMobile ? 16 : 24),
+                    // Vissza a bejelentkezéshez link
+                    TextButton(
+                      onPressed: () async {
+                        await FirebaseAuth.instance.signOut();
+                        if (mounted) context.go('/login');
+                      },
+                      child: Text(
+                        'Vissza a bejelentkezéshez',
+                        style: TextStyle(
+                          color: const Color(0xFF1E3A8A),
+                          fontSize: isMobile ? 14 : 16,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
-                  ],
-                  if (_successMessage != null) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0FDF4),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFBBF7D0)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.check_circle_outline,
-                              color: Color(0xFF16A34A), size: 20),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              _successMessage!,
-                              style: const TextStyle(
-                                  color: Color(0xFF16A34A), fontSize: 14),
+                    SizedBox(height: isMobile ? 24 : 32),
+                    // Hiba/siker üzenetek
+                    if (_errorMessage != null) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFFECACA)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline,
+                                color: Color(0xFFDC2626), size: 20),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: const TextStyle(
+                                    color: Color(0xFFDC2626), fontSize: 14),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
+                    if (_successMessage != null) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFBBF7D0)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.check_circle_outline,
+                                color: Color(0xFF16A34A), size: 20),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _successMessage!,
+                                style: const TextStyle(
+                                    color: Color(0xFF16A34A), fontSize: 14),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             );
           },
