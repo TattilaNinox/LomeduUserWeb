@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 // import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import '../core/session_guard.dart';
 
 /// A bejelentkezési képernyőt megvalósító widget.
 ///
@@ -47,9 +48,27 @@ class LoginScreenState extends State<LoginScreen> {
       );
       debugPrint('Firebase Auth bejelentkezés sikeres!');
 
-      // Sikeres bejelentkezés: a router redirect fog dönteni (guard)
+      // Sikeres bejelentkezés után azonnali irányítás a guard állapot alapján
       if (userCredential.user != null) {
-        debugPrint('Bejelentkezés sikeres, router dönt a célképernyőről');
+        debugPrint('Bejelentkezés sikeres, guard állapot ellenőrzése...');
+        await SessionGuard.instance.ensureInitialized();
+        final auth = SessionGuard.instance.authStatus;
+        final device = SessionGuard.instance.deviceAccess;
+
+        if (!mounted) return;
+        if (auth == AuthStatus.emailUnverified) {
+          context.go('/verify-email');
+          return;
+        }
+        if (device == DeviceAccess.denied) {
+          context.go('/device-change');
+          return;
+        }
+        if (device == DeviceAccess.loading) {
+          context.go('/guard');
+          return;
+        }
+        // allowed esetben a redirect úgyis /notes-ra visz, nem kell tenni semmit
       }
     } on FirebaseAuthException catch (e) {
       // Ha a bejelentkezés során a Firebase hibát dob (pl. rossz jelszó),
