@@ -22,6 +22,19 @@ class Sidebar extends StatelessWidget {
   /// A `Sidebar` widget konstruktora.
   const Sidebar({super.key, required this.selectedMenu, this.extraPanel});
 
+  void _navigate(BuildContext context, String path) {
+    // Ha a Sidebar egy Drawer-ben van, előbb zárjuk be a Drawert
+    final navigator = Navigator.of(context);
+    final router = GoRouter.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+      // A pop után ütemezzük a navigációt
+      Future.microtask(() => router.go(path));
+    } else {
+      router.go(path);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Egy fix szélességű konténer, ami a menüsáv alapját képezi.
@@ -35,7 +48,7 @@ class Sidebar extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: InkWell(
-                onTap: () => context.go('/notes'),
+                onTap: () => _navigate(context, '/notes'),
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
@@ -200,29 +213,29 @@ class Sidebar extends StatelessWidget {
       // A `onTap` esemény a `go_router` segítségével a megfelelő útvonalra navigál.
       onTap: () {
         if (routeName == 'notes') {
-          context.go('/notes');
+          _navigate(context, '/notes');
         } else if (routeName == 'note_create') {
-          context.go('/notes/create');
+          _navigate(context, '/notes/create');
         } else if (routeName == 'interactive_note_create') {
-          context.go('/interactive-notes/create');
+          _navigate(context, '/interactive-notes/create');
         } else if (routeName == 'dynamic_quiz_create') {
-          context.go('/dynamic-quiz/create');
+          _navigate(context, '/dynamic-quiz/create');
         } else if (routeName == 'dynamic_quiz_dual_create') {
-          context.go('/dynamic-quiz-dual/create');
+          _navigate(context, '/dynamic-quiz-dual/create');
         } else if (routeName == 'bundles') {
-          context.go('/bundles');
+          _navigate(context, '/bundles');
         } else if (routeName == 'question_banks') {
-          context.go('/question-banks');
+          _navigate(context, '/question-banks');
         } else if (routeName == 'categories') {
-          context.go('/categories');
+          _navigate(context, '/categories');
         } else if (routeName == 'sciences') {
-          context.go('/sciences');
+          _navigate(context, '/sciences');
         } else if (routeName == 'decks') {
-          context.go('/decks');
+          _navigate(context, '/decks');
         } else if (routeName == 'users') {
-          context.go('/users');
+          _navigate(context, '/users');
         } else if (routeName == 'public_documents') {
-          context.go('/public-documents');
+          _navigate(context, '/public-documents');
         }
       },
     );
