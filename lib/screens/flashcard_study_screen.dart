@@ -17,13 +17,13 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
   bool _isLoading = true;
   int _currentIndex = 0;
   bool _showAnswer = false;
-  
+
   // Evaluation counters
   int _againCount = 0;
   int _hardCount = 0;
   int _goodCount = 0;
   int _easyCount = 0;
-  
+
   // Learning data
   List<int> _dueCardIndices = [];
   String? _categoryId;
@@ -40,25 +40,29 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
           .collection('notes')
           .doc(widget.deckId)
           .get();
-      
+
       if (mounted) {
         final data = doc.data();
         final categoryId = data?['category'] as String? ?? 'default';
-        final flashcards = List<Map<String, dynamic>>.from(data?['flashcards'] ?? []);
-        
+        final flashcards =
+            List<Map<String, dynamic>>.from(data?['flashcards'] ?? []);
+
         // Esedékes kártyák lekérése
-        final dueIndices = await LearningService.getDueFlashcardIndicesForDeck(widget.deckId);
+        final dueIndices =
+            await LearningService.getDueFlashcardIndicesForDeck(widget.deckId);
         // Valós időben számolt statisztikák a kártyák aktuális értékelései alapján
         final user = FirebaseAuth.instance.currentUser;
         int again = 0, hard = 0, good = 0, easy = 0;
         if (user != null && flashcards.isNotEmpty) {
           // Batch lekérdezés a tanulási adatokhoz
-          final allCardIds = List.generate(flashcards.length, (i) => '${widget.deckId}#$i');
+          final allCardIds =
+              List.generate(flashcards.length, (i) => '${widget.deckId}#$i');
           const chunkSize = 10;
           final learningDocs = <QueryDocumentSnapshot>[];
-          
+
           for (var i = 0; i < allCardIds.length; i += chunkSize) {
-            final chunk = allCardIds.sublist(i, (i + chunkSize).clamp(0, allCardIds.length));
+            final chunk = allCardIds.sublist(
+                i, (i + chunkSize).clamp(0, allCardIds.length));
             final query = await FirebaseFirestore.instance
                 .collection('users')
                 .doc(user.uid)
@@ -69,21 +73,29 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
                 .get();
             learningDocs.addAll(query.docs);
           }
-          
+
           // Számlálók számítása az utolsó értékelések alapján
           for (final doc in learningDocs) {
             final data = doc.data() as Map<String, dynamic>?;
             final lastRating = data?['lastRating'] as String? ?? 'Again';
-            
+
             switch (lastRating) {
-              case 'Again': again++; break;
-              case 'Hard': hard++; break;
-              case 'Good': good++; break;
-              case 'Easy': easy++; break;
+              case 'Again':
+                again++;
+                break;
+              case 'Hard':
+                hard++;
+                break;
+              case 'Good':
+                good++;
+                break;
+              case 'Easy':
+                easy++;
+                break;
             }
           }
         }
-        
+
         setState(() {
           _deckData = doc;
           _categoryId = categoryId;
@@ -114,8 +126,9 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
   Future<void> _evaluateCard(String evaluation) async {
     try {
       final currentCardIndex = _dueCardIndices[_currentIndex];
-      final cardId = '${widget.deckId}#$currentCardIndex'; // deckId#index formátum
-      
+      final cardId =
+          '${widget.deckId}#$currentCardIndex'; // deckId#index formátum
+
       // Optimista UI frissítés
       setState(() {
         switch (evaluation) {
@@ -167,7 +180,6 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
           _showCompletionDialog();
         }
       }
-
     } catch (e) {
       // Hibakezelés - UI visszaállítása
       setState(() {
@@ -186,7 +198,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
             break;
         }
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -259,7 +271,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
     try {
       final flashcards = _getFlashcards();
       await LearningService.resetDeckProgress(widget.deckId, flashcards.length);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -347,7 +359,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
 
     final data = _deckData!.data() as Map<String, dynamic>;
     final deckTitle = data['title'] as String? ?? 'Névtelen pakli';
-    
+
     // Ha nincs esedékes kártya
     if (_dueCardIndices.isEmpty) {
       return Scaffold(
@@ -372,7 +384,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
         ),
       );
     }
-    
+
     final currentCardIndex = _dueCardIndices[_currentIndex];
     final currentCard = flashcards[currentCardIndex];
     final totalCards = _dueCardIndices.length;
@@ -457,7 +469,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // Question section
                     const Text(
@@ -476,12 +488,20 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
                         color: Colors.black87,
                         height: 1.4,
                       ),
+                      textAlign: TextAlign.center,
                     ),
 
-                    const SizedBox(height: 24),
-
-                    // Answer section
                     if (_showAnswer) ...[
+                      const SizedBox(height: 16),
+                      Divider(
+                        color: Colors.grey,
+                        thickness: 1,
+                        indent: 8,
+                        endIndent: 8,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Answer section
                       const Text(
                         'Válasz:',
                         style: TextStyle(
@@ -498,6 +518,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
                           color: Colors.black87,
                           height: 1.4,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ] else ...[
                       // Show answer button
