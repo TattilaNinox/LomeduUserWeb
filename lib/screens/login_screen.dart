@@ -1,5 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:js' as js;
 // import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../core/session_guard.dart';
@@ -106,6 +109,20 @@ class LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     // A `Scaffold` egy alapvető Material Design vizuális elrendezési struktúra.
+    // Ha a verifikációs linkről jöttünk (web), jelzünk a másik fülnek
+    if (kIsWeb) {
+      final qp = Uri.base.queryParameters;
+      if (qp['from'] == 'verify') {
+        try {
+          // Web BroadcastChannel JS API hívása dart:js util nélkül
+          // ignore: avoid_dynamic_calls
+          (js.context['BroadcastChannel'] as dynamic)
+              .callMethod('new', ['lomedu-auth']).callMethod(
+                  'postMessage', ['email-verified']);
+        } catch (_) {}
+      }
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       // Görgethető, biztonságos terület a kisebb kijelzők és a billentyűzet miatt.

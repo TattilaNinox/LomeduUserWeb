@@ -21,36 +21,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _errorMessage;
   bool _isLoading = false;
 
-  /// Külön segédfüggvény az email megerősítő levél küldésére.
-  /// A Flutter webes implementációja megköveteli az `ActionCodeSettings`-et,
-  /// ami megadja a Firebase-nek a visszatérési URL-t, enélkül a hívás hibát dobhat vagy lefagyhat.
+  /// Külön segédfüggvény az email megerősítő levél küldésére (weben ActionCodeSettings-szel).
   Future<void> _sendVerificationEmail(User user) async {
     try {
-      debugPrint("=== EMAIL VERIFICATION DEBUG ===");
-      debugPrint("User email: ${user.email}");
-      debugPrint("User emailVerified: ${user.emailVerified}");
-
       if (kIsWeb) {
-        debugPrint("Sending email verification for web...");
-        // Weben kötelező megadni a visszatérési URL-t.
+        final origin = Uri.base
+            .origin; // pl. https://lomedu-user-web.web.app vagy http://localhost:xxxx
         await user.sendEmailVerification(ActionCodeSettings(
-          // Ezt az URL-t a Firebase Hosting-ban is be kell állítani, ha van.
-          url: 'https://lomedu-user-web.web.app/notes',
+          url: '$origin/#/login?from=verify',
           handleCodeInApp: true,
         ));
-        debugPrint("Email verification sent successfully for web");
       } else {
-        debugPrint("Sending email verification for mobile...");
-        // Mobilon nincs szükség extra beállításokra.
         await user.sendEmailVerification();
-        debugPrint("Email verification sent successfully for mobile");
       }
     } on TypeError catch (e) {
-      // MFA related TypeError kezelése
       debugPrint("MFA TypeError elkapva (nem kritikus): $e");
     } catch (e) {
-      // Hiba esetén naplózzuk, de a felhasználót továbbengedjük a verify screen-re,
-      // ahol újra tudja küldeni.
       debugPrint("Hiba a megerősítő email küldésekor: $e");
     }
   }

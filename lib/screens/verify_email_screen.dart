@@ -3,7 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:web/web.dart' as web;
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:js' as js;
 
 class VerifyEmailScreen extends StatefulWidget {
   const VerifyEmailScreen({super.key});
@@ -15,32 +16,32 @@ class VerifyEmailScreen extends StatefulWidget {
 class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   Timer? _timer;
   int _cooldown = 0;
-  bool _triedAutoClose = false;
 
-  /// Megpróbálja bezárni az aktuális böngészőablakot (weben).
-  /// Visszatér: sikerült-e.
-  bool _attemptCloseWindow() {
-    if (!kIsWeb) return false;
+  void _listenForVerificationFromOtherTab() {
+    if (!kIsWeb) return;
     try {
-      // 1) about:blank-re váltás majd zárás
-      web.window.open('about:blank', '_self');
-      web.window.close();
+      // BroadcastChannel figyelése JS-ből
+      // ignore: avoid_dynamic_calls
+      final channel =
+          js.context.callMethod('BroadcastChannel', ['lomedu-auth']);
+      channel.callMethod('addEventListener', [
+        'message',
+        (dynamic event) {
+          try {
+            final data = event?.data?.toString();
+            if (data == 'email-verified' && mounted) {
+              context.go('/login');
+            }
+          } catch (_) {}
+        }
+      ]);
     } catch (_) {}
-    try {
-      // 2) Alternatív: self close
-      web.window.close();
-    } catch (_) {}
-    try {
-      // 3) Fallback: üres oldal megnyitása és zárása
-      web.window.open('', '_self')?.close();
-    } catch (_) {}
-    // Ha idáig eljutottunk, nincs megbízható visszajelzés; jelezzük, hogy próbálkoztunk
-    return true;
   }
 
   @override
   void initState() {
     super.initState();
+    _listenForVerificationFromOtherTab();
     _timer = Timer.periodic(const Duration(seconds: 5), (_) async {
       final u = FirebaseAuth.instance.currentUser;
       if (u == null) return;
@@ -49,14 +50,6 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         await u.reload();
         final reloadedUser = FirebaseAuth.instance.currentUser;
         if (reloadedUser != null && reloadedUser.emailVerified && mounted) {
-          if (!_triedAutoClose) {
-            _triedAutoClose = true;
-            // Többszöri kísérlet a bezárásra rövid késleltetéssel
-            for (int i = 0; i < 3; i++) {
-              _attemptCloseWindow();
-              await Future.delayed(const Duration(milliseconds: 200));
-            }
-          }
           // Biztonsági lépés: jelentkezzünk ki, és menjünk a login képernyőre
           try {
             await FirebaseAuth.instance.signOut();
@@ -200,12 +193,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                     child: const Text('Vissza a bejelentkezéshez'),
                   ),
                   const SizedBox(height: 4),
-                  if (kIsWeb)
-                    TextButton.icon(
-                      onPressed: _attemptCloseWindow,
-                      icon: const Icon(Icons.close),
-                      label: const Text('Ablak bezárása'),
-                    ),
+                  // Szándékos: manuális bezáró gomb helyett automatikus redirect működik
                 ],
               ),
             ),
