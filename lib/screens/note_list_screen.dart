@@ -464,42 +464,72 @@ class _NoteListScreenState extends State<NoteListScreen> {
                     const SizedBox(height: 12),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                context.go('/account');
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFF97316),
-                                foregroundColor: Colors.white,
-                                minimumSize: const Size(0, 40),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8)),
+                      child: LayoutBuilder(builder: (context, c) {
+                        final isNarrow = c.maxWidth < 360;
+                        if (isNarrow) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              ElevatedButton(
+                                onPressed: () => context.go('/account'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFF97316),
+                                  foregroundColor: Colors.white,
+                                  minimumSize: const Size.fromHeight(44),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text('Fiók adatok'),
                               ),
-                              child: const Text('Fiók adatok',
-                                  overflow: TextOverflow.ellipsis),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () async {
-                                await FirebaseAuth.instance.signOut();
-                                if (context.mounted) context.go('/login');
-                              },
-                              style: OutlinedButton.styleFrom(
-                                minimumSize: const Size(0, 40),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8)),
+                              const SizedBox(height: 8),
+                              OutlinedButton(
+                                onPressed: () async {
+                                  await FirebaseAuth.instance.signOut();
+                                  if (context.mounted) context.go('/login');
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(44),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text('Kijelentkezés'),
                               ),
-                              child: const Text('Kijelentkezés',
-                                  overflow: TextOverflow.ellipsis),
+                            ],
+                          );
+                        }
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () => context.go('/account'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFF97316),
+                                  foregroundColor: Colors.white,
+                                  minimumSize: const Size(0, 40),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text('Fiók adatok'),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () async {
+                                  await FirebaseAuth.instance.signOut();
+                                  if (context.mounted) context.go('/login');
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  minimumSize: const Size(0, 40),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text('Kijelentkezés'),
+                              ),
+                            ),
+                          ],
+                        );
+                      }),
                     )
                   ],
                 ),
