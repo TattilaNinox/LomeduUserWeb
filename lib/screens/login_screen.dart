@@ -24,6 +24,7 @@ class LoginScreenState extends State<LoginScreen> {
   // a mezők tartalma.
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _passwordVisible = false;
 
   // Magyar Firebase Auth hibaüzenetek
   static const Map<String, String> _firebaseErrorHu = {
@@ -200,7 +201,8 @@ class LoginScreenState extends State<LoginScreen> {
                     // Jelszó beviteli mező
                     TextField(
                       controller: _passwordController,
-                      obscureText: true, // Elrejti a beírt karaktereket
+                      obscureText:
+                          !_passwordVisible, // Elrejti a beírt karaktereket
                       decoration: InputDecoration(
                         labelText: 'Jelszó',
                         border: OutlineInputBorder(
@@ -210,6 +212,19 @@ class LoginScreenState extends State<LoginScreen> {
                         ),
                         prefixIcon:
                             const Icon(Icons.lock, color: Color(0xFF6B7280)),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _passwordVisible
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: const Color(0xFF6B7280),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _passwordVisible = !_passwordVisible;
+                            });
+                          },
+                        ),
                       ),
                       autofillHints: const [AutofillHints.password],
                     ),

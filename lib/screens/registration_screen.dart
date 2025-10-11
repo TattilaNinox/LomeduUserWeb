@@ -18,6 +18,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  bool _passwordsVisible = false;
   String? _errorMessage;
   bool _isLoading = false;
 
@@ -263,7 +264,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     const SizedBox(height: 16),
                     TextField(
                       controller: _passwordController,
-                      obscureText: true,
+                      obscureText: !_passwordsVisible,
                       decoration: InputDecoration(
                         labelText: 'Jelszó',
                         border: OutlineInputBorder(
@@ -279,7 +280,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     const SizedBox(height: 16),
                     TextField(
                       controller: _confirmPasswordController,
-                      obscureText: true,
+                      obscureText: !_passwordsVisible,
                       decoration: InputDecoration(
                         labelText: 'Jelszó megerősítése',
                         border: OutlineInputBorder(
@@ -289,6 +290,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         ),
                         prefixIcon: const Icon(Icons.lock_outline,
                             color: Color(0xFF6B7280)),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _passwordsVisible
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: const Color(0xFF6B7280),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _passwordsVisible = !_passwordsVisible;
+                            });
+                          },
+                        ),
                       ),
                       autofillHints: const [AutofillHints.newPassword],
                     ),
