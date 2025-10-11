@@ -24,6 +24,10 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
   final int _currentPageIndex = 0;
   WebViewController? _webViewController;
 
+  // Text size toggle state
+  bool _isTextScaled = false;
+  double _fontScale = 1.0;
+
   @override
   void initState() {
     super.initState();
@@ -63,7 +67,7 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
     final data = _noteSnapshot!.data() as Map<String, dynamic>;
     final title = data['title'] as String? ?? 'Cím nélkül';
     final pages = data['pages'] as List<dynamic>? ?? [];
-    final currentPage = pages.isNotEmpty
+    String currentPage = pages.isNotEmpty
         ? pages[_currentPageIndex] as String
         : 'Ez a jegyzet nem tartalmaz tartalmat.';
 
@@ -110,6 +114,25 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
             context.go(uri.toString());
           },
         ),
+        actions: [
+          if (!isWebView)
+            Padding(
+              padding: EdgeInsets.only(right: isMobile ? 12 : 16),
+              child: IconButton(
+                icon: const Icon(
+                  Icons.format_size,
+                  color: Color(0xFF6A5ACD), // purple-blue
+                ),
+                tooltip: _isTextScaled ? 'Eredeti méret' : 'Nagyobb szöveg',
+                onPressed: () {
+                  setState(() {
+                    _isTextScaled = !_isTextScaled;
+                    _fontScale = _isTextScaled ? 1.3 : 1.0;
+                  });
+                },
+              ),
+            ),
+        ],
       ),
       body: Container(
         color: const Color(0xFFF8F9FA),
@@ -140,31 +163,36 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
                               data: currentPage,
                               style: {
                                 "body": Style(
-                                  fontSize: FontSize(isMobile ? 15 : 18),
+                                  fontSize: FontSize(
+                                      (isMobile ? 14 : 18) * _fontScale),
                                   lineHeight: const LineHeight(1.6),
                                   color: const Color(0xFF2D3748),
                                   fontFamily: 'Inter',
                                 ),
                                 "h1": Style(
-                                  fontSize: FontSize(isMobile ? 18 : 24),
+                                  fontSize: FontSize(
+                                      (isMobile ? 18 : 24) * _fontScale),
                                   fontWeight: FontWeight.bold,
                                   color: const Color(0xFF1A202C),
                                   margin: Margins.only(bottom: 16),
                                 ),
                                 "h2": Style(
-                                  fontSize: FontSize(isMobile ? 16 : 22),
+                                  fontSize: FontSize(
+                                      (isMobile ? 16 : 22) * _fontScale),
                                   fontWeight: FontWeight.w600,
                                   color: const Color(0xFF2D3748),
                                   margin: Margins.only(bottom: 12),
                                 ),
                                 "h3": Style(
-                                  fontSize: FontSize(isMobile ? 14 : 20),
+                                  fontSize: FontSize(
+                                      (isMobile ? 14 : 20) * _fontScale),
                                   fontWeight: FontWeight.w600,
                                   color: const Color(0xFF4A5568),
                                   margin: Margins.only(bottom: 10),
                                 ),
                                 "p": Style(
-                                  fontSize: FontSize(isMobile ? 14 : 17),
+                                  fontSize: FontSize(
+                                      (isMobile ? 13 : 17) * _fontScale),
                                   lineHeight: const LineHeight(1.6),
                                   color: const Color(0xFF2D3748),
                                   margin: Margins.only(bottom: 12),
@@ -176,13 +204,15 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
                                   margin: Margins.only(bottom: 12),
                                 ),
                                 "li": Style(
-                                  fontSize: FontSize(isMobile ? 14 : 17),
+                                  fontSize: FontSize(
+                                      (isMobile ? 13 : 17) * _fontScale),
                                   lineHeight: const LineHeight(1.5),
                                   color: const Color(0xFF2D3748),
                                   margin: Margins.only(bottom: 6),
                                 ),
                                 "blockquote": Style(
-                                  fontSize: FontSize(isMobile ? 13 : 17),
+                                  fontSize: FontSize(
+                                      (isMobile ? 13 : 17) * _fontScale),
                                   fontStyle: FontStyle.italic,
                                   color: const Color(0xFF4A5568),
                                   backgroundColor: const Color(0xFFF7FAFC),
@@ -200,7 +230,8 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
                                   backgroundColor: const Color(0xFFF7FAFC),
                                   color: const Color(0xFFE53E3E),
                                   fontFamily: 'monospace',
-                                  fontSize: FontSize(isMobile ? 12 : 15),
+                                  fontSize: FontSize(
+                                      (isMobile ? 11 : 15) * _fontScale),
                                   padding: HtmlPaddings.symmetric(
                                       horizontal: 4, vertical: 2),
                                 ),
