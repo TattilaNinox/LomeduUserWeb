@@ -59,6 +59,7 @@ final _router = GoRouter(
       '/register',
       '/verify-email',
       '/guard',
+      '/device-change',
     }.contains(loc);
 
     if (auth == AuthStatus.loggedOut) {
