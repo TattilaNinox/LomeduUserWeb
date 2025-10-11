@@ -207,7 +207,7 @@ class MyApp extends StatelessWidget {
     // Ez köti össze a router konfigurációt az alkalmazás vizuális rétegével.
     // A DeviceChecker wrappert kivesszük: a router redirect dönti el a képernyőt
     return MaterialApp.router(
-      title: 'Lomedu Admin',
+      title: 'Lomedu.hu',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: AppMessenger.key,
