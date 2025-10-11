@@ -302,7 +302,7 @@ class LoginScreenState extends State<LoginScreen> {
                         size: 16,
                         color: Color(0xFF1E3A8A),
                       ),
-                      label: const Text('Eszközváltás'),
+                      label: const Text('Eszköz regisztráció'),
                     ),
                   ],
                 ),

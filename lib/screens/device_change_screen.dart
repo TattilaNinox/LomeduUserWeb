@@ -113,7 +113,7 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
-          'Eszközváltás',
+          'Eszköz regisztráció',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w600,
@@ -160,7 +160,7 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
                     SizedBox(height: isMobile ? 24 : 32),
                     // Cím
                     Text(
-                      'Eszköz váltása',
+                      'Eszköz regisztráció',
                       style: TextStyle(
                         fontSize: isMobile ? 24 : 28,
                         fontWeight: FontWeight.w700,
@@ -173,7 +173,7 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 0),
                       child: Text(
-                        'Adja meg az email címét az eszközváltáshoz szükséges kód igényléséhez.',
+                        'Biztonsági okokból egy felhasználói fiókhoz egyszerre csak egy eszköz társítható. Ha új számítógépet, telefont vagy privát böngészőablakot szeretnél használni, először regisztrálnod kell azt. Kérj egy hatjegyű kódot az e-mail címedre, majd írd be a kódot, hogy igazold az új eszköz használatát.',
                         style: TextStyle(
                           fontSize: isMobile ? 14 : 16,
                           color: const Color(0xFF6B7280),
@@ -310,7 +310,7 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
                               ? const CircularProgressIndicator(
                                   color: Colors.white)
                               : Text(
-                                  'Eszköz váltása',
+                                  'Eszköz regisztráció',
                                   style: TextStyle(
                                     fontSize: isMobile ? 14 : 16,
                                     fontWeight: FontWeight.w600,
