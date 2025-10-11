@@ -24,6 +24,9 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
   int _goodCount = 0;
   int _easyCount = 0;
 
+  // Megjelenjen-e a nullázó ikon?
+  bool get _hasProgress => _againCount + _hardCount + _goodCount + _easyCount > 0;
+
   // Learning data
   List<int> _dueCardIndices = [];
   String? _categoryId;
@@ -409,11 +412,12 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
           },
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            tooltip: 'Újrakezdés',
-            onPressed: _showResetDialog,
-          ),
+          if (_hasProgress)
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              tooltip: 'Újrakezdés',
+              onPressed: _showResetDialog,
+            ),
         ],
         elevation: 0,
       ),
@@ -521,6 +525,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
                         textAlign: TextAlign.center,
                       ),
                     ] else ...[
+                      const SizedBox(height: 24),
                       // Show answer button
                       SizedBox(
                         width: double.infinity,
