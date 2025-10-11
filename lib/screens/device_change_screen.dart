@@ -126,7 +126,8 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () async {
             await FirebaseAuth.instance.signOut();
-            if (mounted) context.go('/login');
+            if (!mounted) return;
+            context.go('/login');
           },
         ),
       ),
@@ -171,7 +172,8 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
                     SizedBox(height: isMobile ? 12 : 16),
                     // Leírás
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 0),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: isMobile ? 8 : 0),
                       child: Text(
                         'Biztonsági okokból egy felhasználói fiókhoz egyszerre csak egy eszköz társítható. Ha új számítógépet, telefont vagy privát böngészőablakot szeretnél használni, először regisztrálnod kell azt. Kérj egy hatjegyű kódot az e-mail címedre, majd írd be a kódot, hogy igazold az új eszköz használatát.',
                         style: TextStyle(
@@ -188,8 +190,8 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
                       controller: _emailController,
                       decoration: const InputDecoration(
                         hintText: 'Email cím',
-                        prefixIcon:
-                            Icon(Icons.email_outlined, color: Color(0xFF6B7280)),
+                        prefixIcon: Icon(Icons.email_outlined,
+                            color: Color(0xFF6B7280)),
                         border: UnderlineInputBorder(
                           borderSide: BorderSide(color: Color(0xFFE5E7EB)),
                         ),
@@ -277,7 +279,8 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
                           elevation: 0,
                         ),
                         child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
+                            ? const CircularProgressIndicator(
+                                color: Colors.white)
                             : Text(
                                 _cooldown > 0
                                     ? 'Újraküldés $_cooldown s'
@@ -324,7 +327,8 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
                     TextButton(
                       onPressed: () async {
                         await FirebaseAuth.instance.signOut();
-                        if (mounted) context.go('/login');
+                        if (!mounted) return;
+                        context.go('/login');
                       },
                       child: Text(
                         'Vissza a bejelentkezéshez',

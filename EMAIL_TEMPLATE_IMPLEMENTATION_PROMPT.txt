@@ -1,0 +1,56 @@
+# Lomedu – Professzionális E-mail Sablonok (2025-10-11)
+
+Ez a fájl bemutatja a Lomedu felhasználói e-mail rendszerének új, márkázott sablonmegoldását, valamint annak elkészült állapotát.
+
+---
+
+## 1. Cél
+1. Egységes, professzionális megjelenésű e-mailek (eszközváltási kód, e-mail-megerősítés, előfizetési emlékeztetők).  
+2. Lomedu-logó beágyazása cid-ként → kép azonnal megjelenik, internetkapcsolat nélkül is.  
+3. #0d6efd Bootstrap-kék brand-szín használata.
+
+## 2. Fő elemek
+- **`functions/assets/logo.png`** – a Lomedu logó, amelyet cid-ként csatolunk.
+- **`functions/emailTemplates.js`**  
+  - `buildTemplate(bodyHtml)` → kész HTML-keret logóval, fejléc-színnel, lábléccel.  
+  - `logoAttachment()` → Nodemailer-hez tartozó cid-attachment descriptor.
+- **`functions/index.js` módosítások**  
+  1. `requestDeviceChange` most már az új sablont használja.  
+  2. Új `initiateVerification` Cloud Function:  
+     - `generateEmailVerificationLink()`‐kel linket készít.  
+     - Küldés Nodemailerrel, `buildTemplate()`-tel.
+
+## 3. Használat kliensoldalról
+```
+final callable = FirebaseFunctions.instance.httpsCallable('initiateVerification');
+await callable.call({ 'userId': myUid });
+```
+Ezután a felhasználó a márkázott megerősítő e-mailt kapja.  
+**Ne** hívd `user.sendEmailVerification()`-t, mert az a Firebase beépített sablont küldi.
+
+## 4. Deploy / Teszt
+1. Frissítsd a Functions-t:  
+   ```bash
+   firebase deploy --only functions
+   ```
+2. Helyi teszthez:  
+   ```bash
+   firebase emulators:start --only functions
+   ```
+3. Hívj új eszközváltási kérést vagy `initiateVerification`-t → ellenőrizd az e-mailt.
+
+## 5. Készültségi állapot
+- [x] Logó átmásolása `functions/assets` alá.  
+- [x] `emailTemplates.js` helper elkészült.  
+- [x] `requestDeviceChange` átállítva új sablonra.  
+- [x] `initiateVerification` implementálva.  
+- [ ] Lokális/emulátor-teszt (TODO: `test-locally`).
+
+## 6. További bővítés
+- Előfizetési emlékeztető funkciók átkonvertálása a sablonra.  
+- Jelszó-visszaállító levél ugyanezzel a sablonnal.  
+- Multilanguage támogatás (i18n) sablon-szinten.
+
+---
+
+*Utolsó módosítás: 2025-10-11*

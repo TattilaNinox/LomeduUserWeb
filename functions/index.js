@@ -4,6 +4,7 @@ const { setGlobalOptions } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const { buildTemplate, logoAttachment } = require('./emailTemplates');
 
 // Konfiguráció forrása: 1) Firebase Functions config (firebase functions:config:set smtp.*),
 // 2) környezeti változók, 3) ha emulátor fut, próbáljon meg helyi SMTP-t (opcionális).
@@ -78,7 +79,8 @@ exports.requestDeviceChange = onCall(async (request) => {
       to: email,
       subject: 'Eszközváltási kód',
       text: `Az új eszköz jóváhagyásához adja meg a következő kódot: ${code} (15 percig érvényes)`,
-      html: `<p>Az új eszköz jóváhagyásához adja meg a következő kódot:</p><h2>${code}</h2><p>A kód 15 percig érvényes.</p>`,
+      html: buildTemplate(`<p>Az új eszköz jóváhagyásához adja meg a következő kódot:</p><h2 style="text-align:center;font-size:32px;margin:24px 0;color:#0d6efd;">${code}</h2><p>A kód 15 percig érvényes.</p>`),
+      attachments: [logoAttachment()],
     });
     console.log('Device change email sent to', email);
   } catch (mailErr) {
@@ -685,8 +687,40 @@ exports.fixExpiredSubscriptions = onCall(async (request) => {
 // Email verifikáció indítása
 exports.initiateVerification = onCall(async (request) => {
   try {
-    console.log('Initiate verification called');
-    return { success: true, message: 'Verification initiated' };
+    const { userId } = request.data || {};
+    if (!userId) {
+      throw new Error('invalid-argument: userId szükséges');
+    }
+
+    // Felhasználó email címének lekérése
+    const userRecord = await admin.auth().getUser(userId);
+    const email = userRecord.email;
+    if (!email) {
+      throw new Error('invalid-argument: A felhasználóhoz nincs email cím rendelve');
+    }
+
+    // Email verification link generálása
+    const actionCodeSettings = {
+      url: 'https://lomedu-user-web.web.app/login',
+      handleCodeInApp: false,
+    };
+    const verificationLink = await admin.auth().generateEmailVerificationLink(email, actionCodeSettings);
+
+    const subject = 'Email-cím megerősítése';
+    const text = `Kedves felhasználó!\n\nKérjük, erősítsd meg email-címedet a következő linkre kattintva:\n\n${verificationLink}\n\nÜdvözlettel,\nA Lomedu csapat`;
+    const bodyHtml = `<p>Kedves felhasználó!</p><p>Kérjük, erősítsd meg email-címedet az alábbi gombra kattintva:</p><p style="text-align:center;margin:32px 0;"><a href="${verificationLink}" style="background:#0d6efd;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:4px;display:inline-block;">Email megerősítése</a></p><p>Ha a gomb nem működik, másold be ezt a linket a böngésződbe:<br><a href="${verificationLink}">${verificationLink}</a></p><p>Üdvözlettel,<br>A Lomedu csapat</p>`;
+
+    await transport.sendMail({
+      from: 'Lomedu <info@lomedu.hu>',
+      to: email,
+      subject,
+      text,
+      html: buildTemplate(bodyHtml),
+      attachments: [logoAttachment()],
+    });
+
+    console.log('Verification email sent to', email);
+    return { success: true };
   } catch (error) {
     console.error('Initiate verification error:', error);
     throw new Error(`internal: Initiate verification failed: ${error.message}`);

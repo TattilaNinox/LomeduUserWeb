@@ -126,11 +126,11 @@ class LoginScreenState extends State<LoginScreen> {
       final qp = Uri.base.queryParameters;
       if (qp['from'] == 'verify') {
         try {
-          // Web BroadcastChannel JS API hívása dart:js util nélkül
+          // Web BroadcastChannel JS API hívása dart:js használatával
           // ignore: avoid_dynamic_calls
-          (js.context['BroadcastChannel'] as dynamic)
-              .callMethod('new', ['lomedu-auth']).callMethod(
-                  'postMessage', ['email-verified']);
+          final channel =
+              js.context['BroadcastChannel'].callMethod('new', ['lomedu-auth']);
+          channel.callMethod('postMessage', ['email-verified']);
         } catch (_) {}
       }
     }
@@ -295,7 +295,8 @@ class LoginScreenState extends State<LoginScreen> {
                     TextButton.icon(
                       onPressed: () async {
                         await FirebaseAuth.instance.signOut();
-                        if (mounted) context.go('/device-change');
+                        if (!mounted) return;
+                        context.go('/device-change');
                       },
                       icon: const Icon(
                         Icons.devices,

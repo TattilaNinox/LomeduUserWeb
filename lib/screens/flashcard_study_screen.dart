@@ -500,7 +500,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
 
                       if (_showAnswer) ...[
                         const SizedBox(height: 16),
-                        Divider(
+                        const Divider(
                           color: Colors.grey,
                           thickness: 1,
                           indent: 8,

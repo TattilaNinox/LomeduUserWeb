@@ -285,7 +285,8 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
           .map((q) => (q['question'] as String).trim().toLowerCase())
           .toSet();
       final uniqueToAdd = newQuestions
-          .where((q) => !existing.contains((q['question'] as String).trim().toLowerCase()))
+          .where((q) => !existing
+              .contains((q['question'] as String).trim().toLowerCase()))
           .toList();
       final skipped = newQuestions.length - uniqueToAdd.length;
       setState(() => _questions.addAll(uniqueToAdd));
@@ -298,7 +299,8 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
       setState(() => _questions = newQuestions);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Sikeres importálás: kérdések felülírva. Ne felejts el menteni.')));
+            content: Text(
+                'Sikeres importálás: kérdések felülírva. Ne felejts el menteni.')));
       }
     }
   }
