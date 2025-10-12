@@ -193,6 +193,12 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
             child: htmlWidget,
           ),
         );
+      } else {
+        // Mobilon: belső padding 0, maximális szélesség érzet
+        htmlWidget = Padding(
+          padding: EdgeInsets.zero,
+          child: htmlWidget,
+        );
       }
 
       return MouseRegion(
