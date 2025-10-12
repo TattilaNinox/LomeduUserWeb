@@ -48,7 +48,6 @@ class _FiltersState extends State<Filters> {
   String? _status;
   String? _category;
   String? _tag;
-  String? _science;
   String? _type;
 
   static const _noteTypes = [
@@ -66,7 +65,6 @@ class _FiltersState extends State<Filters> {
     _status = widget.selectedStatus;
     _category = widget.selectedCategory;
     _tag = widget.selectedTag;
-    _science = widget.selectedScience;
     _type = widget.selectedType;
   }
 
@@ -81,9 +79,6 @@ class _FiltersState extends State<Filters> {
     }
     if (widget.selectedTag != oldWidget.selectedTag) {
       _tag = widget.selectedTag;
-    }
-    if (widget.selectedScience != oldWidget.selectedScience) {
-      _science = widget.selectedScience;
     }
     if (widget.selectedType != oldWidget.selectedType) {
       _type = widget.selectedType;
@@ -141,15 +136,30 @@ class _FiltersState extends State<Filters> {
       isExpanded: widget.vertical,
     ));
 
-    add(_buildDropdown<String>(
-      hint: 'Tudomány',
-      value: _science,
-      items: widget.sciences,
-      onChanged: (v) {
-        setState(() => _science = v);
-        widget.onScienceChanged(v);
-      },
-      isExpanded: widget.vertical,
+    // Tudomány szűrő ideiglenesen inaktív, fix értékkel
+    const String allowedScience = 'Egészségügyi kártevőírtó';
+    add(Opacity(
+      opacity: 0.6,
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          canvasColor: Colors.white,
+          highlightColor: Colors.transparent,
+          splashColor: Colors.transparent,
+        ),
+        child: DropdownButton<String>(
+          hint: const Text('Tudomány',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+          value: allowedScience,
+          isExpanded: widget.vertical,
+          items: const [
+            DropdownMenuItem<String>(
+              value: allowedScience,
+              child: Text(allowedScience, style: TextStyle(fontSize: 12)),
+            )
+          ],
+          onChanged: null, // inaktív
+        ),
+      ),
     ));
 
     add(_buildDropdown<String>(
@@ -171,7 +181,6 @@ class _FiltersState extends State<Filters> {
             _status = null;
             _category = null;
             _tag = null;
-            _science = null;
             _type = null;
           });
           widget.onClearFilters();

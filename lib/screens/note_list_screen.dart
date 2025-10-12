@@ -120,10 +120,19 @@ class _NoteListScreenState extends State<NoteListScreen> {
 
   /// Betölti a címkéket a Firestore `tags` kollekciójából.
   Future<void> _loadSciences() async {
-    final snapshot =
-        await FirebaseConfig.firestore.collection('sciences').get();
+    // Ideiglenes korlátozás: csak egyetlen tudomány választható
+    const allowedScience = 'Egészségügyi kártevőírtó';
+    try {
+      // Lekérés megmarad, de az eredményt felülírjuk az allowedScience-re
+      await FirebaseConfig.firestore.collection('sciences').limit(1).get();
+    } catch (_) {
+      // Hiba esetén is alkalmazzuk a korlátozást
+    }
     setState(() {
-      _sciences = snapshot.docs.map((doc) => doc['name'] as String).toList();
+      _sciences = const [allowedScience];
+      if (_selectedScience != null && _selectedScience != allowedScience) {
+        _selectedScience = null;
+      }
     });
   }
 
