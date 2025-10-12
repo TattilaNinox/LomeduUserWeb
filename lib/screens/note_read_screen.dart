@@ -153,14 +153,25 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
             padding: HtmlPaddings.all(12),
             margin: Margins.only(bottom: 16),
           ),
+          // Képek és táblák igazítása a rendelkezésre álló szélességhez
+          "img": Style(width: Width(100, Unit.percent)),
+          "table": Style(width: Width(100, Unit.percent)),
         },
       );
 
       if (limitWidth) {
+        // Reszponzív max szélesség: desktopon szélesebb, tableten közepes
+        double maxContentWidth;
+        if (screenWidth >= 1200) {
+          maxContentWidth = 1120; // nagy kijelzők
+        } else {
+          maxContentWidth = 960; // tablet / kisebb desktop
+        }
+
         htmlWidget = Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
+            constraints: BoxConstraints(maxWidth: maxContentWidth),
             child: htmlWidget,
           ),
         );
