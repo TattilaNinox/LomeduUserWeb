@@ -28,7 +28,7 @@ class DeviceFingerprint {
       // Hiba esetén is új generálás
       final fingerprint = await _generateStableWebFingerprint();
       debugPrint(
-          'DeviceFingerprint: Generated fallback fingerprint: $fingerprint');
+          'DeviceFingerprint: Generated fallback fingerprint: $fingerprint (error: $e)');
       return fingerprint;
     }
   }
@@ -36,22 +36,20 @@ class DeviceFingerprint {
   /// Stabil web fingerprint generálása
   static Future<String> _generateStableWebFingerprint() async {
     try {
-      // Stabil böngésző jellemzők összegyűjtése
-      const language = 'hu'; // Magyar nyelv
-      const platform = 'web';
-      const userAgent = 'flutter_web'; // Stabil érték
-      const timezone = 1; // Magyar időzóna (CET/CEST)
-
-      // Kombinált string - NINCS timestamp benne!
-      const combined = '${platform}_${timezone}_${language}_$userAgent';
-
-      // Hash generálása
-      final hash = _simpleHash(combined);
-
+      final info = DeviceInfoPlugin();
+      final web = await info.webBrowserInfo;
+      final ua = web.userAgent ?? '';
+      final vendor = web.vendor ?? '';
+      final platform = web.platform ?? '';
+      final hc = web.hardwareConcurrency?.toString() ?? '';
+      final raw = '$ua|$vendor|$platform|$hc';
+      final hash = _simpleHash(raw);
+      debugPrint('DeviceFingerprint: web raw="$raw" -> hash=$hash');
       return 'web_$hash';
     } catch (e) {
-      // Hiba esetén is stabil generálás
-      return 'web_${_simpleHash('flutter_web_stable')}';
+      // Fallback stabil értékre, ha webBrowserInfo nem elérhető
+      debugPrint('DeviceFingerprint: webBrowserInfo error: $e, using fallback');
+      return 'web_${_simpleHash('flutter_web_fallback')}';
     }
   }
 

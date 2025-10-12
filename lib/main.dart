@@ -25,6 +25,7 @@ import 'core/session_guard.dart';
 import 'screens/guard_splash_screen.dart';
 import 'screens/account_screen.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'screens/forgot_password_screen.dart';
 
 /// Az alkalmazás fő belépési pontja.
 void main() async {
@@ -60,6 +61,7 @@ final _router = GoRouter(
       '/verify-email',
       '/guard',
       '/device-change',
+      '/forgot-password',
     }.contains(loc);
 
     if (auth == AuthStatus.loggedOut) {
@@ -67,6 +69,7 @@ final _router = GoRouter(
         '/login',
         '/register',
         '/device-change',
+        '/forgot-password',
       };
       return publicRoutes.contains(loc) ? null : '/login';
     }
@@ -189,6 +192,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/account',
       builder: (context, state) => const AccountScreen(),
+    ),
+    GoRoute(
+      path: '/forgot-password',
+      builder: (context, state) => const ForgotPasswordScreen(),
     ),
   ],
 );

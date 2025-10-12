@@ -33,11 +33,13 @@ class SessionGuard extends ChangeNotifier {
     _initialized = true;
 
     _authSubscription = _auth.authStateChanges().listen((user) async {
+      debugPrint('[SessionGuard] authStateChanges -> user=${user?.uid}');
       // Alapértelmezett állapotok
       if (user == null) {
         _authStatus = AuthStatus.loggedOut;
         _deviceAccess = DeviceAccess.loading;
         await _cancelUserDocSubscription();
+        debugPrint('[SessionGuard] user == null -> loggedOut, loading');
         notifyListeners();
         return;
       }
@@ -46,6 +48,7 @@ class SessionGuard extends ChangeNotifier {
         _authStatus = AuthStatus.emailUnverified;
         _deviceAccess = DeviceAccess.loading;
         await _cancelUserDocSubscription();
+        debugPrint('[SessionGuard] email NOT verified -> emailUnverified');
         notifyListeners();
         return;
       }
@@ -53,11 +56,13 @@ class SessionGuard extends ChangeNotifier {
       // Be van jelentkezve és email verifikált
       _authStatus = AuthStatus.loggedIn;
       _deviceAccess = DeviceAccess.loading;
+      debugPrint('[SessionGuard] loggedIn -> start device check');
       notifyListeners();
 
       try {
         // Aktuális fingerprint előkészítése (cache-elve is elég)
         _currentFingerprint = await DeviceFingerprint.getCurrentFingerprint();
+        debugPrint('[SessionGuard] currentFingerprint=$_currentFingerprint');
 
         // Felhasználói dokumentum figyelése
         await _cancelUserDocSubscription();
@@ -66,12 +71,14 @@ class SessionGuard extends ChangeNotifier {
             .doc(user.uid)
             .snapshots()
             .listen(_onUserDocChanged, onError: (error, _) {
+          debugPrint('[SessionGuard] user doc listen error: $error');
           // Hiba esetén ne rúgjuk ki a felhasználót, csak jelezzük, hogy loading
           _deviceAccess = DeviceAccess.loading;
           notifyListeners();
         });
       } catch (_) {
         _deviceAccess = DeviceAccess.loading;
+        debugPrint('[SessionGuard] exception during init, set loading');
         notifyListeners();
       }
     });
@@ -86,6 +93,7 @@ class SessionGuard extends ChangeNotifier {
     final data = snapshot.data();
     if (data == null) {
       _deviceAccess = DeviceAccess.loading;
+      debugPrint('[SessionGuard] user doc null -> loading');
       notifyListeners();
       return;
     }
@@ -95,6 +103,7 @@ class SessionGuard extends ChangeNotifier {
     final isAdmin = userType == 'admin';
     if (isAdmin) {
       _deviceAccess = DeviceAccess.allowed;
+      debugPrint('[SessionGuard] admin user -> allowed');
       notifyListeners();
       return;
     }
@@ -102,22 +111,26 @@ class SessionGuard extends ChangeNotifier {
     final String? allowedFingerprint =
         data['authorizedDeviceFingerprint'] as String?;
 
-    // Ha nincs regisztrált fingerprint, tekintsük engedélyezettnek (első eszköz regisztráció kezelhető külön folyamatban)
+    // Ha nincs regisztrált fingerprint, ne engedjük be azonnal
+    // A router átirányít a /device-change képernyőre
     if (allowedFingerprint == null || allowedFingerprint.isEmpty) {
-      _deviceAccess = DeviceAccess.allowed;
+      _deviceAccess = DeviceAccess.denied;
+      debugPrint('[SessionGuard] missing allowed fingerprint -> denied');
       notifyListeners();
       return;
     }
 
     if (_currentFingerprint == null) {
       _deviceAccess = DeviceAccess.loading;
+      debugPrint('[SessionGuard] currentFingerprint is null -> loading');
       notifyListeners();
       return;
     }
 
-    _deviceAccess = (allowedFingerprint == _currentFingerprint)
-        ? DeviceAccess.allowed
-        : DeviceAccess.denied;
+    final equal = allowedFingerprint == _currentFingerprint;
+    _deviceAccess = equal ? DeviceAccess.allowed : DeviceAccess.denied;
+    debugPrint(
+        '[SessionGuard] compare allowed=$allowedFingerprint vs current=$_currentFingerprint -> ${_deviceAccess.name}');
     notifyListeners();
   }
 

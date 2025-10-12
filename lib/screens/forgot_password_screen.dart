@@ -1,7 +1,13 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import '../core/app_messenger.dart';
 
+/// Elfelejtett jelszó képernyő.
+///
+/// Megadott e-mail címre jelszó-visszaállító linket küld a Firebase Authentication
+/// `sendPasswordResetEmail` hívással. Siker és hiba esetén SnackBar-on keresztül
+/// ad visszajelzést.
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
@@ -11,32 +17,45 @@ class ForgotPasswordScreen extends StatefulWidget {
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
-  String? _message;
-  String? _errorMessage;
   bool _isLoading = false;
 
-  Future<void> _sendPasswordResetEmail() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-      _message = null;
-    });
+  // Magyar Firebase Auth hibaüzenetek
+  static const Map<String, String> _firebaseHu = {
+    'user-not-found': 'Ez az e-mail cím nem található.',
+    'invalid-email': 'Érvénytelen e-mail cím formátum.',
+    'too-many-requests': 'Túl sok próbálkozás. Kérlek, próbáld meg később.',
+  };
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendResetLink() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      AppMessenger.showError('Kérlek, add meg az e-mail címed.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
     try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(
-        email: _emailController.text.trim(),
-      );
-      setState(() {
-        _message = 'A jelszó-visszaállító linket elküldtük a megadott e-mail címre.';
-      });
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      if (!mounted) return;
+      AppMessenger.showSuccess('Jelszó-visszaállító e-mail elküldve.');
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/login');
+      }
     } on FirebaseAuthException catch (e) {
-      setState(() {
-        _errorMessage = e.message;
-      });
+      final msg = _firebaseHu[e.code] ?? 'Hiba történt: ${e.message}';
+      AppMessenger.showError(msg);
+    } catch (e) {
+      AppMessenger.showError('Ismeretlen hiba történt: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -45,62 +64,38 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Elfelejtett jelszó'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/login'),
-        ),
       ),
-      body: Center(
-        child: Container(
-          width: 500,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(26),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextField(
+              controller: _emailController,
+              decoration: const InputDecoration(
+                labelText: 'E-mail',
+                border: OutlineInputBorder(),
               ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Add meg az e-mail címedet a jelszó-visszaállításhoz.',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              TextField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'E-mail',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.email),
-                ),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              if (_errorMessage != null) ...[
-                const SizedBox(height: 16),
-                Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
-              ],
-              if (_message != null) ...[
-                const SizedBox(height: 16),
-                Text(_message!, style: const TextStyle(color: Colors.green)),
-              ],
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _sendPasswordResetEmail,
+              keyboardType: TextInputType.emailAddress,
+              autofillHints: const [AutofillHints.email],
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _sendResetLink,
                 child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Visszaállító link küldése'),
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Jelszó-visszaállító e-mail küldése'),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
-} 
+}

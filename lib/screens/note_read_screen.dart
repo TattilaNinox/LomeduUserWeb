@@ -75,6 +75,100 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
 
+    Widget buildNoteBody({required bool limitWidth}) {
+      if (isWebView) {
+        return WebViewWidget(controller: _webViewController!);
+      }
+
+      Widget htmlWidget = Html(
+        data: currentPage,
+        style: {
+          "body": Style(
+            fontSize: FontSize((isMobile ? 14 : 18) * _fontScale),
+            lineHeight: const LineHeight(1.6),
+            color: const Color(0xFF2D3748),
+            fontFamily: 'Inter',
+          ),
+          "h1": Style(
+            fontSize: FontSize((isMobile ? 18 : 24) * _fontScale),
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF1A202C),
+            margin: Margins.only(bottom: 16),
+          ),
+          "h2": Style(
+            fontSize: FontSize((isMobile ? 16 : 22) * _fontScale),
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF2D3748),
+            margin: Margins.only(bottom: 12),
+          ),
+          "h3": Style(
+            fontSize: FontSize((isMobile ? 14 : 20) * _fontScale),
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF4A5568),
+            margin: Margins.only(bottom: 10),
+          ),
+          "p": Style(
+            fontSize: FontSize((isMobile ? 13 : 17) * _fontScale),
+            lineHeight: const LineHeight(1.6),
+            color: const Color(0xFF2D3748),
+            margin: Margins.only(bottom: 12),
+          ),
+          "ul": Style(
+            margin: Margins.only(bottom: 12),
+          ),
+          "ol": Style(
+            margin: Margins.only(bottom: 12),
+          ),
+          "li": Style(
+            fontSize: FontSize((isMobile ? 13 : 17) * _fontScale),
+            lineHeight: const LineHeight(1.5),
+            color: const Color(0xFF2D3748),
+            margin: Margins.only(bottom: 6),
+          ),
+          "blockquote": Style(
+            fontSize: FontSize((isMobile ? 13 : 17) * _fontScale),
+            fontStyle: FontStyle.italic,
+            color: const Color(0xFF4A5568),
+            backgroundColor: const Color(0xFFF7FAFC),
+            border: const Border(
+              left: BorderSide(
+                color: Color(0xFFE2E8F0),
+                width: 4,
+              ),
+            ),
+            padding:
+                HtmlPaddings.only(left: 16, top: 12, bottom: 12, right: 16),
+            margin: Margins.only(bottom: 16),
+          ),
+          "code": Style(
+            backgroundColor: const Color(0xFFF7FAFC),
+            color: const Color(0xFFE53E3E),
+            fontFamily: 'monospace',
+            fontSize: FontSize((isMobile ? 11 : 15) * _fontScale),
+            padding: HtmlPaddings.symmetric(horizontal: 4, vertical: 2),
+          ),
+          "pre": Style(
+            backgroundColor: const Color(0xFFF7FAFC),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            padding: HtmlPaddings.all(12),
+            margin: Margins.only(bottom: 16),
+          ),
+        },
+      );
+
+      if (limitWidth) {
+        htmlWidget = Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: htmlWidget,
+          ),
+        );
+      }
+
+      return SingleChildScrollView(child: htmlWidget);
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -141,111 +235,34 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
             Expanded(
               child: Container(
                 margin: EdgeInsets.all(isMobile ? 0 : 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
-                  child: Padding(
-                    padding: EdgeInsets.all(isMobile ? 0 : 20),
-                    child: isWebView
-                        ? WebViewWidget(controller: _webViewController!)
-                        : SingleChildScrollView(
-                            child: Html(
-                              data: currentPage,
-                              style: {
-                                "body": Style(
-                                  fontSize: FontSize(
-                                      (isMobile ? 14 : 18) * _fontScale),
-                                  lineHeight: const LineHeight(1.6),
-                                  color: const Color(0xFF2D3748),
-                                  fontFamily: 'Inter',
-                                ),
-                                "h1": Style(
-                                  fontSize: FontSize(
-                                      (isMobile ? 18 : 24) * _fontScale),
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF1A202C),
-                                  margin: Margins.only(bottom: 16),
-                                ),
-                                "h2": Style(
-                                  fontSize: FontSize(
-                                      (isMobile ? 16 : 22) * _fontScale),
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF2D3748),
-                                  margin: Margins.only(bottom: 12),
-                                ),
-                                "h3": Style(
-                                  fontSize: FontSize(
-                                      (isMobile ? 14 : 20) * _fontScale),
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF4A5568),
-                                  margin: Margins.only(bottom: 10),
-                                ),
-                                "p": Style(
-                                  fontSize: FontSize(
-                                      (isMobile ? 13 : 17) * _fontScale),
-                                  lineHeight: const LineHeight(1.6),
-                                  color: const Color(0xFF2D3748),
-                                  margin: Margins.only(bottom: 12),
-                                ),
-                                "ul": Style(
-                                  margin: Margins.only(bottom: 12),
-                                ),
-                                "ol": Style(
-                                  margin: Margins.only(bottom: 12),
-                                ),
-                                "li": Style(
-                                  fontSize: FontSize(
-                                      (isMobile ? 13 : 17) * _fontScale),
-                                  lineHeight: const LineHeight(1.5),
-                                  color: const Color(0xFF2D3748),
-                                  margin: Margins.only(bottom: 6),
-                                ),
-                                "blockquote": Style(
-                                  fontSize: FontSize(
-                                      (isMobile ? 13 : 17) * _fontScale),
-                                  fontStyle: FontStyle.italic,
-                                  color: const Color(0xFF4A5568),
-                                  backgroundColor: const Color(0xFFF7FAFC),
-                                  border: const Border(
-                                    left: BorderSide(
-                                      color: Color(0xFFE2E8F0),
-                                      width: 4,
-                                    ),
-                                  ),
-                                  padding: HtmlPaddings.only(
-                                      left: 16, top: 12, bottom: 12, right: 16),
-                                  margin: Margins.only(bottom: 16),
-                                ),
-                                "code": Style(
-                                  backgroundColor: const Color(0xFFF7FAFC),
-                                  color: const Color(0xFFE53E3E),
-                                  fontFamily: 'monospace',
-                                  fontSize: FontSize(
-                                      (isMobile ? 11 : 15) * _fontScale),
-                                  padding: HtmlPaddings.symmetric(
-                                      horizontal: 4, vertical: 2),
-                                ),
-                                "pre": Style(
-                                  backgroundColor: const Color(0xFFF7FAFC),
-                                  border: Border.all(
-                                      color: const Color(0xFFE2E8F0)),
-                                  padding: HtmlPaddings.all(12),
-                                  margin: Margins.only(bottom: 16),
-                                ),
-                              },
-                            ),
+                decoration: isMobile
+                    ? null
+                    : BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
-                  ),
+                        ],
+                      ),
+                child: Builder(
+                  builder: (_) {
+                    if (isMobile) {
+                      return buildNoteBody(limitWidth: false);
+                    }
+
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        color: Colors.white,
+                        padding: const EdgeInsets.all(20),
+                        child: buildNoteBody(limitWidth: true),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
