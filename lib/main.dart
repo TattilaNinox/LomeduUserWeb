@@ -26,6 +26,8 @@ import 'screens/guard_splash_screen.dart';
 import 'screens/account_screen.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'screens/forgot_password_screen.dart';
+import 'screens/reset_password_screen.dart';
+import 'screens/change_password_screen.dart';
 
 /// Az alkalmazás fő belépési pontja.
 void main() async {
@@ -99,6 +101,25 @@ final _router = GoRouter(
       builder: (context, state) {
         final qp = state.uri.queryParameters;
         return LoginScreen(initialEmail: qp['email']);
+      },
+    ),
+    // Reset password képernyő (oobCode query param kezelése)
+    GoRoute(
+      path: '/reset-password',
+      builder: (context, state) {
+        final qp = state.uri.queryParameters;
+        final code = qp['oobCode'];
+        if (code == null || code.isEmpty) {
+          return const Scaffold(
+            body: Center(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('Hiányzó vagy érvénytelen visszaállító kód.'),
+              ),
+            ),
+          );
+        }
+        return ResetPasswordScreen(oobCode: code);
       },
     ),
     // Regisztrációs képernyő útvonala.
@@ -199,6 +220,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/forgot-password',
       builder: (context, state) => const ForgotPasswordScreen(),
+    ),
+    GoRoute(
+      path: '/change-password',
+      builder: (context, state) => const ChangePasswordScreen(),
     ),
   ],
 );

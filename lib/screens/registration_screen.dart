@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../utils/password_validation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/device_fingerprint.dart';
 
@@ -50,6 +51,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   Future<void> _register() async {
+    // Jelszó erősség ellenőrzése
+    final pwd = _passwordController.text;
+    final confirmPwd = _confirmPasswordController.text;
+    final pwdError = PasswordValidation.errorText(pwd);
+    if (pwdError != null) {
+      setState(() => _errorMessage = pwdError);
+      return;
+    }
+    if (pwd != confirmPwd) {
+      setState(() => _errorMessage = 'A két jelszó nem egyezik.');
+      return;
+    }
+
     if (_lastNameController.text.trim().isEmpty) {
       setState(() => _errorMessage = 'Vezetéknév kötelező.');
       return;
@@ -63,12 +77,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           () => _errorMessage = 'Kérjük, adjon meg egy érvényes email címet.');
       return;
     }
-    if (_passwordController.text != _confirmPasswordController.text) {
-      setState(() {
-        _errorMessage = 'A két jelszó nem egyezik.';
-      });
-      return;
-    }
+    // email/jelszó ellenőrzés fentebb megtörtént
 
     setState(() {
       _isLoading = true;

@@ -17,13 +17,25 @@ class AccountScreen extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Fiók adatok')),
+        appBar: AppBar(
+          title: const Text('Fiók adatok'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.go('/notes'),
+          ),
+        ),
         body: const Center(child: Text('Nincs bejelentkezett felhasználó.')),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Fiók adatok')),
+      appBar: AppBar(
+        title: const Text('Fiók adatok'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/notes'),
+        ),
+      ),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance
             .collection('users')
@@ -63,6 +75,18 @@ class AccountScreen extends StatelessWidget {
                 EnhancedSubscriptionStatusCard(
                   userData: data,
                   onRenewPressed: () => context.go('/subscription'),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Jelszó megváltoztatása gomb
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.go('/change-password'),
+                    icon: const Icon(Icons.password),
+                    label: const Text('Jelszó megváltoztatása'),
+                  ),
                 ),
 
                 const SizedBox(height: 20),
