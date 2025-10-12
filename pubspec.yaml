@@ -1,6 +1,6 @@
 name: orlomed_admin_web
 description: Admin web interface for OrLomed
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

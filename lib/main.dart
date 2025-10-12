@@ -57,6 +57,7 @@ final _router = GoRouter(
     final auth = SessionGuard.instance.authStatus;
     final device = SessionGuard.instance.deviceAccess;
     final loc = state.uri.path;
+    final qp = state.uri.queryParameters;
     final isAuthRoute = {
       '/login',
       '/register',
@@ -64,7 +65,18 @@ final _router = GoRouter(
       '/guard',
       '/device-change',
       '/forgot-password',
+      '/reset-password',
     }.contains(loc);
+
+    // Ha a gyári email link a gyökérre érkezik ("/"), query-ben oobCode-dal,
+    // akkor tereljük át a saját reset képernyőnkre.
+    if (loc == '/' &&
+        (qp['mode'] == 'resetPassword' ||
+            Uri.base.queryParameters['mode'] == 'resetPassword') &&
+        ((qp['oobCode'] ?? Uri.base.queryParameters['oobCode']) != null)) {
+      final code = qp['oobCode'] ?? Uri.base.queryParameters['oobCode'];
+      return '/reset-password?oobCode=$code';
+    }
 
     if (auth == AuthStatus.loggedOut) {
       final publicRoutes = {
@@ -72,6 +84,7 @@ final _router = GoRouter(
         '/register',
         '/device-change',
         '/forgot-password',
+        '/reset-password',
       };
       return publicRoutes.contains(loc) ? null : '/login';
     }
@@ -107,8 +120,8 @@ final _router = GoRouter(
     GoRoute(
       path: '/reset-password',
       builder: (context, state) {
-        final qp = state.uri.queryParameters;
-        final code = qp['oobCode'];
+        final qpLocal = state.uri.queryParameters;
+        final code = qpLocal['oobCode'] ?? Uri.base.queryParameters['oobCode'];
         if (code == null || code.isEmpty) {
           return const Scaffold(
             body: Center(
