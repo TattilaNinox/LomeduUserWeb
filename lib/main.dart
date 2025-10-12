@@ -96,7 +96,10 @@ final _router = GoRouter(
     // Bejelentkezési képernyő útvonala.
     GoRoute(
       path: '/login',
-      builder: (context, state) => const LoginScreen(),
+      builder: (context, state) {
+        final qp = state.uri.queryParameters;
+        return LoginScreen(initialEmail: qp['email']);
+      },
     ),
     // Regisztrációs képernyő útvonala.
     GoRoute(

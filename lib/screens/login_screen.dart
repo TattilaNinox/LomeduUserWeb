@@ -12,7 +12,9 @@ import '../core/session_guard.dart';
 /// Ez egy `StatefulWidget`, mivel a beviteli mezők tartalmát, a jelszó
 /// láthatóságát és a hibaüzeneteket az állapotában (`State`) kell kezelnie.
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.initialEmail});
+
+  final String? initialEmail;
 
   @override
   LoginScreenState createState() => LoginScreenState();
@@ -124,6 +126,12 @@ class LoginScreenState extends State<LoginScreen> {
     // Ha a verifikációs linkről jöttünk (web), jelzünk a másik fülnek
     if (kIsWeb) {
       final qp = Uri.base.queryParameters;
+      // Eszközváltásból visszatérve előtöltjük az e-mailt, ha üres
+      final prefillEmail = widget.initialEmail ?? qp['email'];
+      if (prefillEmail != null && prefillEmail.isNotEmpty &&
+          _emailController.text.isEmpty) {
+        _emailController.text = prefillEmail;
+      }
       if (qp['from'] == 'verify') {
         try {
           // Web BroadcastChannel JS API hívása dart:js használatával
@@ -132,6 +140,13 @@ class LoginScreenState extends State<LoginScreen> {
               js.context['BroadcastChannel'].callMethod('new', ['lomedu-auth']);
           channel.callMethod('postMessage', ['email-verified']);
         } catch (_) {}
+      }
+    } else {
+      // Nem web környezet: az átadott initialEmail-t használjuk, ha van
+      final prefillEmail = widget.initialEmail;
+      if (prefillEmail != null && prefillEmail.isNotEmpty &&
+          _emailController.text.isEmpty) {
+        _emailController.text = prefillEmail;
       }
     }
 

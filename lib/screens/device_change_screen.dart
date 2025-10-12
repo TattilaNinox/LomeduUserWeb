@@ -97,8 +97,9 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
       if (result['success']) {
         _successMessage =
             'Eszköz sikeresen frissítve. Mostantól ez az eszköz jogosult.';
+        final email = Uri.encodeComponent(_emailController.text.trim());
         Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) context.go('/login');
+          if (mounted) context.go('/login?email=$email');
         });
       } else {
         _errorMessage =
