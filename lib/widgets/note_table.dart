@@ -378,7 +378,14 @@ class _NoteTableState extends State<NoteTable> {
                       },
                     ),
                   ),
-                if (hasAudio) MiniAudioPlayer(audioUrl: data['audioUrl']),
+                if (hasAudio)
+                  Align(
+                    alignment: Alignment.center,
+                    child: MiniAudioPlayer(
+                      audioUrl: data['audioUrl'],
+                      compact: true,
+                    ),
+                  ),
                 if (hasVideo)
                   Tooltip(
                     message: 'Videó',
@@ -533,7 +540,14 @@ class _NoteTableState extends State<NoteTable> {
                       },
                     ),
                   ),
-                if (hasAudio) MiniAudioPlayer(audioUrl: data['audioUrl']),
+                if (hasAudio)
+                  Align(
+                    alignment: Alignment.center,
+                    child: MiniAudioPlayer(
+                      audioUrl: data['audioUrl'],
+                      compact: true,
+                    ),
+                  ),
                 if (hasVideo)
                   Tooltip(
                     message: 'Videó',

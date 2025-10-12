@@ -14,8 +14,14 @@ class MiniAudioPlayer extends StatefulWidget {
   /// Ha igaz, a lejátszó csak interakcióra inicializál (lista teljesítményhez).
   final bool deferInit;
 
+  /// Kompakt megjelenítés: kisebb ikonok, hátralévő idő elrejtése.
+  final bool compact;
+
   const MiniAudioPlayer(
-      {super.key, required this.audioUrl, this.deferInit = true});
+      {super.key,
+      required this.audioUrl,
+      this.deferInit = true,
+      this.compact = false});
 
   @override
   State<MiniAudioPlayer> createState() => _MiniAudioPlayerState();
@@ -34,6 +40,8 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
   bool _hasError = false;
   bool _initializing = false;
   bool _expanded = false; // Ha igaz, a teljes kezelőfelület látszik
+  bool _isLooping =
+      false; // Folyamatos lejátszás kapcsoló (nem mentjük tartósan)
 
   bool get _isPlaying => _playerState == PlayerState.playing;
 
@@ -51,6 +59,10 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
     try {
       // Beállítja a forrás URL-t. Ez a lejátszás előfeltétele.
       await _audioPlayer.setSourceUrl(widget.audioUrl);
+      // Ismétlés beállítása a kapcsoló állapotának megfelelően
+      await _audioPlayer.setReleaseMode(
+        _isLooping ? ReleaseMode.loop : ReleaseMode.stop,
+      );
 
       // Feliratkozás a lejátszó eseményeire (listenerek), hogy az UI
       // valós időben frissüljön az állapotváltozásoknak megfelelően.
@@ -130,8 +142,11 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    const double iconSize = 22; // nagyobb ikon táblagépre
-    const BoxConstraints btnSize = BoxConstraints(minWidth: 36, minHeight: 36);
+    final double iconSize = widget.compact ? 18 : 22; // kompakt módban kisebb
+    final BoxConstraints btnSize = BoxConstraints(
+      minWidth: widget.compact ? 30 : 36,
+      minHeight: widget.compact ? 30 : 36,
+    );
 
     if (_hasError) {
       return const Tooltip(
@@ -152,13 +167,41 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : IconButton(
-                  icon: const Icon(Icons.play_circle_fill,
-                      size: 22, color: Color(0xFF1E3A8A)),
-                  padding: EdgeInsets.zero,
-                  constraints: btnSize,
-                  tooltip: 'Hang lejátszása',
-                  onPressed: _ensureInitAndPlay,
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.play_circle_fill,
+                          size: 22, color: Color(0xFF1E3A8A)),
+                      padding: EdgeInsets.zero,
+                      constraints: btnSize,
+                      tooltip: 'Hang lejátszása',
+                      onPressed: _ensureInitAndPlay,
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: Icon(
+                        _isLooping ? Icons.repeat_on : Icons.repeat,
+                        size: 20,
+                        color: _isLooping
+                            ? Colors.orange
+                            : const Color(0xFF1E3A8A),
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: btnSize,
+                      tooltip: _isLooping
+                          ? 'Ismétlés: bekapcsolva'
+                          : 'Ismétlés: kikapcsolva',
+                      onPressed: () async {
+                        setState(() => _isLooping = !_isLooping);
+                        if (_isInitialized) {
+                          await _audioPlayer.setReleaseMode(
+                            _isLooping ? ReleaseMode.loop : ReleaseMode.stop,
+                          );
+                        }
+                      },
+                    ),
+                  ],
                 ),
         ),
       );
@@ -173,74 +216,95 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: SizedBox(
-        height: 36,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.replay_10, size: iconSize),
-              onPressed: () => _seekRelative(-10),
-              color: Colors.green,
-              padding: EdgeInsets.zero,
-              constraints: btnSize,
-              tooltip: 'Vissza 10 mp',
-            ),
-            IconButton(
-              icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow,
-                  size: iconSize),
-              onPressed: () async {
-                if (_isPlaying) {
-                  await _audioPlayer.pause();
-                } else if (_playerState == PlayerState.paused) {
-                  await _audioPlayer.resume();
-                } else {
-                  // Ha a lejátszás befejeződött vagy le lett állítva,
-                  // a play metódus újra elindítja a forrástól.
-                  await _audioPlayer.play(UrlSource(widget.audioUrl));
-                }
-              },
-              color: Colors.green,
-              padding: EdgeInsets.zero,
-              constraints: btnSize,
-              tooltip: _isPlaying ? 'Szünet' : 'Lejátszás',
-            ),
-            IconButton(
-              icon: const Icon(Icons.forward_10, size: iconSize),
-              onPressed: () => _seekRelative(10),
-              color: Colors.green,
-              padding: EdgeInsets.zero,
-              constraints: btnSize,
-              tooltip: 'Előre 10 mp',
-            ),
-            IconButton(
-              icon: const Icon(Icons.stop, size: iconSize),
-              onPressed: () async {
-                await _audioPlayer.stop();
-                setState(() => _position = Duration.zero);
-              },
-              color: Colors.green,
-              padding: EdgeInsets.zero,
-              constraints: btnSize,
-              tooltip: 'Stop',
-            ),
-            Padding(
-              padding: const EdgeInsets.only(left: 6),
-              child: Text(
-                _formatDuration((_duration - _position).isNegative
-                    ? Duration.zero
-                    : _duration - _position),
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontFeatures: [FontFeature.tabularFigures()],
+        padding: const EdgeInsets.only(right: 8),
+        child: SizedBox(
+          height: 36,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.replay_10, size: iconSize),
+                  onPressed: () => _seekRelative(-10),
+                  color: Colors.green,
+                  padding: EdgeInsets.zero,
+                  constraints: btnSize,
+                  tooltip: 'Vissza 10 mp',
                 ),
-              ),
+                IconButton(
+                  icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow,
+                      size: iconSize),
+                  onPressed: () async {
+                    if (_isPlaying) {
+                      await _audioPlayer.pause();
+                    } else if (_playerState == PlayerState.paused) {
+                      await _audioPlayer.resume();
+                    } else {
+                      // Ha a lejátszás befejeződött vagy le lett állítva,
+                      // a play metódus újra elindítja a forrástól.
+                      await _audioPlayer.play(UrlSource(widget.audioUrl));
+                    }
+                  },
+                  color: Colors.green,
+                  padding: EdgeInsets.zero,
+                  constraints: btnSize,
+                  tooltip: _isPlaying ? 'Szünet' : 'Lejátszás',
+                ),
+                IconButton(
+                  icon: Icon(Icons.forward_10, size: iconSize),
+                  onPressed: () => _seekRelative(10),
+                  color: Colors.green,
+                  padding: EdgeInsets.zero,
+                  constraints: btnSize,
+                  tooltip: 'Előre 10 mp',
+                ),
+                IconButton(
+                  icon: Icon(Icons.stop, size: iconSize),
+                  onPressed: () async {
+                    await _audioPlayer.stop();
+                    setState(() => _position = Duration.zero);
+                  },
+                  color: Colors.green,
+                  padding: EdgeInsets.zero,
+                  constraints: btnSize,
+                  tooltip: 'Stop',
+                ),
+                IconButton(
+                  icon: Icon(
+                    _isLooping ? Icons.repeat_on : Icons.repeat,
+                    size: iconSize,
+                  ),
+                  onPressed: () async {
+                    setState(() => _isLooping = !_isLooping);
+                    await _audioPlayer.setReleaseMode(
+                      _isLooping ? ReleaseMode.loop : ReleaseMode.stop,
+                    );
+                  },
+                  color: _isLooping ? Colors.orange : Colors.green,
+                  padding: EdgeInsets.zero,
+                  constraints: btnSize,
+                  tooltip: _isLooping
+                      ? 'Ismétlés: bekapcsolva'
+                      : 'Ismétlés: kikapcsolva',
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 6),
+                  child: Text(
+                    _formatDuration((_duration - _position).isNegative
+                        ? Duration.zero
+                        : _duration - _position),
+                    style: TextStyle(
+                      fontSize: widget.compact ? 11 : 12,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-    );
+          ),
+        ));
   }
 }

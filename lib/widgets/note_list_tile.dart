@@ -203,9 +203,13 @@ class NoteListTile extends StatelessWidget {
 
                   Widget audioWidget = const SizedBox.shrink();
                   if (hasAudio && (audioUrl?.isNotEmpty ?? false)) {
-                    audioWidget = SizedBox(
-                      width: isNarrow ? double.infinity : 180,
-                      child: MiniAudioPlayer(audioUrl: audioUrl!),
+                    audioWidget = Align(
+                      alignment: Alignment.center,
+                      child: SizedBox(
+                        width: isNarrow ? double.infinity : 150,
+                        child:
+                            MiniAudioPlayer(audioUrl: audioUrl!, compact: true),
+                      ),
                     );
                   } else if (hasAudio) {
                     audioWidget = const Tooltip(
@@ -288,11 +292,21 @@ class NoteListTile extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 16),
+                      // Bal oldali cím/meta
                       titleAndMeta,
-                      if (hasAudio) ...[
-                        const SizedBox(width: 16),
-                        audioWidget,
-                      ],
+                      // Középre igazított lejátszó a sor közepén
+                      if (hasAudio)
+                        Expanded(
+                          child: Center(
+                            child: SizedBox(
+                              width: 150,
+                              child: MiniAudioPlayer(
+                                audioUrl: audioUrl!,
+                                compact: true,
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   );
                 },
