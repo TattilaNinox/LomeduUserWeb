@@ -157,14 +157,6 @@ class _EnhancedSubscriptionStatusCardState
                         color: _getStatusColor(),
                       ),
                     ),
-                    if (widget.userData != null)
-                      Text(
-                        widget.userData!['email'] ?? 'N/A',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                      ),
                   ],
                 ),
               ),
