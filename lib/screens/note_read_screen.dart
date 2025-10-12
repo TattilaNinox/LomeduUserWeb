@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:html/dom.dart' as dom;
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/audio_preview_player.dart';
 import '../utils/filter_storage.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Felhasználói (csak olvasás) nézet szöveges jegyzetekhez.
 ///
@@ -156,6 +158,22 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
           // Képek és táblák igazítása a rendelkezésre álló szélességhez
           "img": Style(width: Width(100, Unit.percent)),
           "table": Style(width: Width(100, Unit.percent)),
+          // Linkek jól látható megjelenése
+          "a": Style(
+            color: const Color(0xFF1D4ED8),
+            textDecoration: TextDecoration.underline,
+          ),
+        },
+        onAnchorTap: (String? url, Map<String, String> attributes,
+            dom.Element? element) {
+          if (url == null || url.isEmpty) return;
+          final uri = Uri.tryParse(url);
+          if (uri == null) return;
+          launchUrl(
+            uri,
+            mode: LaunchMode.platformDefault,
+            webOnlyWindowName: '_blank',
+          );
         },
       );
 
@@ -177,7 +195,10 @@ class _NoteReadScreenState extends State<NoteReadScreen> {
         );
       }
 
-      return SingleChildScrollView(child: htmlWidget);
+      return MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: SingleChildScrollView(child: htmlWidget),
+      );
     }
 
     return Scaffold(
