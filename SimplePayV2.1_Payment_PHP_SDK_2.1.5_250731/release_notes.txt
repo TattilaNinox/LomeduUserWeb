@@ -1,0 +1,113 @@
+SimplePay PHP SDK (API v2.1)
+
+2.0
+2018.09.30.
+----------
+Eredeti kiadás
+
+2.0.1
+2018.10.01.
+----------
+Funkciók
+	Tranzakció lekérdezés (query)
+	SimplePayQuery class használatához mintakód létrehozása
+	Fájl: query.php
+
+2.0.2
+2018.10.02.
+----------
+Funkciók
+	Kétlépcsős tranzakciók kezelése
+	SimplePayFinish class használatához mintakód létrehozása
+	Fájl: finish.php
+
+2.0.3
+2018.11.30.
+----------
+Funkciók
+	Kártyatárolásra épülő fizetések
+	Fájl: do.php, cardquery.php, cardcancel.php
+
+2.0.4
+2019.02.17.
+----------
+Refaktorálás I.
+	Fájl: SimplePayV2.php
+
+2.0.5
+2019.02.26.
+----------
+Funkciók
+	Kártyatárolásra épülő funkciók eltávolítása
+	Előkészítés API v2.1 funkciók használhoz: SimplePayV2.php -> SimplePayV21.php
+
+2.0.6
+2019.03.01.
+----------
+Refaktorálás II.
+	Fájl: SimplePayV21.php
+
+2.0.7
+2019.08.15.
+----------
+Funkciók
+	Signature kezelés egységesítése
+
+2.0.8
+2019.09.24.
+----------
+Funkciók
+	PHP verzió ellenőrzés
+	Header tartalom Nginx szerverhez
+	Fájl: SimplePayV21.php
+
+2.0.9
+2020.01.30.
+----------
+Refaktorálás III.
+
+Funkciók
+	3DS megfelelőség háromszereplős fizetések esetére
+	Fájl: SimplePayV21.php
+
+Funkciók
+    3DS megfelelőség a háromszereplős fizetések esetén
+
+2.1.0
+2020.08.25.
+----------
+Funkciók
+	Új változók 3DS folyamathoz: maySelectEmail, threeDSReqAuthMethod
+	Fájl: SimplePayV21.php		
+		
+2.1.1
+2021.08.04.
+----------		
+Hibajavítás
+	PHP8 json_encode() kompatibilitási probléma javítása
+	
+2.1.2
+2024.04.18
+----------
+Funkciók
+    PHP 8.3 kompatibilitás (5.6-tól 8.3-ig)
+
+2.1.3
+2024.08.22
+----------
+Funkciók
+    QVIK/EAM tranzakciók kezelése
+	Fájl: SimplePayV21.php, starteam.php, transactioncancel.php
+
+2.1.4
+2025.02.05
+----------
+Hibajavítás
+    SimplePayStartEam returnData hozzáférhetőség javítása
+
+2.1.5
+2025.07.31
+----------
+Funkciók
+    Kereskedő oldali Apple Pay fizetések kezelése
+	Fájl: SimplePayV21.php, startapplepay.php, doapplepay.php

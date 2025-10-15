@@ -1,8 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 /// Flutter Web payment service OTP SimplePay v2 API integrációval
@@ -10,18 +7,14 @@ import 'package:cloud_functions/cloud_functions.dart';
 /// Ez a service kezeli a webes fizetési folyamatokat a SimplePay v2 API-val.
 /// Kompatibilis a meglévő Google Play Billing rendszerrel.
 class WebPaymentService {
-  static const String _baseUrl = 'https://secure.simplepay.hu/payment/v2/';
-  static const String _sandboxUrl = 'https://sandbox.simplepay.hu/payment/v2/';
-
-  // Environment változók (build-time injection)
+  // Környezeti változók maradhatnak konfigurációs ellenőrzéshez, de külső
+  // SimplePay API-hívás már nem történik ebben a fájlban.
   static const String _merchantId =
       String.fromEnvironment('SIMPLEPAY_MERCHANT_ID', defaultValue: '');
   static const String _secretKey =
       String.fromEnvironment('SIMPLEPAY_SECRET_KEY', defaultValue: '');
   static const bool _isProduction =
       bool.fromEnvironment('PRODUCTION', defaultValue: false);
-
-  static String get _apiBaseUrl => _isProduction ? _baseUrl : _sandboxUrl;
 
   /// Fizetési csomagok definíciója
   static const Map<String, PaymentPlan> _plans = {
@@ -47,102 +40,18 @@ class WebPaymentService {
   /// Fizetési csomagok lekérése
   static List<PaymentPlan> get availablePlans => _plans.values.toList();
 
-  /// Fizetés indítása SimplePay v2 API-val
+  // Egyszerűsített verzió: böngészőben már nem hívjuk közvetlenül a SimplePay
+  // API-t, hanem átküldjük a kérést a biztonságos Cloud Functionnek, amely
+  // már bizonyítottan helyesen működik.
   static Future<PaymentInitiationResult> initiatePayment({
     required String planId,
     required String userId,
     String? customerEmail,
     String? customerName,
   }) async {
-    try {
-      // Plan validálás
-      final plan = _plans[planId];
-      if (plan == null) {
-        throw PaymentException('Érvénytelen csomag: $planId');
-      }
-
-      // Environment változók ellenőrzése
-      if (_merchantId.isEmpty || _secretKey.isEmpty) {
-        throw const PaymentException(
-            'SimplePay konfiguráció hiányzik. Ellenőrizze az environment változókat.');
-      }
-
-      // Felhasználó adatok lekérése
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw const PaymentException('Nincs bejelentkezett felhasználó');
-      }
-
-      final email = customerEmail ?? user.email;
-      final name = customerName ?? user.displayName;
-
-      if (email == null || email.isEmpty) {
-        throw const PaymentException('Email cím szükséges a fizetéshez');
-      }
-
-      // Egyedi rendelés azonosító generálása (userId-t tartalmazza)
-      final orderRef =
-          'WEB_${userId}_${DateTime.now().millisecondsSinceEpoch}_${_generateRandomString(8)}';
-
-      // SimplePay v2 API kérés összeállítása
-      final request = SimplePayV2Request(
-        merchant: _merchantId,
-        orderRef: orderRef,
-        customerEmail: email,
-        customerName: name,
-        language: 'HU',
-        currency: 'HUF',
-        total: plan.price,
-        items: [
-          SimplePayItem(
-            ref: planId,
-            title: plan.name,
-            description: plan.description,
-            amount: plan.price,
-            price: plan.price,
-            quantity: 1,
-          ),
-        ],
-        methods: ['CARD'], // Bankkártya fizetés
-        url: _getWebhookUrl(),
-        timeout: _getTimeoutDate(),
-        invoice: '1', // Számla generálás
-        redirectUrl: _getSuccessUrl(),
-      );
-
-      // API hívás
-      final response = await http.post(
-        Uri.parse('${_apiBaseUrl}start'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_secretKey',
-          'User-Agent': 'Lomedu-Flutter-Web/1.0',
-        },
-        body: jsonEncode(request.toJson()),
-      );
-
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
-
-        return PaymentInitiationResult(
-          success: true,
-          paymentUrl: responseData['paymentUrl'] as String?,
-          orderRef: orderRef,
-          amount: plan.price,
-          planId: planId,
-        );
-      } else {
-        final errorData = jsonDecode(response.body) as Map<String, dynamic>;
-        throw PaymentException(
-            'SimplePay API hiba: ${errorData['message'] ?? 'Ismeretlen hiba'}');
-      }
-    } catch (e) {
-      debugPrint('WebPaymentService: Payment initiation error: $e');
-      return PaymentInitiationResult(
-        success: false,
-        error: e.toString(),
-      );
-    }
+    // Irányítás a Cloud Function-re. A plusz paramétereket (email, név) most
+    // nem továbbítjuk; a Functon a Firestore-ból olvassa a felhasználó adatait.
+    return initiatePaymentViaCloudFunction(planId: planId, userId: userId);
   }
 
   /// Cloud Function hívás a fizetés indításához (alternatív megközelítés)
@@ -151,7 +60,7 @@ class WebPaymentService {
     required String userId,
   }) async {
     try {
-      final functions = FirebaseFunctions.instance;
+      final functions = FirebaseFunctions.instanceFor(region: 'europe-west1');
       final callable = functions.httpsCallable('initiateWebPayment');
 
       final result = await callable.call({
@@ -211,7 +120,7 @@ class WebPaymentService {
   /// Webhook feldolgozás (Cloud Function-ben fog futni)
   static Future<bool> processWebhook(Map<String, dynamic> webhookData) async {
     try {
-      final functions = FirebaseFunctions.instance;
+      final functions = FirebaseFunctions.instanceFor(region: 'europe-west1');
       final callable = functions.httpsCallable('processWebPaymentWebhook');
 
       final result = await callable.call(webhookData);
@@ -224,37 +133,8 @@ class WebPaymentService {
     }
   }
 
-  /// Helper metódusok
-  static String _generateRandomString(int length) {
-    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    final random = DateTime.now().millisecondsSinceEpoch;
-    return List.generate(
-        length, (index) => chars[(random + index) % chars.length]).join();
-  }
-
-  static String _getWebhookUrl() {
-    if (kIsWeb) {
-      // Web esetén a jelenlegi domain + webhook path
-      return '${Uri.base.origin}/api/webhook/simplepay';
-    } else {
-      // Mobilon nincs webhook
-      return '';
-    }
-  }
-
-  static String _getSuccessUrl() {
-    if (kIsWeb) {
-      return '${Uri.base.origin}/subscription?success=true';
-    } else {
-      return '';
-    }
-  }
-
-  static String _getTimeoutDate() {
-    // 30 perc timeout
-    final timeout = DateTime.now().add(const Duration(minutes: 30));
-    return timeout.toIso8601String();
-  }
+  // Az alábbi helper függvények a közvetlen SimplePay-híváshoz kellettek; most
+  // már nem használjuk őket, ezért törölve.
 
   /// Konfiguráció ellenőrzése
   static bool get isConfigured =>

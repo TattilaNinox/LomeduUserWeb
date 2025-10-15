@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../services/web_payment_service.dart';
 
 /// Az alkalmazás felső fejlécét (Header) megvalósító widget.
 ///
@@ -58,6 +60,47 @@ class Header extends StatelessWidget {
             ),
           ),
           if (showActions) ...[
+            const SizedBox(width: 12),
+            ElevatedButton(
+              onPressed: () async {
+                final user = FirebaseAuth.instance.currentUser;
+                if (user == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Nincs bejelentkezett felhasználó')),
+                  );
+                  return;
+                }
+                final result =
+                    await WebPaymentService.initiatePaymentViaCloudFunction(
+                  planId: 'monthly_web',
+                  userId: user.uid,
+                );
+                if (result.success && result.paymentUrl != null) {
+                  try {
+                    await launchUrl(Uri.parse(result.paymentUrl!));
+                  } catch (_) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content: Text('Payment URL: ${result.paymentUrl}')),
+                    );
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(result.error ?? 'Ismeretlen hiba')),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF10B981),
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4)),
+              ),
+              child: const Text('Teszt fizetés'),
+            ),
             const SizedBox(width: 12),
             // Jobb oldali akció: "Fiók adatok"
             ElevatedButton(

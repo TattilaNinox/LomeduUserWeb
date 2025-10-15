@@ -11,6 +11,7 @@
       "**/node_modules/**"
     ],
     "rewrites": [
+      { "source": "/api/webhook/simplepay", "function": { "functionId": "simplepayWebhook", "region": "europe-west1", "pinTag": true } },
       {
         "source": "**",
         "destination": "/index.html"
@@ -22,10 +23,28 @@
         "headers": [
           { "key": "Cache-Control", "value": "no-store, must-revalidate" }
         ]
+      },
+      {
+        "source": "/initiateWebPayment",
+        "headers": [
+          { "key": "Access-Control-Allow-Origin", "value": "http://localhost:59955" }
+        ]
       }
     ]
   },
-  "functions": {
-    "source": "functions"
-  }
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ]
+    }
+  ]
 }

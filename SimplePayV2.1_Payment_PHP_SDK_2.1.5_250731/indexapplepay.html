@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="hu" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Apple Pay demo</title>
+    <style>
+        apple-pay-button {
+            --apple-pay-button-width: 150px;
+            --apple-pay-button-height: 30px;
+            --apple-pay-button-border-radius: 3px;
+            --apple-pay-button-padding: 0px 0px;
+            --apple-pay-button-box-sizing: border-box;
+        }
+    </style>
+    <script crossorigin src="https://applepay.cdn-apple.com/jsapi/1.latest/apple-pay-sdk.js"></script>
+</head>
+<body>
+<apple-pay-button id="apple-pay-button" buttonstyle="black" type="plain" locale="hu-HU"
+                  onclick="onApplePayButtonClicked()" hidden></apple-pay-button>
+<script type="text/javascript" th:inline="javascript">
+
+    // Apple Pay Merchant Identifier from SimplePay admin
+    const merchantIdentifier = '';
+
+    // Endpoint in the merchant system that call SimplePay /v2/startapplepay 
+    const validationEndpoint = "startapplepay.php";
+
+    // Endpoint in the merchant system that call SimplePay /v2/doapplepay 
+    const authorizationEndpoint = "doapplepay.php";
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        // Check if the Apple Pay JS API is available.
+        if (!ApplePaySession) {
+            console.error('This device does not support Apple Pay');
+            return;
+        }
+
+        /*
+        According to the Apple Pay on the Web Acceptable Use Guidelines, if you invoke the applePayCapabilities API and determine that a person has an active card provisioned into Wallet, then Apple Pay should be the primary, but not necessarily sole payment option on any webpage that accepts payments, like the checkout page or product detail page.
+        In all other situations, use canMakePayments instead.
+        */
+        await ApplePaySession.applePayCapabilities(merchantIdentifier).then(function (capabilities) {
+            // Check if the person has an active payment credential provisioned in Wallet.
+            switch (capabilities.paymentCredentialStatus) {
+                case "paymentCredentialsAvailable":
+                // Display an Apple Pay button and offer Apple Pay as the primary payment option.
+                case "paymentCredentialStatusUnknown":
+                // Display an Apple Pay button and offer Apple Pay as a payment option.
+                case "paymentCredentialsUnavailable":
+                    // Consider displaying an Apple Pay button.
+                    document.getElementById("apple-pay-button").removeAttribute("hidden");
+                    break;
+                case "applePayUnsupported":
+                    // Don't show an Apple Pay button or offer Apple Pay.
+                    console.error('This device does not support Apple Pay');
+                    return;
+            }
+        });
+    });
+
+    async function onApplePayButtonClicked() {
+        // The Apple Pay JS API is available.
+        try {
+            // https://developer.apple.com/documentation/applepayontheweb/creating-an-apple-pay-session
+
+            // Define ApplePayPaymentRequest
+            const request = {
+                "countryCode": "HU",
+                "currencyCode": "HUF",
+                "merchantCapabilities": [
+                    "supports3DS"
+                ],
+                "supportedNetworks": [
+                    "visa",
+                    "masterCard",
+                    "amex",
+                    "discover"
+                ],
+                "total": {
+                    "label": "PROD (card will be charge)",
+                    "type": "final",
+                    "amount": "5"
+                },
+                // SimplePay related sample data
+                "simplepayData": {
+                    "language": "HU",
+                    "invoice": {
+                        "name": "SimplePay Apple Pay Tester",
+                        "country": "HU",
+                        "city": "Budapest",
+                        "zip": "1111",
+                        "address": "Address 1",
+                    }
+                }
+            };
+
+            // Create ApplePaySession
+            const session = new ApplePaySession(3, request);
+
+            let paymentResponse;
+            session.onvalidatemerchant = event => {
+                // Call your own server to request a new merchant session.
+                fetch(validationEndpoint, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify(
+                        request
+                    )
+                }).then(res => res.json()) // Parse the response as JSON.
+                    .then(response => {
+                        if (response.errorCodes || !response.transactionId || !response.applePaySession) {
+                            return Promise.reject("Payment error: " + response.errorCodes);
+                        }
+                        paymentResponse = response;
+                        session.completeMerchantValidation(response.applePaySession);
+                    }).catch(err => {
+                    console.error("Error fetching merchant session", err);
+                    session.abort();
+                });
+            };
+
+            session.onpaymentauthorized = event => {
+                // Define ApplePayPaymentAuthorizationResult
+                fetch(authorizationEndpoint, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify({
+                        transactionId: paymentResponse.transactionId,
+                        applePayToken: btoa(JSON.stringify(event.payment.token))
+                    })
+                }).then(res => res.json()) // Parse the response as JSON.
+                    .then(response => {
+                        const result = {
+                            "status": (response.applePayStatus === 'STATUS_SUCCESS' && !response.errorCodes) ? ApplePaySession.STATUS_SUCCESS : ApplePaySession.STATUS_FAILURE
+                        };
+
+                        session.completePayment(result);
+                        
+                        // Redirect to ptional result page
+                        //window.location.replace("/resultpage.html");     
+
+                    }).catch(err => {
+                    console.error("Error fetching authorization result", err);
+                    session.abort();
+                });
+            };
+
+            session.oncancel = event => {
+                // Payment canceled by WebKit
+            };
+
+            session.begin();
+        } catch (e) {
+            // Handle errors
+            console.error(e)
+        }
+    }
+</script>
+</body>
+</html>

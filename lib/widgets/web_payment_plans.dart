@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:url_launcher/url_launcher_string.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/web_payment_service.dart';
 
 /// Webes fizetési csomagok widget
@@ -184,7 +186,8 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
           width: plan.popular ? 2 : 1,
         ),
         borderRadius: BorderRadius.circular(12),
-        color: plan.popular ? Colors.blue.withValues(alpha: 0.02) : Colors.white,
+        color:
+            plan.popular ? Colors.blue.withValues(alpha: 0.02) : Colors.white,
       ),
       child: Column(
         children: [
@@ -269,29 +272,28 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
                 const SizedBox(height: 16),
 
                 // Features
-                ...plan.features
-                    .map((feature) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.check,
-                                size: 16,
-                                color: Colors.green[600],
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  feature,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Color(0xFF374151),
-                                  ),
-                                ),
-                              ),
-                            ],
+                ...plan.features.map((feature) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.check,
+                            size: 16,
+                            color: Colors.green[600],
                           ),
-                        )),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              feature,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF374151),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
 
                 const SizedBox(height: 20),
 
@@ -361,15 +363,16 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
     });
 
     try {
-      final user = widget.userData;
-      if (user == null) {
-        throw Exception('Felhasználói adatok nem elérhetők');
+      final authUser = FirebaseAuth.instance.currentUser;
+      if (authUser == null) {
+        throw Exception('Nincs bejelentkezett felhasználó');
       }
+      final uid = authUser.uid;
 
       // Fizetés indítása Cloud Function-nel
       final result = await WebPaymentService.initiatePaymentViaCloudFunction(
         planId: plan.id,
-        userId: user['uid'] ?? user['id'],
+        userId: uid,
       );
 
       if (result.success && result.paymentUrl != null) {
@@ -419,11 +422,8 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
   }
 
   void _openPaymentUrl(String url) {
-    if (kIsWeb) {
-      // Web esetén window.open használata
-        // Web navigáció implementálva
-      debugPrint('Opening payment URL: $url');
-    }
+    if (!kIsWeb) return;
+    launchUrlString(url, mode: LaunchMode.platformDefault);
   }
 
   void _showError(String message) {

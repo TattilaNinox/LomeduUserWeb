@@ -3,6 +3,9 @@
   "engines": {
     "node": "20"
   },
+  "scripts": {
+    "lint": "echo 'No linting configured'"
+  },
   "dependencies": {
     "firebase-admin": "^11.10.1",
     "firebase-functions": "^5.1.0",

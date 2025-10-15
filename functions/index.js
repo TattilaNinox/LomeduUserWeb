@@ -1,4 +1,4 @@
-const { onCall, onRequest } = require('firebase-functions/v2/https');
+const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { setGlobalOptions } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
@@ -16,14 +16,32 @@ setGlobalOptions({ region: 'europe-west1', cpu: 1 });
 
 const db = admin.firestore();
 
+// Helper to mask sensitive values in logs
+function maskValue(value) {
+  try {
+    if (!value || typeof value !== 'string') return 'N/A';
+    const tail = value.slice(-4);
+    return `***${tail}`;
+  } catch (_) {
+    return 'N/A';
+  }
+}
+
 // SimplePay konfiguráció
+// Sandbox/Production kiválasztása külön titok alapján (alapértelmezés: sandbox)
+const SIMPLEPAY_ENV = (process.env.SIMPLEPAY_ENV || 'sandbox').toLowerCase();
+
 const SIMPLEPAY_CONFIG = {
-  merchantId: process.env.SIMPLEPAY_MERCHANT_ID || '',
-  secretKey: process.env.SIMPLEPAY_SECRET_KEY || '',
-  baseUrl: process.env.NODE_ENV === 'production' 
+  merchantId: (process.env.SIMPLEPAY_MERCHANT_ID || '').trim(),
+  secretKey: (process.env.SIMPLEPAY_SECRET_KEY || '').trim(),
+  baseUrl: (process.env.SIMPLEPAY_ENV || 'sandbox').toLowerCase().trim() === 'production' 
     ? 'https://secure.simplepay.hu/payment/v2/' 
     : 'https://sandbox.simplepay.hu/payment/v2/',
+  nextAuthUrl: (process.env.NEXTAUTH_URL || 'https://lomedu-user-web.web.app').trim(),
+  env: (process.env.SIMPLEPAY_ENV || 'sandbox').toLowerCase().trim(),
 };
+
+const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'https://lomedu-user-web.web.app';
 
 // Fizetési csomagok
 const PAYMENT_PLANS = {
@@ -159,123 +177,157 @@ exports.verifyAndChangeDevice = onCall(async (request) => {
 /**
  * Webes fizetés indítása SimplePay v2 API-val
  */
-exports.initiateWebPayment = onCall(async (request) => {
+exports.initiateWebPayment = onCall({ 
+  secrets: ['SIMPLEPAY_MERCHANT_ID', 'SIMPLEPAY_SECRET_KEY', 'NEXTAUTH_URL']
+}, async (request) => {
   try {
     const { planId, userId } = request.data || {};
-    
+    console.log('[initiateWebPayment] input', { planId, userId });
+
     if (!planId || !userId) {
-      throw new Error('invalid-argument: planId és userId szükséges');
+      throw new HttpsError('invalid-argument', 'planId és userId szükséges');
     }
-    
-    // Plan validálás
+
     const plan = PAYMENT_PLANS[planId];
     if (!plan) {
-      throw new Error('invalid-argument: Érvénytelen csomag');
+      throw new HttpsError('invalid-argument', 'Érvénytelen csomag');
     }
-    
-    // Konfiguráció ellenőrzése
-    if (!SIMPLEPAY_CONFIG.merchantId || !SIMPLEPAY_CONFIG.secretKey) {
-      throw new Error('internal: SimplePay konfiguráció hiányzik');
+
+    if (!SIMPLEPAY_CONFIG.merchantId || !SIMPLEPAY_CONFIG.secretKey || !SIMPLEPAY_CONFIG.baseUrl) {
+      throw new HttpsError('failed-precondition', 'SimplePay konfiguráció hiányzik');
     }
-    
-    // Felhasználó adatok lekérése
+
     const userDoc = await db.collection('users').doc(userId).get();
     if (!userDoc.exists) {
-      throw new Error('not-found: Felhasználó nem található');
+      throw new HttpsError('not-found', 'Felhasználó nem található');
     }
-    
+
     const userData = userDoc.data();
     const email = userData.email;
-    const name = userData.firstName && userData.lastName 
-      ? `${userData.firstName} ${userData.lastName}`.trim()
-      : userData.displayName;
-    
+    const name = userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}`.trim() : userData.displayName;
+
     if (!email) {
-      throw new Error('invalid-argument: Email cím szükséges');
+      throw new HttpsError('failed-precondition', 'A felhasználóhoz nem tartozik email cím');
     }
+
+    const orderRef = `WEB_${userId}_${Date.now()}`;
+    const nextAuthBase = SIMPLEPAY_CONFIG.nextAuthUrl.replace(/\/$/, '');
+
+    // Időkorlát számítása (30 perc a jövőben) ISO formátumban, milliszekundumok nélkül
+    // Példa: 2025-10-15T12:34:56Z
+    const timeout = new Date(Date.now() + 30 * 60 * 1000)
+      .toISOString()
+      .replace(/\.\d{3}Z$/, 'Z');
     
-    // Egyedi rendelés azonosító generálása (userId-t tartalmazza)
-    const orderRef = `WEB_${userId}_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
-    
-    // SimplePay v2 API kérés összeállítása
     const simplePayRequest = {
-      merchant: SIMPLEPAY_CONFIG.merchantId,
-      orderRef: orderRef,
+      salt: crypto.randomBytes(16).toString('hex'),
+      merchant: SIMPLEPAY_CONFIG.merchantId.trim(),
+      orderRef,
       customerEmail: email,
-      customerName: name || undefined,
       language: 'HU',
+      sdkVersion: 'CustomBashScript_v1.0',
       currency: 'HUF',
-      total: plan.price,
+      timeout: timeout,
+      methods: ['CARD'],
+      urls: {
+        success: `${nextAuthBase}/subscription?success=true`,
+        fail: `${nextAuthBase}/subscription?success=false`,
+        timeout: `${nextAuthBase}/subscription?status=timeout`,
+        cancel: `${nextAuthBase}/subscription?status=cancelled`,
+      },
       items: [{
         ref: planId,
         title: plan.name,
         description: plan.description,
-        amount: plan.price,
+        amount: 1,
         price: plan.price,
-        quantity: 1,
       }],
-      methods: ['CARD'],
-      url: `${process.env.NEXTAUTH_URL || 'https://lomedu-user-web.web.app'}/api/webhook/simplepay`,
-      timeout: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 perc
-      invoice: '1',
-      redirectUrl: `${process.env.NEXTAUTH_URL || 'https://lomedu-user-web.web.app'}/subscription?success=true`,
     };
     
-    // SimplePay API hívás
-    const response = await fetch(`${SIMPLEPAY_CONFIG.baseUrl}start`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SIMPLEPAY_CONFIG.secretKey}`,
-        'User-Agent': 'Lomedu-Cloud-Functions/1.0',
-      },
-      body: JSON.stringify(simplePayRequest),
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('SimplePay API error:', errorData);
-      throw new Error('internal: Fizetési folyamat indítása sikertelen');
+    // Ellenőrizzük, hogy a JSON formázás helyes-e
+    const payloadKeys = Object.keys(simplePayRequest);
+    if (!payloadKeys.includes('items') || !Array.isArray(simplePayRequest.items) || simplePayRequest.items.length === 0) {
+      throw new HttpsError('invalid-argument', 'Az items tömb hibásan formázott vagy hiányzik');
     }
     
+    // Ellenőrizzük, hogy minden szükséges kulcs megvan-e
+    const requiredKeys = ['salt', 'merchant', 'orderRef', 'customerEmail', 'language', 'currency', 'timeout', 'methods', 'urls', 'items'];
+    const missingKeys = requiredKeys.filter(key => !payloadKeys.includes(key));
+    if (missingKeys.length > 0) {
+      throw new HttpsError('invalid-argument', `Hiányzó kulcsok a kérésben: ${missingKeys.join(', ')}`);
+    }
+
+    console.log('[initiateWebPayment] outgoing payload', simplePayRequest);
+
+    const requestBody = JSON.stringify(simplePayRequest);
+    const signature = crypto.createHmac('sha384', SIMPLEPAY_CONFIG.secretKey.trim()).update(requestBody).digest('base64');
+
+    const response = await fetch(`${SIMPLEPAY_CONFIG.baseUrl.trim()}start`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Signature': signature,
+      },
+      body: requestBody,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[initiateWebPayment] SimplePay HTTP error', { status: response.status, errorText, orderRef });
+      throw new HttpsError('internal', 'Fizetési szolgáltató API hiba');
+    }
+
     const paymentData = await response.json();
-    
-    // Fizetési rekord mentése
+    if (!paymentData?.paymentUrl) {
+      const errorCodes = paymentData?.errorCodes;
+      
+      // Részletes log a 5321-es hibakódhoz
+      if (Array.isArray(errorCodes) && errorCodes.includes('5321')) {
+        console.error('=================================================================');
+        console.error('SIMPLEPAY HIBAKÓD 5321 RÉSZLETES ELEMZÉS:');
+        console.error('=================================================================');
+        console.error('Kérés adatok:', JSON.stringify(simplePayRequest, null, 2));
+        console.error('SimplePay válasz:', JSON.stringify(paymentData, null, 2));
+        console.error('Aláírás generálás alapja:', requestBody);
+        console.error('Generált aláírás:', signature);
+        console.error('=================================================================');
+      }
+      
+      console.error('[initiateWebPayment] SimplePay start returned logical error', { orderRef, errorCodes, rawResponse: paymentData, payload: simplePayRequest });
+      throw new HttpsError('failed-precondition', `SimplePay indítás elutasítva: ${Array.isArray(errorCodes) ? errorCodes.join(',') : 'ismeretlen hiba'}`);
+    }
+
     await db.collection('web_payments').doc(orderRef).set({
-      userId: userId,
-      planId: planId,
-      orderRef: orderRef,
+      userId,
+      planId,
+      orderRef,
+      simplePayTransactionId: paymentData.transactionId || null,
       amount: plan.price,
-      status: 'pending',
+      status: 'INITIATED',
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-    
-    return {
-      success: true,
-      paymentUrl: paymentData.paymentUrl,
-      orderRef: orderRef,
-      amount: plan.price,
-    };
-    
+
+    return { success: true, paymentUrl: paymentData.paymentUrl, orderRef };
   } catch (error) {
-    console.error('initiateWebPayment error:', error);
-    throw error;
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError('internal', error?.message || 'Ismeretlen szerverhiba');
   }
 });
 
 /**
  * SimplePay webhook feldolgozás
  */
-exports.processWebPaymentWebhook = onCall(async (request) => {
+exports.processWebPaymentWebhook = onCall({ secrets: ['SIMPLEPAY_SECRET_KEY','NEXTAUTH_URL','SIMPLEPAY_ENV'] }, async (request) => {
   try {
     const webhookData = request.data || {};
+    console.debug('[processWebPaymentWebhook] input status/orderRef', { status: webhookData?.status, orderRef: webhookData?.orderRef });
     
     // Webhook adatok validálása
     const { orderRef, transactionId, orderId, status, total, items } = webhookData;
     
     if (!orderRef || !transactionId || !status) {
-      throw new Error('invalid-argument: Hiányzó webhook adatok');
+      throw new HttpsError('invalid-argument', 'Hiányzó webhook adatok');
     }
     
     // Csak sikeres fizetéseket dolgozunk fel
@@ -288,7 +340,7 @@ exports.processWebPaymentWebhook = onCall(async (request) => {
     // Formátum: WEB_userId_timestamp_random
     const orderRefParts = orderRef.split('_');
     if (orderRefParts.length < 3 || orderRefParts[0] !== 'WEB') {
-      throw new Error('invalid-argument: Érvénytelen orderRef formátum');
+      throw new HttpsError('invalid-argument', 'Érvénytelen orderRef formátum');
     }
     
     const userId = orderRefParts[1];
@@ -298,7 +350,7 @@ exports.processWebPaymentWebhook = onCall(async (request) => {
     const paymentDoc = await paymentRef.get();
     
     if (!paymentDoc.exists) {
-      throw new Error('not-found: Fizetési rekord nem található');
+      throw new HttpsError('not-found', 'Fizetési rekord nem található');
     }
     
     const paymentData = paymentDoc.data();
@@ -306,7 +358,7 @@ exports.processWebPaymentWebhook = onCall(async (request) => {
     const plan = PAYMENT_PLANS[planId];
     
     if (!plan) {
-      throw new Error('invalid-argument: Érvénytelen csomag');
+      throw new HttpsError('failed-precondition', 'Érvénytelen csomag');
     }
     
     // Előfizetés aktiválása
@@ -352,20 +404,23 @@ exports.processWebPaymentWebhook = onCall(async (request) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     
-    console.log(`Successfully processed web payment for user ${userId}, orderRef: ${orderRef}`);
+    console.log('[processWebPaymentWebhook] processed OK', { userId, orderRef });
     
     return { success: true };
     
   } catch (error) {
-    console.error('processWebPaymentWebhook error:', error);
-    throw error;
+    console.error('[processWebPaymentWebhook] error', { message: error?.message, stack: error?.stack });
+    if (error instanceof HttpsError || error?.code) {
+      throw error;
+    }
+    throw new HttpsError('internal', error?.message || 'Ismeretlen hiba a SimplePay webhook feldolgozásakor');
   }
 });
 
 /**
  * HTTP webhook endpoint SimplePay számára
  */
-exports.simplepayWebhook = onRequest(async (req, res) => {
+exports.simplepayWebhook = onRequest({ secrets: ['SIMPLEPAY_SECRET_KEY','NEXTAUTH_URL','SIMPLEPAY_ENV'] }, async (req, res) => {
   try {
     // CORS headers
     res.set('Access-Control-Allow-Origin', '*');
@@ -386,14 +441,14 @@ exports.simplepayWebhook = onRequest(async (req, res) => {
     const signature = req.headers['x-simplepay-signature'];
     
     if (!signature) {
-      console.error('Missing signature in webhook request');
+      console.error('[simplepayWebhook] Missing signature');
       res.status(400).send('Missing signature');
       return;
     }
     
     // Aláírás ellenőrzése
     if (!SIMPLEPAY_CONFIG.secretKey) {
-      console.error('SimplePay secret key not configured');
+      console.error('[simplepayWebhook] Secret key not configured');
       res.status(500).send('Configuration error');
       return;
     }
@@ -407,16 +462,16 @@ exports.simplepayWebhook = onRequest(async (req, res) => {
       Buffer.from(signature, 'hex'),
       Buffer.from(expectedSignature, 'hex')
     )) {
-      console.error('Invalid signature in webhook request');
+      console.error('[simplepayWebhook] Invalid signature');
       res.status(401).send('Invalid signature');
       return;
     }
     
-    console.log('SimplePay webhook received:', body);
+    console.log('[simplepayWebhook] received', { status: body?.status, orderRef: body?.orderRef });
     
     // Csak sikeres fizetéseket dolgozunk fel
     if (body.status !== 'SUCCESS') {
-      console.log('Payment not successful, ignoring webhook');
+      console.log('[simplepayWebhook] non-success status, ignoring');
       res.status(200).send('OK');
       return;
     }
@@ -438,7 +493,7 @@ exports.simplepayWebhook = onRequest(async (req, res) => {
     const paymentDoc = await paymentRef.get();
     
     if (!paymentDoc.exists) {
-      console.error('Payment record not found:', orderRef);
+      console.error('[simplepayWebhook] Payment record not found', { orderRef });
       res.status(404).send('Payment record not found');
       return;
     }
@@ -448,7 +503,7 @@ exports.simplepayWebhook = onRequest(async (req, res) => {
     const plan = PAYMENT_PLANS[planId];
     
     if (!plan) {
-      console.error('Invalid plan:', planId);
+      console.error('[simplepayWebhook] Invalid plan', { planId });
       res.status(400).send('Invalid plan');
       return;
     }
@@ -491,12 +546,12 @@ exports.simplepayWebhook = onRequest(async (req, res) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     
-    console.log(`Successfully processed web payment for user ${userId}, orderRef: ${orderRef}`);
+    console.log('[simplepayWebhook] processed OK', { userId, orderRef });
     
     res.status(200).send('OK');
     
   } catch (error) {
-    console.error('SimplePay webhook error:', error);
+    console.error('[simplepayWebhook] error', { message: error?.message, stack: error?.stack });
     res.status(500).send('Internal server error');
   }
 });

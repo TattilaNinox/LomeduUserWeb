@@ -1,0 +1,43 @@
+functions/index.js – region: europe-west1
+
+1) initiateWebPayment (callable)
+- Input: request.data = { planId, userId }
+- Validates: planId exists in PAYMENT_PLANS; SIMPLEPAY_MERCHANT_ID and SIMPLEPAY_SECRET_KEY are set; Firestore users/{userId} exists and has email
+- orderRef: WEB_<userId>_<timestamp>_<8char>
+- Calls POST {baseUrl}start with:
+  merchant, orderRef, customerEmail, customerName, language=HU, currency=HUF,
+  total=plan.price, items[ref/title/description/amount/price/quantity],
+  methods=[CARD], url=<NEXTAUTH_URL>/api/webhook/simplepay,
+  redirectUrl=<NEXTAUTH_URL>/subscription?success=true, timeout=+30min, invoice="1"
+- On HTTP 200:
+  writes web_payments/{orderRef} = { userId, planId, orderRef, amount: plan.price, status: "pending", createdAt, updatedAt }
+  returns { success: true, paymentUrl, orderRef, amount }
+- On non-200: logs response text; throws Error("internal: Fizetési folyamat indítása sikertelen")
+- Env used: SIMPLEPAY_MERCHANT_ID, SIMPLEPAY_SECRET_KEY, NEXTAUTH_URL, SIMPLEPAY_ENV
+- Base URL: sandbox=https://sandbox.simplepay.hu/payment/v2/ ; production=https://secure.simplepay.hu/payment/v2/
+
+2) processWebPaymentWebhook (callable)
+- Input: request.data = { orderRef, transactionId, orderId, status, total, items }
+- Validates: orderRef/transactionId/status present; status == "SUCCESS"; orderRef format starts with "WEB_" and contains userId
+- Reads web_payments/{orderRef} to get planId; computes expiry = now + PAYMENT_PLANS[planId].subscriptionDays
+- Updates users/{userId} (merge):
+  isSubscriptionActive=true, subscriptionStatus="premium", subscriptionEndDate,
+  subscription={ status="ACTIVE", productId, purchaseToken=transactionId, orderId,
+  endTime ISO, lastUpdateTime ISO, source="otp_simplepay" }, lastPaymentDate, updatedAt
+  then deletes lastReminder
+- Updates web_payments/{orderRef}: status="completed", transactionId, orderId, completedAt, updatedAt
+- Returns { success: true }
+
+3) simplepayWebhook (HTTP onRequest)
+- CORS: allows POST; OPTIONS returns 200
+- Requires header x-simplepay-signature = HMAC-SHA256(JSON body) with SIMPLEPAY_SECRET_KEY; invalid → 401
+- If body.status != "SUCCESS": returns 200 (no-op)
+- Else: same users/{userId} and web_payments/{orderRef} updates as in (2) with plan check and expiry calculation
+- Returns 200 "OK"
+
+Other facts
+- PAYMENT_PLANS: monthly_web { name="Havi előfizetés", price=4350, description, subscriptionDays=30 }
+- Firestore collections used: users, web_payments
+- Hosting rewrite (firebase.json): /api/webhook/simplepay → function simplepayWebhook (region europe-west1)
+- Global options: setGlobalOptions({ region: 'europe-west1', cpu: 1 })
+- Runtime: Node.js 20 (2nd Gen)

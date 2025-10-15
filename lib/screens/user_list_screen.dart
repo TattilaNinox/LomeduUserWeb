@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/sidebar.dart';
 import '../services/admin_service.dart';
+import '../services/web_payment_service.dart';
 
 enum UserFilter { all, premium, trial, test, free, expired }
 
@@ -47,6 +49,42 @@ class _UserListScreenState extends State<UserListScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _testPayment() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Nincs bejelentkezett felhasználó')),
+        );
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fizetés indítása...')),
+      );
+
+      final result = await WebPaymentService.initiatePaymentViaCloudFunction(
+        planId: 'monthly_web',
+        userId: user.uid,
+      );
+
+      if (result.success && result.paymentUrl != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sikeres! Payment URL: ${result.paymentUrl}')),
+        );
+        // Itt megnyithatnád a payment URL-t egy új ablakban
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Hiba: ${result.error ?? 'Ismeretlen hiba'}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Hiba: $e')),
+      );
+    }
   }
 
   @override
@@ -429,12 +467,26 @@ class _UserListScreenState extends State<UserListScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Felhasználók',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      const Text(
+                        'Felhasználók',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Spacer(),
+                      ElevatedButton.icon(
+                        onPressed: _testPayment,
+                        icon: const Icon(Icons.payment),
+                        label: const Text('Teszt Fizetés'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   TextField(
