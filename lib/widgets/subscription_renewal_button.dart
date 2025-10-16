@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/hybrid_payment_service.dart';
 import '../services/subscription_reminder_service.dart';
 import '../services/web_payment_service.dart';
@@ -184,9 +185,18 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
         widget.onPaymentInitiated?.call();
         _showSuccess('Fizetés sikeresen indítva!');
 
-        // Web esetén átirányítás
+        // Web esetén ugyanabban a fülben nyissuk meg (ne új ablakban)
         if (HybridPaymentService.isWeb) {
-          _showPaymentDialog(result.paymentUrl!);
+          final uri = Uri.parse(result.paymentUrl!);
+          final launched = await launchUrl(
+            uri,
+            webOnlyWindowName: '_self',
+          );
+          if (!launched && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Payment URL: ${result.paymentUrl}')),
+            );
+          }
         }
       } else {
         _showError(result.error ?? 'Fizetés indítása sikertelen');
@@ -200,32 +210,7 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
     }
   }
 
-  void _showPaymentDialog(String paymentUrl) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Fizetés'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Átirányítjuk a biztonságos fizetési oldalra...'),
-            const SizedBox(height: 16),
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Web navigáció implementálva
-                debugPrint('Opening payment URL: $paymentUrl');
-              },
-              child: const Text('Manuális átirányítás'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // payment dialog removed; we launch using url_launcher directly
 
   void _showError(String message) {
     if (mounted) {
@@ -256,7 +241,7 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
     }
 
     // Fallback
-    return 'monthly_web';
+    return 'monthly_premium_prepaid';
   }
 
   Color _getButtonColor() {

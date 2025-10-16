@@ -521,6 +521,8 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
 
   String _getPlanName(String planId) {
     switch (planId) {
+      case 'monthly_premium_prepaid':
+        return 'Havi előfizetés';
       case 'monthly_web':
         return 'Havi előfizetés';
       case 'yearly_web':

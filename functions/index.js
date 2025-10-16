@@ -1,5 +1,6 @@
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { setGlobalOptions } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
@@ -31,26 +32,52 @@ function maskValue(value) {
 // Sandbox/Production kiválasztása külön titok alapján (alapértelmezés: sandbox)
 const SIMPLEPAY_ENV = (process.env.SIMPLEPAY_ENV || 'sandbox').toLowerCase();
 
-const SIMPLEPAY_CONFIG = {
-  merchantId: (process.env.SIMPLEPAY_MERCHANT_ID || '').trim(),
-  secretKey: (process.env.SIMPLEPAY_SECRET_KEY || '').trim(),
-  baseUrl: (process.env.SIMPLEPAY_ENV || 'sandbox').toLowerCase().trim() === 'production' 
-    ? 'https://secure.simplepay.hu/payment/v2/' 
-    : 'https://sandbox.simplepay.hu/payment/v2/',
-  nextAuthUrl: (process.env.NEXTAUTH_URL || 'https://lomedu-user-web.web.app').trim(),
-  env: (process.env.SIMPLEPAY_ENV || 'sandbox').toLowerCase().trim(),
-};
+// Runtime config reader (secrets biztosan elérhetők invokációkor)
+function getSimplePayConfig() {
+  const env = (process.env.SIMPLEPAY_ENV || 'sandbox').toLowerCase().trim();
+  return {
+    merchantId: (process.env.SIMPLEPAY_MERCHANT_ID || '').trim(),
+    secretKey: (process.env.SIMPLEPAY_SECRET_KEY || '').trim(),
+    baseUrl: env === 'production'
+      ? 'https://secure.simplepay.hu/payment/v2/'
+      : 'https://sandbox.simplepay.hu/payment/v2/',
+    nextAuthUrl: (process.env.NEXTAUTH_URL || 'https://lomedu-user-web.web.app').trim(),
+    env,
+  };
+}
+
+// Biztonság kedvéért definiálunk egy globális, hogy régi revíziók/async hivatkozások se dobjanak ReferenceError-t
+const SIMPLEPAY_CONFIG = getSimplePayConfig();
+
+// Kisegítő késleltetés
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'https://lomedu-user-web.web.app';
 
 // Fizetési csomagok
 const PAYMENT_PLANS = {
+  // Kanonikus azonosító
+  monthly_premium_prepaid: {
+    name: 'Havi előfizetés',
+    price: 4350,
+    description: 'Teljes hozzáférés minden funkcióhoz',
+    subscriptionDays: 30,
+  },
+  // Régi alias a visszafelé kompatibilitásért
   monthly_web: {
     name: 'Havi előfizetés',
     price: 4350,
     description: 'Teljes hozzáférés minden funkcióhoz',
     subscriptionDays: 30,
   },
+};
+
+// Plan ID kanonikusítása (alias → kanonikus)
+const CANONICAL_PLAN_ID = {
+  monthly_web: 'monthly_premium_prepaid',
+  monthly_premium_prepaid: 'monthly_premium_prepaid',
 };
 
 // SMTP transport - STARTTLS módszerrel
@@ -92,6 +119,7 @@ exports.requestDeviceChange = onCall(async (request) => {
 
   // E-mail küldés
   try {
+    const SIMPLEPAY_CONFIG = getSimplePayConfig();
     await transport.sendMail({
       from: 'Lomedu <info@lomedu.hu>',
       to: email,
@@ -188,7 +216,8 @@ exports.initiateWebPayment = onCall({
       throw new HttpsError('invalid-argument', 'planId és userId szükséges');
     }
 
-    const plan = PAYMENT_PLANS[planId];
+    const canonicalPlanId = CANONICAL_PLAN_ID[planId] || planId;
+    const plan = PAYMENT_PLANS[canonicalPlanId];
     if (!plan) {
       throw new HttpsError('invalid-argument', 'Érvénytelen csomag');
     }
@@ -212,6 +241,8 @@ exports.initiateWebPayment = onCall({
 
     const orderRef = `WEB_${userId}_${Date.now()}`;
     const nextAuthBase = SIMPLEPAY_CONFIG.nextAuthUrl.replace(/\/$/, '');
+    const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || '';
+    const webhookUrl = `https://europe-west1-${projectId}.cloudfunctions.net/simplepayWebhook`;
 
     // Időkorlát számítása (30 perc a jövőben) ISO formátumban, milliszekundumok nélkül
     // Példa: 2025-10-15T12:34:56Z
@@ -229,14 +260,16 @@ exports.initiateWebPayment = onCall({
       currency: 'HUF',
       timeout: timeout,
       methods: ['CARD'],
+      // IPN/Webhook értesítési URL (server-to-server)
+      url: webhookUrl,
       urls: {
-        success: `${nextAuthBase}/subscription?success=true`,
-        fail: `${nextAuthBase}/subscription?success=false`,
-        timeout: `${nextAuthBase}/subscription?status=timeout`,
-        cancel: `${nextAuthBase}/subscription?status=cancelled`,
+        success: `${nextAuthBase}/account?payment=success&orderRef=${orderRef}`,
+        fail: `${nextAuthBase}/account?payment=fail&orderRef=${orderRef}`,
+        timeout: `${nextAuthBase}/account?payment=timeout&orderRef=${orderRef}`,
+        cancel: `${nextAuthBase}/account?payment=cancelled&orderRef=${orderRef}`,
       },
       items: [{
-        ref: planId,
+        ref: canonicalPlanId,
         title: plan.name,
         description: plan.description,
         amount: 1,
@@ -257,7 +290,11 @@ exports.initiateWebPayment = onCall({
       throw new HttpsError('invalid-argument', `Hiányzó kulcsok a kérésben: ${missingKeys.join(', ')}`);
     }
 
-    console.log('[initiateWebPayment] outgoing payload', simplePayRequest);
+    console.log('[initiateWebPayment] outgoing payload', {
+      orderRef,
+      url: simplePayRequest.url,
+      hasPaymentUrl: true,
+    });
 
     const requestBody = JSON.stringify(simplePayRequest);
     const signature = crypto.createHmac('sha384', SIMPLEPAY_CONFIG.secretKey.trim()).update(requestBody).digest('base64');
@@ -299,7 +336,7 @@ exports.initiateWebPayment = onCall({
 
     await db.collection('web_payments').doc(orderRef).set({
       userId,
-      planId,
+      planId: canonicalPlanId,
       orderRef,
       simplePayTransactionId: paymentData.transactionId || null,
       amount: plan.price,
@@ -316,10 +353,117 @@ exports.initiateWebPayment = onCall({
 });
 
 /**
+ * Fizetés lezárása (FINISH) SimplePay v2 API-val
+ * - Client a sikeres visszairányítás után hívja: { orderRef }
+ * - Siker esetén users/{uid} frissül és web_payments status COMPLETED-re vált
+ */
+exports.confirmWebPayment = onCall({ secrets: ['SIMPLEPAY_MERCHANT_ID', 'SIMPLEPAY_SECRET_KEY', 'SIMPLEPAY_ENV'] }, async (request) => {
+  try {
+    const SIMPLEPAY_CONFIG = getSimplePayConfig();
+    const { orderRef } = request.data || {};
+    if (!orderRef || typeof orderRef !== 'string') {
+      throw new HttpsError('invalid-argument', 'orderRef szükséges');
+    }
+
+    const orderRefParts = orderRef.split('_');
+    if (orderRefParts.length < 3 || orderRefParts[0] !== 'WEB') {
+      throw new HttpsError('invalid-argument', 'Érvénytelen orderRef formátum');
+    }
+    const userId = orderRefParts[1];
+
+    if (!SIMPLEPAY_CONFIG.merchantId || !SIMPLEPAY_CONFIG.secretKey) {
+      throw new HttpsError('failed-precondition', 'SimplePay konfiguráció hiányzik');
+    }
+
+    // Lekérjük a fizetési rekordot
+    const paymentRef = db.collection('web_payments').doc(orderRef);
+    const paymentSnap = await paymentRef.get();
+    if (!paymentSnap.exists) {
+      throw new HttpsError('not-found', 'Fizetési rekord nem található');
+    }
+    const pay = paymentSnap.data();
+    const rawPlanId = pay.planId;
+    const canonicalPlanId = CANONICAL_PLAN_ID[rawPlanId] || rawPlanId;
+    const plan = PAYMENT_PLANS[canonicalPlanId];
+    if (!plan) {
+      throw new HttpsError('failed-precondition', 'Érvénytelen csomag');
+    }
+
+    // QUERY – ellenőrzés SimplePay v2 API-val (biztos lezárás helyett státusz lekérdezés)
+    const queryPayload = {
+      salt: crypto.randomBytes(16).toString('hex'),
+      merchant: SIMPLEPAY_CONFIG.merchantId.trim(),
+      orderRef,
+    };
+    const queryBody = JSON.stringify(queryPayload);
+    const querySig = crypto.createHmac('sha384', SIMPLEPAY_CONFIG.secretKey.trim()).update(queryBody).digest('base64');
+    const queryResp = await fetch(`${SIMPLEPAY_CONFIG.baseUrl.trim()}query`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Signature': querySig },
+      body: queryBody,
+    });
+    if (!queryResp.ok) {
+      const txt = await queryResp.text();
+      console.error('[confirmWebPayment] query HTTP error', { status: queryResp.status, txt });
+      throw new HttpsError('internal', 'Query hívás sikertelen');
+    }
+    const queryTxt = await queryResp.text();
+    let queryData; try { queryData = JSON.parse(queryTxt); } catch (_) { queryData = { raw: queryTxt }; }
+    const successLike = (queryData?.status || '').toString().toUpperCase() === 'SUCCESS' || !!queryData?.transactionId;
+    if (!successLike) {
+      console.warn('[confirmWebPayment] query not SUCCESS', { orderRef, queryData });
+      return { success: false, status: queryData?.status || 'UNKNOWN' };
+    }
+
+    const transactionId = queryData?.transactionId || pay.simplePayTransactionId || null;
+    const orderId = queryData?.orderId || null;
+
+    // Előfizetés aktiválása
+    const now = new Date();
+    const expiryDate = new Date(now.getTime() + (plan.subscriptionDays * 24 * 60 * 60 * 1000));
+    const subscriptionData = {
+      isSubscriptionActive: true,
+      subscriptionStatus: 'premium',
+      subscriptionEndDate: admin.firestore.Timestamp.fromDate(expiryDate),
+      subscription: {
+        status: 'ACTIVE',
+        productId: canonicalPlanId,
+        purchaseToken: transactionId,
+        orderId: orderId,
+        endTime: expiryDate.toISOString(),
+        lastUpdateTime: now.toISOString(),
+        source: 'otp_simplepay',
+      },
+      lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await db.collection('users').doc(userId).set(subscriptionData, { merge: true });
+    await db.collection('users').doc(userId).update({ lastReminder: admin.firestore.FieldValue.delete() });
+
+    await paymentRef.update({
+      status: 'COMPLETED',
+      transactionId,
+      orderId,
+      completedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    console.log('[confirmWebPayment] completed', { userId, orderRef });
+    return { success: true, status: 'COMPLETED' };
+  } catch (err) {
+    console.error('[confirmWebPayment] error', { message: err?.message, stack: err?.stack });
+    if (err instanceof HttpsError) throw err;
+    throw new HttpsError('internal', err?.message || 'Ismeretlen hiba');
+  }
+});
+
+/**
  * SimplePay webhook feldolgozás
  */
 exports.processWebPaymentWebhook = onCall({ secrets: ['SIMPLEPAY_SECRET_KEY','NEXTAUTH_URL','SIMPLEPAY_ENV'] }, async (request) => {
   try {
+    const SIMPLEPAY_CONFIG = getSimplePayConfig();
     const webhookData = request.data || {};
     console.debug('[processWebPaymentWebhook] input status/orderRef', { status: webhookData?.status, orderRef: webhookData?.orderRef });
     
@@ -354,8 +498,9 @@ exports.processWebPaymentWebhook = onCall({ secrets: ['SIMPLEPAY_SECRET_KEY','NE
     }
     
     const paymentData = paymentDoc.data();
-    const planId = paymentData.planId;
-    const plan = PAYMENT_PLANS[planId];
+    const rawPlanId = paymentData.planId;
+    const canonicalPlanId = CANONICAL_PLAN_ID[rawPlanId] || rawPlanId;
+    const plan = PAYMENT_PLANS[canonicalPlanId];
     
     if (!plan) {
       throw new HttpsError('failed-precondition', 'Érvénytelen csomag');
@@ -374,7 +519,7 @@ exports.processWebPaymentWebhook = onCall({ secrets: ['SIMPLEPAY_SECRET_KEY','NE
       // Részletes adatok
       subscription: {
         status: 'ACTIVE',
-        productId: planId,
+        productId: canonicalPlanId,
         purchaseToken: transactionId,
         orderId: orderId,
         endTime: expiryDate.toISOString(),
@@ -397,14 +542,13 @@ exports.processWebPaymentWebhook = onCall({ secrets: ['SIMPLEPAY_SECRET_KEY','NE
     
     // Fizetési rekord frissítése
     await paymentRef.update({
-      status: 'completed',
+      status: 'COMPLETED',
       transactionId: transactionId,
       orderId: orderId,
       completedAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-    
-    console.log('[processWebPaymentWebhook] processed OK', { userId, orderRef });
+    console.log('[processWebPaymentWebhook] updated payment to COMPLETED', { userId, orderRef });
     
     return { success: true };
     
@@ -422,10 +566,11 @@ exports.processWebPaymentWebhook = onCall({ secrets: ['SIMPLEPAY_SECRET_KEY','NE
  */
 exports.simplepayWebhook = onRequest({ secrets: ['SIMPLEPAY_SECRET_KEY','NEXTAUTH_URL','SIMPLEPAY_ENV'] }, async (req, res) => {
   try {
+    const SIMPLEPAY_CONFIG = getSimplePayConfig();
     // CORS headers
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.set('Access-Control-Allow-Headers', 'Content-Type, x-simplepay-signature');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Signature, x-simplepay-signature, x-signature');
     
     if (req.method === 'OPTIONS') {
       res.status(200).send('');
@@ -438,39 +583,66 @@ exports.simplepayWebhook = onRequest({ secrets: ['SIMPLEPAY_SECRET_KEY','NEXTAUT
     }
     
     const body = req.body;
-    const signature = req.headers['x-simplepay-signature'];
-    
-    if (!signature) {
-      console.error('[simplepayWebhook] Missing signature');
+    const headerSignature = (
+      req.headers['signature'] ||
+      req.headers['x-simplepay-signature'] ||
+      req.headers['x-signature'] ||
+      ''
+    ).toString();
+
+    if (!headerSignature) {
+      console.error('[simplepayWebhook] Missing signature', {
+        headerKeys: Object.keys(req.headers || {}),
+        rawLen: Buffer.isBuffer(req.rawBody) ? req.rawBody.length : String(JSON.stringify(body)).length,
+      });
       res.status(400).send('Missing signature');
       return;
     }
-    
-    // Aláírás ellenőrzése
+
+    // Aláírás ellenőrzése – SimplePay v2: HMAC-SHA384 + base64 a RAW BODY-ra
     if (!SIMPLEPAY_CONFIG.secretKey) {
       console.error('[simplepayWebhook] Secret key not configured');
       res.status(500).send('Configuration error');
       return;
     }
-    
-    const expectedSignature = crypto
-      .createHmac('sha256', SIMPLEPAY_CONFIG.secretKey)
-      .update(JSON.stringify(body))
-      .digest('hex');
-    
-    if (!crypto.timingSafeEqual(
-      Buffer.from(signature, 'hex'),
-      Buffer.from(expectedSignature, 'hex')
-    )) {
-      console.error('[simplepayWebhook] Invalid signature');
+
+    const raw = Buffer.isBuffer(req.rawBody)
+      ? req.rawBody
+      : Buffer.from(JSON.stringify(body));
+
+    const expectedSigSha384B64 = crypto
+      .createHmac('sha384', SIMPLEPAY_CONFIG.secretKey)
+      .update(raw)
+      .digest('base64');
+
+    // Biztonságos összehasonlítás
+    const a = Buffer.from(headerSignature);
+    const b = Buffer.from(expectedSigSha384B64);
+    const valid = a.length === b.length && crypto.timingSafeEqual(a, b);
+
+    if (!valid) {
+      console.error('[simplepayWebhook] Invalid signature', {
+        headerSignatureMasked: maskValue(headerSignature),
+        expectedMasked: maskValue(expectedSigSha384B64),
+        headerKeys: Object.keys(req.headers || {}),
+        rawLen: raw.length,
+      });
       res.status(401).send('Invalid signature');
       return;
     }
     
-    console.log('[simplepayWebhook] received', { status: body?.status, orderRef: body?.orderRef });
+    const incomingStatus = (body?.status || '').toString().toUpperCase();
+    console.log('[simplepayWebhook] received', {
+      status: incomingStatus,
+      orderRef: body?.orderRef,
+      headers: {
+        signatureMasked: maskValue(headerSignature),
+      },
+    });
     
-    // Csak sikeres fizetéseket dolgozunk fel
-    if (body.status !== 'SUCCESS') {
+    // Csak sikeres fizetéseket dolgozunk fel – a SimplePay itt 'FINISHED' státuszt küld,
+    // ami a tranzakció sikeres lezárását jelenti. Kezeljük SUCCESS-ként.
+    if (incomingStatus !== 'SUCCESS' && incomingStatus !== 'FINISHED') {
       console.log('[simplepayWebhook] non-success status, ignoring');
       res.status(200).send('OK');
       return;
@@ -499,8 +671,9 @@ exports.simplepayWebhook = onRequest({ secrets: ['SIMPLEPAY_SECRET_KEY','NEXTAUT
     }
     
     const paymentData = paymentDoc.data();
-    const planId = paymentData.planId;
-    const plan = PAYMENT_PLANS[planId];
+    const rawPlanId = paymentData.planId;
+    const canonicalPlanId = CANONICAL_PLAN_ID[rawPlanId] || rawPlanId;
+    const plan = PAYMENT_PLANS[canonicalPlanId];
     
     if (!plan) {
       console.error('[simplepayWebhook] Invalid plan', { planId });
@@ -518,9 +691,9 @@ exports.simplepayWebhook = onRequest({ secrets: ['SIMPLEPAY_SECRET_KEY','NEXTAUT
       subscriptionEndDate: admin.firestore.Timestamp.fromDate(expiryDate),
       subscription: {
         status: 'ACTIVE',
-        productId: planId,
-        purchaseToken: transactionId,
-        orderId: orderId,
+        productId: canonicalPlanId,
+        purchaseToken: transactionId || null,
+        orderId: orderId || null,
         endTime: expiryDate.toISOString(),
         lastUpdateTime: now.toISOString(),
         source: 'otp_simplepay',
@@ -539,20 +712,244 @@ exports.simplepayWebhook = onRequest({ secrets: ['SIMPLEPAY_SECRET_KEY','NEXTAUT
     
     // Fizetési rekord frissítése
     await paymentRef.update({
-      status: 'completed',
-      transactionId: transactionId,
-      orderId: orderId,
+      status: 'COMPLETED',
+      transactionId: transactionId || null,
+      orderId: orderId || null,
       completedAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     
-    console.log('[simplepayWebhook] processed OK', { userId, orderRef });
+    console.log('[simplepayWebhook] updated payment to COMPLETED', { userId, orderRef });
     
     res.status(200).send('OK');
     
   } catch (error) {
     console.error('[simplepayWebhook] error', { message: error?.message, stack: error?.stack });
     res.status(500).send('Internal server error');
+  }
+});
+
+/**
+ * Firestore trigger: web_payments/{orderRef}
+ * Ha egy fizetés elkészült (status == 'INITIATED' → 'SUCCESS'/'COMPLETED' vagy manuálisan beállított SUCCESS),
+ * frissíti a users/{uid} dokumentumot a mobil sémának megfelelően.
+ */
+exports.onWebPaymentWrite = onDocumentWritten({
+  document: 'web_payments/{orderRef}',
+  secrets: ['SIMPLEPAY_MERCHANT_ID','SIMPLEPAY_SECRET_KEY','SIMPLEPAY_ENV'],
+}, async (event) => {
+  try {
+    const SIMPLEPAY_CONFIG = getSimplePayConfig();
+    const before = event.data?.before?.data() || null;
+    const after = event.data?.after?.data() || null;
+
+    // Ha törlés, nincs teendő
+    if (!after) return;
+
+    const status = (after.status || '').toString().toUpperCase();
+    const userId = after.userId;
+    const rawPlanId = after.planId;
+    const canonicalPlanId = CANONICAL_PLAN_ID[rawPlanId] || rawPlanId;
+    const plan = PAYMENT_PLANS[canonicalPlanId];
+
+    console.log('[onWebPaymentWrite] trigger', {
+      orderRef: event.params.orderRef,
+      status,
+      userId,
+      planId: rawPlanId,
+    });
+
+    if (!userId || !plan) {
+      console.warn('[onWebPaymentWrite] skip - missing user/plan', {
+        orderRef: event.params.orderRef,
+        hasUser: !!userId,
+        hasPlan: !!plan,
+      });
+      return;
+    }
+
+    // Csak akkor írunk, ha:
+    // - új dokumentum jött létre és már SUCCESS/COMPLETED, vagy
+    // - status változott INITIATED/PENDING → SUCCESS/COMPLETED
+    const beforeStatus = (before?.status || '').toString().toUpperCase();
+    const meaningfulTransition = (
+      (!before && (status === 'SUCCESS' || status === 'COMPLETED')) ||
+      (before && beforeStatus !== status && (status === 'SUCCESS' || status === 'COMPLETED'))
+    );
+
+    // Ha még csak INITIATED, megpróbáljuk a FINISH hívást szerverről (nem kell kliensre várni)
+    if (status === 'INITIATED') {
+      try {
+        if (!SIMPLEPAY_CONFIG.merchantId || !SIMPLEPAY_CONFIG.secretKey) {
+          console.warn('[onWebPaymentWrite] finish skipped - config missing');
+          return;
+        }
+        // QUERY – állapot lekérdezése a FINISH helyett
+        // Többszöri query 5 másodpercig; SimplePay késleltetett állapotközlés esetére
+        let data = null;
+        for (let i = 0; i < 20; i++) {
+          const queryPayload = { salt: crypto.randomBytes(16).toString('hex'), merchant: SIMPLEPAY_CONFIG.merchantId.trim(), orderRef: event.params.orderRef };
+          const queryBody = JSON.stringify(queryPayload);
+          const querySig = crypto.createHmac('sha384', SIMPLEPAY_CONFIG.secretKey.trim()).update(queryBody).digest('base64');
+          const resp = await fetch(`${SIMPLEPAY_CONFIG.baseUrl.trim()}query`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8', Signature: querySig }, body: queryBody,
+          });
+          const txt = await resp.text();
+          try { data = JSON.parse(txt); } catch (_) { data = { raw: txt }; }
+          const ok = (data?.status || '').toString().toUpperCase() === 'SUCCESS' || !!data?.transactionId;
+          if (ok) break;
+          await sleep(1000);
+        }
+        if (data) {
+          const ok = (data?.status || '').toString().toUpperCase() === 'SUCCESS' || !!data?.transactionId;
+          if (ok) {
+            const now = new Date();
+            const expiryDate = new Date(
+              now.getTime() + plan.subscriptionDays * 24 * 60 * 60 * 1000
+            );
+            const transactionId = data?.transactionId || after.simplePayTransactionId || null;
+            const orderId = data?.orderId || null;
+
+            const subscriptionData = {
+              isSubscriptionActive: true,
+              subscriptionStatus: 'premium',
+              subscriptionEndDate: admin.firestore.Timestamp.fromDate(expiryDate),
+              subscription: {
+                status: 'ACTIVE',
+                productId: canonicalPlanId,
+                purchaseToken: transactionId,
+                orderId: orderId,
+                endTime: expiryDate.toISOString(),
+                lastUpdateTime: now.toISOString(),
+                source: 'otp_simplepay',
+              },
+              lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
+              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            };
+
+            await db.collection('users').doc(userId).set(subscriptionData, { merge: true });
+            await db.collection('users').doc(userId).update({
+              lastReminder: admin.firestore.FieldValue.delete(),
+            });
+            await event.data.after.ref.update({
+              status: 'COMPLETED',
+              transactionId,
+              orderId,
+              completedAt: admin.firestore.FieldValue.serverTimestamp(),
+              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            console.log('[onWebPaymentWrite] completed via FINISH', { userId, orderRef: event.params.orderRef });
+          } else {
+            console.log('[onWebPaymentWrite] query not SUCCESS', { orderRef: event.params.orderRef, status: data?.status, data });
+          }
+        }
+      } catch (e) {
+        console.error('[onWebPaymentWrite] finish call failed', { message: e?.message });
+      }
+      return;
+    }
+
+    if (!meaningfulTransition) {
+      console.log('[onWebPaymentWrite] no-op transition', {
+        orderRef: event.params.orderRef,
+        beforeStatus,
+        status,
+      });
+      return;
+    }
+
+    const now = new Date();
+    const expiryDate = new Date(now.getTime() + (plan.subscriptionDays * 24 * 60 * 60 * 1000));
+
+    const subscriptionData = {
+      isSubscriptionActive: true,
+      subscriptionStatus: 'premium',
+      subscriptionEndDate: admin.firestore.Timestamp.fromDate(expiryDate),
+      subscription: {
+        status: 'ACTIVE',
+        productId: canonicalPlanId,
+        purchaseToken: after.transactionId || after.simplePayTransactionId || null,
+        orderId: after.orderId || null,
+        endTime: expiryDate.toISOString(),
+        lastUpdateTime: now.toISOString(),
+        source: 'otp_simplepay',
+      },
+      lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await db.collection('users').doc(userId).set(subscriptionData, { merge: true });
+    await db.collection('users').doc(userId).update({
+      lastReminder: admin.firestore.FieldValue.delete(),
+    });
+
+    console.log('[onWebPaymentWrite] user updated from web_payments', { userId, orderRef: event.params.orderRef, status });
+  } catch (err) {
+    console.error('[onWebPaymentWrite] error', { message: err?.message, stack: err?.stack });
+  }
+});
+
+// Stabil reconciláció: INITIATED web_payments rekordok utózárása QUERY-vel
+exports.reconcileWebPaymentsScheduled = onSchedule({
+  schedule: '*/2 * * * *',
+  timeZone: 'Europe/Budapest',
+  memory: '256MiB',
+  timeoutSeconds: 240,
+}, async () => {
+  const cfg = getSimplePayConfig();
+  try {
+    const cutoff = new Date(Date.now() - 90 * 1000); // 90s-nél régebbi INITIATED
+    const snap = await db.collection('web_payments')
+      .where('status', '==', 'INITIATED')
+      .where('createdAt', '<=', admin.firestore.Timestamp.fromDate(cutoff))
+      .limit(20).get();
+    if (snap.empty) return { ok: true, reconciled: 0 };
+    let reconciled = 0;
+    for (const d of snap.docs) {
+      const pay = d.data();
+      const orderRef = pay.orderRef || d.id;
+      const userId = pay.userId;
+      const canonicalPlanId = CANONICAL_PLAN_ID[pay.planId] || pay.planId;
+      const plan = PAYMENT_PLANS[canonicalPlanId];
+      if (!userId || !plan) continue;
+      // 10 próbálat, 1 mp-es poll
+      let data = null;
+      for (let i = 0; i < 10; i++) {
+        const pl = { salt: crypto.randomBytes(16).toString('hex'), merchant: cfg.merchantId.trim(), orderRef };
+        const body = JSON.stringify(pl);
+        const sig = crypto.createHmac('sha384', cfg.secretKey.trim()).update(body).digest('base64');
+        const r = await fetch(`${cfg.baseUrl.trim()}query`, { method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8', Signature: sig }, body });
+        const t = await r.text();
+        try { data = JSON.parse(t); } catch (_) { data = { raw: t }; }
+        const ok = (data?.status || '').toString().toUpperCase() === 'SUCCESS' || !!data?.transactionId;
+        if (ok) break;
+        await sleep(1000);
+      }
+      const ok = data && ((data.status || '').toString().toUpperCase() === 'SUCCESS' || !!data.transactionId);
+      if (!ok) continue;
+      const now = new Date();
+      const expiry = new Date(now.getTime() + plan.subscriptionDays * 24 * 60 * 60 * 1000);
+      const transactionId = data?.transactionId || pay.simplePayTransactionId || null;
+      const orderId = data?.orderId || null;
+      await db.collection('users').doc(userId).set({
+        isSubscriptionActive: true,
+        subscriptionStatus: 'premium',
+        subscriptionEndDate: admin.firestore.Timestamp.fromDate(expiry),
+        subscription: {
+          status: 'ACTIVE', productId: canonicalPlanId, purchaseToken: transactionId,
+          orderId, endTime: expiry.toISOString(), lastUpdateTime: now.toISOString(), source: 'otp_simplepay'
+        },
+        lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+      await d.ref.update({ status: 'COMPLETED', transactionId, orderId, completedAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+      reconciled++;
+      console.log('[reconcileWebPaymentsScheduled] reconciled', { orderRef });
+    }
+    return { ok: true, reconciled };
+  } catch (e) {
+    console.error('[reconcileWebPaymentsScheduled] error', { message: e?.message });
+    throw e;
   }
 });
 

@@ -18,6 +18,25 @@ class WebPaymentService {
 
   /// Fizetési csomagok definíciója
   static const Map<String, PaymentPlan> _plans = {
+    // Kanonikus azonosító
+    'monthly_premium_prepaid': PaymentPlan(
+      id: 'monthly_premium_prepaid',
+      name: 'Havi előfizetés',
+      price: 4350,
+      period: 'hó',
+      description: 'Teljes hozzáférés minden funkcióhoz',
+      features: [
+        'Korlátlan jegyzet hozzáférés',
+        'Interaktív kvízek',
+        'Flashcard csomagok',
+        'Audio tartalmak',
+        'Offline letöltés',
+        'Elsődleges támogatás'
+      ],
+      subscriptionDays: 30,
+      popular: true,
+    ),
+    // Visszafelé kompatibilitás
     'monthly_web': PaymentPlan(
       id: 'monthly_web',
       name: 'Havi előfizetés',
@@ -33,7 +52,7 @@ class WebPaymentService {
         'Elsődleges támogatás'
       ],
       subscriptionDays: 30,
-      popular: true,
+      popular: false,
     ),
   };
 
@@ -51,7 +70,11 @@ class WebPaymentService {
   }) async {
     // Irányítás a Cloud Function-re. A plusz paramétereket (email, név) most
     // nem továbbítjuk; a Functon a Firestore-ból olvassa a felhasználó adatait.
-    return initiatePaymentViaCloudFunction(planId: planId, userId: userId);
+    // Alapértelmezett kanonikus planId használata, ha a hívó nem a kanonikusat adja
+    final canonicalPlanId =
+        planId == 'monthly_web' ? 'monthly_premium_prepaid' : planId;
+    return initiatePaymentViaCloudFunction(
+        planId: canonicalPlanId, userId: userId);
   }
 
   /// Cloud Function hívás a fizetés indításához (alternatív megközelítés)

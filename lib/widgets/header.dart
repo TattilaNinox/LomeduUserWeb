@@ -73,7 +73,7 @@ class Header extends StatelessWidget {
                 }
                 final result =
                     await WebPaymentService.initiatePaymentViaCloudFunction(
-                  planId: 'monthly_web',
+                  planId: 'monthly_premium_prepaid',
                   userId: user.uid,
                 );
                 if (result.success && result.paymentUrl != null) {
