@@ -58,7 +58,10 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
   Future<void> _initAudioPlayer() async {
     try {
       // Beállítja a forrás URL-t. Ez a lejátszás előfeltétele.
-      await _audioPlayer.setSourceUrl(widget.audioUrl);
+      await _audioPlayer.setSource(UrlSource(
+        widget.audioUrl,
+        mimeType: 'audio/mpeg',
+      ));
       // Ismétlés beállítása a kapcsoló állapotának megfelelően
       await _audioPlayer.setReleaseMode(
         _isLooping ? ReleaseMode.loop : ReleaseMode.stop,
@@ -105,7 +108,10 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
   Future<void> _ensureInitAndPlay() async {
     if (_isInitialized) {
       setState(() => _expanded = true);
-      await _audioPlayer.play(UrlSource(widget.audioUrl));
+      await _audioPlayer.play(UrlSource(
+        widget.audioUrl,
+        mimeType: 'audio/mpeg',
+      ));
       return;
     }
     setState(() => _initializing = true);
@@ -115,7 +121,10 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
       _initializing = false;
       _expanded = true;
     });
-    await _audioPlayer.play(UrlSource(widget.audioUrl));
+    await _audioPlayer.play(UrlSource(
+      widget.audioUrl,
+      mimeType: 'audio/mpeg',
+    ));
   }
 
   @override
@@ -245,7 +254,10 @@ class _MiniAudioPlayerState extends State<MiniAudioPlayer> {
                     } else {
                       // Ha a lejátszás befejeződött vagy le lett állítva,
                       // a play metódus újra elindítja a forrástól.
-                      await _audioPlayer.play(UrlSource(widget.audioUrl));
+                      await _audioPlayer.play(UrlSource(
+                        widget.audioUrl,
+                        mimeType: 'audio/mpeg',
+                      ));
                     }
                   },
                   color: Colors.green,

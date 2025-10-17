@@ -58,7 +58,10 @@ class _AudioPreviewPlayerState extends State<AudioPreviewPlayer> {
       });
 
       await _audioPlayer.setVolume(1.0);
-      await _audioPlayer.setSourceUrl(widget.audioUrl);
+      await _audioPlayer.setSource(UrlSource(
+        widget.audioUrl,
+        mimeType: 'audio/mpeg',
+      ));
       _isConfigured = true;
     } catch (e) {
       // Hibakezelés, ha a forrás URL beállítása sikertelen.
@@ -157,7 +160,10 @@ class _AudioPreviewPlayerState extends State<AudioPreviewPlayer> {
                   return;
                 }
 
-                await _audioPlayer.play(UrlSource(widget.audioUrl));
+                await _audioPlayer.play(UrlSource(
+                  widget.audioUrl,
+                  mimeType: 'audio/mpeg',
+                ));
               },
             ),
             IconButton(
