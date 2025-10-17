@@ -4,7 +4,9 @@
       "http://localhost:*",
       "https://orlomed-f8f9f.web.app",
       "https://lomedu-user-web.web.app",
-      "https://lomedu-user-web.firebaseapp.com"
+      "https://lomedu-user-web.firebaseapp.com",
+      "https://www.lomedu.hu",
+      "https://lomedu.hu"
     ],
     "method": ["GET", "HEAD"],
     "responseHeader": [
