@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import '../services/email_notification_service.dart';
 import '../widgets/subscription_reminder_banner.dart';
 import '../widgets/enhanced_subscription_status_card.dart';
@@ -55,12 +54,12 @@ class AccountScreen extends StatelessWidget {
           // Fizetési visszairányítás kezelése: üzenet a query param alapján, majd tisztítás
           final qp = GoRouterState.of(context).uri.queryParameters;
           final paymentStatus = qp['payment'];
-          final orderRef = qp['orderRef'];
+          // final orderRef = qp['orderRef'];
           if (paymentStatus != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) async {
               // UI jelzés
               final msg = switch (paymentStatus) {
-                'success' => 'Fizetés sikeres. Lezárás folyamatban…',
+                'success' => 'Fizetés sikeres.',
                 'fail' => 'Fizetés sikertelen.',
                 'timeout' => 'Fizetés időtúllépés.',
                 'cancelled' => 'Fizetés megszakítva.',
@@ -69,54 +68,18 @@ class AccountScreen extends StatelessWidget {
               ScaffoldMessenger.of(context)
                   .showSnackBar(SnackBar(content: Text(msg)));
 
-              // Siker esetén: FINISH hívás (confirmWebPayment)
-              if (paymentStatus == 'success' && orderRef != null) {
-                try {
-                  final functions =
-                      FirebaseFunctions.instanceFor(region: 'europe-west1');
-                  final callable = functions.httpsCallable('confirmWebPayment');
-                  final res = await callable.call({'orderRef': orderRef});
-                  final ok = (res.data is Map && (res.data['success'] == true));
-                  if (ok && context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Fizetés lezárva.')),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Lezárás hiba: $e')),
-                    );
-                  }
-                }
-              }
-
-              // URL tisztítás
+              // Csak URL tisztítás – szerver oldali IPN/recon végzi a lezárást
               if (context.mounted) {
                 context.go('/account');
               }
             });
           }
 
-          // Fallback: ha nincs query param, próbáljuk lezárni a legutóbbi INITIATED rendelést
+          // Fallback: ha nincs query param, próbáljuk lekérdezni a legutóbbi státuszt (csak olvasás)
           if (paymentStatus == null) {
             WidgetsBinding.instance.addPostFrameCallback((_) async {
               try {
-                final snap = await FirebaseFirestore.instance
-                    .collection('web_payments')
-                    .where('userId', isEqualTo: user.uid)
-                    .where('status', isEqualTo: 'INITIATED')
-                    .orderBy('createdAt', descending: true)
-                    .limit(1)
-                    .get();
-                if (snap.docs.isEmpty) return;
-                final dataWp = snap.docs.first.data();
-                final lastOrderRef = dataWp['orderRef'] as String?;
-                if (lastOrderRef == null) return;
-                final functions =
-                    FirebaseFunctions.instanceFor(region: 'europe-west1');
-                final callable = functions.httpsCallable('confirmWebPayment');
-                await callable.call({'orderRef': lastOrderRef});
+                // nincs extra kliens akció – elhagyjuk az auto-confirmet, a szerver oldali recon/ipn intézi
               } catch (_) {
                 // csendes fallback
               }

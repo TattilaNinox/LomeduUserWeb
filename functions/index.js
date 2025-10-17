@@ -42,6 +42,10 @@ function getSimplePayConfig() {
       ? 'https://secure.simplepay.hu/payment/v2/'
       : 'https://sandbox.simplepay.hu/payment/v2/',
     nextAuthUrl: (process.env.NEXTAUTH_URL || 'https://lomedu-user-web.web.app').trim(),
+    allowedReturnBases: (process.env.RETURN_BASES || process.env.NEXTAUTH_URL || 'https://lomedu-user-web.web.app')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean),
     env,
   };
 }
@@ -240,7 +244,11 @@ exports.initiateWebPayment = onCall({
     }
 
     const orderRef = `WEB_${userId}_${Date.now()}`;
-    const nextAuthBase = SIMPLEPAY_CONFIG.nextAuthUrl.replace(/\/$/, '');
+    // Visszairányítási bázis validálása (ne ugorjon loginra ismeretlen domain miatt)
+    const returnBase = (SIMPLEPAY_CONFIG.allowedReturnBases && SIMPLEPAY_CONFIG.allowedReturnBases.length > 0)
+      ? SIMPLEPAY_CONFIG.allowedReturnBases[0]
+      : SIMPLEPAY_CONFIG.nextAuthUrl;
+    const nextAuthBase = returnBase.replace(/\/$/, '');
     const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || '';
     const webhookUrl = `https://europe-west1-${projectId}.cloudfunctions.net/simplepayWebhook`;
 
