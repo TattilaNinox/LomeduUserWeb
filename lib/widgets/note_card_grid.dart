@@ -198,8 +198,7 @@ class _CategorySectionState extends State<_CategorySection> {
                       decoration: BoxDecoration(
                         color: Theme.of(context).primaryColor,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                            color: const Color(0xFF960018), width: 1),
+                        // Piros szegély eltávolítva az ikonról
                       ),
                       child: Icon(
                         _isExpanded ? Icons.folder_open : Icons.folder_outlined,
