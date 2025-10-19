@@ -1,12 +1,13 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import '../services/email_notification_service.dart';
 import '../widgets/subscription_reminder_banner.dart';
 import '../widgets/enhanced_subscription_status_card.dart';
 import '../widgets/subscription_renewal_button.dart';
+import '../services/account_deletion_service.dart';
 
 /// Egyszerű fiókadatok képernyő, előfizetési státusszal.
 class AccountScreen extends StatelessWidget {
@@ -95,13 +96,55 @@ class AccountScreen extends StatelessWidget {
                   onRenewPressed: () => context.go('/subscription'),
                 ),
 
-                // Felhasználói adatok
+                // Felhasználói adatok + műveletek (felső sávban)
                 Card(
-                  child: ListTile(
-                    title: Text(
-                        '${data['lastName'] ?? ''} ${data['firstName'] ?? ''}'
-                            .trim()),
-                    subtitle: Text(user.email ?? ''),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${data['lastName'] ?? ''} ${data['firstName'] ?? ''}'
+                                    .trim(),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                user.email ?? '',
+                                style: const TextStyle(color: Colors.black54),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: () => context.go('/change-password'),
+                              icon: const Icon(Icons.password),
+                              label: const Text('Jelszó megváltoztatása'),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: () => _confirmAndDelete(context),
+                              icon: const Icon(Icons.delete_forever),
+                              label: const Text('Fiók végleges törlése'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red[700],
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -113,16 +156,6 @@ class AccountScreen extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 20),
-
-                // Jelszó megváltoztatása gomb
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => context.go('/change-password'),
-                    icon: const Icon(Icons.password),
-                    label: const Text('Jelszó megváltoztatása'),
-                  ),
-                ),
 
                 const SizedBox(height: 20),
 
@@ -467,5 +500,136 @@ class AccountScreen extends StatelessWidget {
         },
       ),
     );
+  }
+
+  Future<void> _confirmAndDelete(BuildContext context) async {
+    final current = FirebaseAuth.instance.currentUser;
+    if (current == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nincs bejelentkezett felhasználó.')),
+      );
+      return;
+    }
+
+    final passwordCtrl = TextEditingController();
+    String? errorText;
+    bool isLoading = false;
+    bool obscure = true;
+
+    final confirmed = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) {
+            return StatefulBuilder(
+              builder: (ctx, setState) {
+                return AlertDialog(
+                  title: const Text('Fiók végleges törlése'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Biztosan törölni szeretnéd a fiókodat?\n\n'
+                        'A törlés végleges. A profilod és az adataid eltávolításra kerülnek.\n'
+                        'A későbbiekben nem tudjuk visszaállítani.',
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: passwordCtrl,
+                        obscureText: obscure,
+                        enabled: !isLoading,
+                        decoration: InputDecoration(
+                          labelText: 'Jelszó',
+                          errorText: errorText,
+                          suffixIcon: IconButton(
+                            onPressed: () => setState(() => obscure = !obscure),
+                            icon: Icon(obscure
+                                ? Icons.visibility
+                                : Icons.visibility_off),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed:
+                          isLoading ? null : () => Navigator.of(ctx).pop(false),
+                      child: const Text('Mégse'),
+                    ),
+                    ElevatedButton(
+                      onPressed: isLoading
+                          ? null
+                          : () async {
+                              setState(() {
+                                isLoading = true;
+                                errorText = null;
+                              });
+                              try {
+                                await AccountDeletionService.deleteAccount(
+                                  passwordCtrl.text,
+                                );
+                                if (context.mounted) {
+                                  Navigator.of(ctx).pop(true);
+                                }
+                              } on FirebaseAuthException catch (e) {
+                                String msg;
+                                switch (e.code) {
+                                  case 'wrong-password':
+                                    msg = 'Hibás jelszó.';
+                                    break;
+                                  case 'requires-recent-login':
+                                    msg =
+                                        'A művelethez friss bejelentkezés szükséges.';
+                                    break;
+                                  default:
+                                    msg =
+                                        'Hitelesítési hiba: ${e.message ?? e.code}';
+                                }
+                                setState(() {
+                                  errorText = msg;
+                                  isLoading = false;
+                                });
+                              } catch (e) {
+                                setState(() {
+                                  errorText = 'Hiba történt: $e';
+                                  isLoading = false;
+                                });
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red[700],
+                        foregroundColor: Colors.white,
+                      ),
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Text('Végleges törlés'),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        ) ??
+        false;
+
+    if (confirmed) {
+      // A szolgáltatás kijelentkeztet; a router redirect a loginra visz.
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Fiók sikeresen törölve.')),
+        );
+        // Biztos átirányítás a loginra
+        context.go('/login');
+      }
+    }
   }
 }
