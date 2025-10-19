@@ -205,8 +205,11 @@ class LoginScreenState extends State<LoginScreen> {
                           onTap: () async {
                             final uri =
                                 Uri.parse('https://lomedu-public.web.app/');
-                            await launchUrl(uri,
-                                mode: LaunchMode.externalApplication);
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.platformDefault,
+                              webOnlyWindowName: '_self',
+                            );
                           },
                           hoverColor: Colors.transparent,
                           highlightColor: Colors.transparent,
