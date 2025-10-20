@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:js' as js;
+import 'package:cloud_functions/cloud_functions.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
   const VerifyEmailScreen({super.key});
@@ -162,7 +163,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       debugPrint("Email újraküldés indítása...");
 
       try {
-        await u.sendEmailVerification();
+        await FirebaseFunctions.instance.httpsCallable('initiateVerification').call({'userId': u.uid});
         debugPrint("Email sikeresen újraküldve!");
       } catch (e) {
         debugPrint("Email resend hiba: $e");

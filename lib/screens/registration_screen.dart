@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../utils/password_validation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/device_fingerprint.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -23,24 +24,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _errorMessage;
   bool _isLoading = false;
 
-  /// Külön segédfüggvény az email megerősítő levél küldésére.
+  /// Külön segédfüggvény az email megerősítő levél küldésére Cloud Function-ön keresztül.
   Future<void> _sendVerificationEmail(User user) async {
     try {
-      debugPrint("Verifikációs email küldése indítása...");
-
-      if (kIsWeb) {
-        // Web: ActionCodeSettings-szel
-        const origin = 'https://www.lomedu.hu';
-        await user.sendEmailVerification(ActionCodeSettings(
-          url: '$origin/#/verify-email',
-          handleCodeInApp: true,
-        ));
-      } else {
-        // Native: egyszerű módban
-        await user.sendEmailVerification();
-      }
-
-      debugPrint("Email sikeresen elküldve!");
+      debugPrint("Email megerősítés Cloud Function-ön keresztül...");
+      
+      final callable = FirebaseFunctions.instance.httpsCallable('initiateVerification');
+      final result = await callable.call({'userId': user.uid});
+      
+      debugPrint("Email sikeresen elküldve: ${result.data}");
     } on TypeError catch (e) {
       debugPrint("MFA TypeError elkapva (nem kritikus): $e");
     } catch (e) {
