@@ -114,17 +114,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       debugPrint("4. Próbaidőszak adatai kiszámítva.");
 
       // 4. Firestore adatok összeállítása a specifikáció szerint
-      // Először töröljük a korábbi ujjlenyomatot, hogy új stabilat generáljon
-      String deviceFingerprint = 'unknown';
-      try {
-        await DeviceFingerprint.clearWebFingerprint();
-        deviceFingerprint = await DeviceFingerprint.getCurrentFingerprint();
-        debugPrint('=== REGISTRATION DEBUG ===');
-        debugPrint('Generated Device Fingerprint: $deviceFingerprint');
-      } catch (e) {
-        debugPrint('Device Fingerprint hiba (fallback): $e');
-        deviceFingerprint = 'fallback_${DateTime.now().millisecondsSinceEpoch}';
-      }
+      // NE állítsuk be az authorizedDeviceFingerprint mezőt itt!
+      // Az eszköz ujjlenyomata csak az eszközregisztrációs folyamat során lesz beállítva.
 
       final newUserDoc = {
         'email': user.email,
@@ -139,7 +130,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         'freeTrialStartDate': Timestamp.fromDate(now),
         'freeTrialEndDate': Timestamp.fromDate(trialEnd),
         'deviceRegistrationDate': Timestamp.fromDate(now),
-        'authorizedDeviceFingerprint': deviceFingerprint,
+        // 'authorizedDeviceFingerprint': null, // NE állítsuk be itt, az eszközregisztráció során lesz beállítva
         'isActive': true,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
