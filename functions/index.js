@@ -1265,25 +1265,15 @@ exports.sendVerificationEmail = onCall(async (request) => {
       <p>A link 24 óra múlva lejár.</p>
     `;
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER || process.env.SENDER_EMAIL,
-        pass: process.env.SMTP_PASSWORD,
-      },
-    });
-
     const mailOptions = {
-      from: process.env.SENDER_EMAIL || 'noreply@lomedu.hu',
+      from: 'info@lomedu.hu',
       to: email,
       subject: 'Lomedu - E-mail megerősítés',
       html: buildTemplate(emailBody),
       attachments: [logoAttachment()],
     };
 
-    const result = await transporter.sendMail(mailOptions);
+    const result = await transport.sendMail(mailOptions);
     console.log(`Email sent successfully to ${email}, message ID: ${result.messageId}`);
 
     return {
