@@ -71,7 +71,6 @@ final _router = GoRouter(
     final isAuthRoute = {
       '/login',
       '/register',
-      '/verify-email',
       '/guard',
       '/device-change',
       '/forgot-password',
