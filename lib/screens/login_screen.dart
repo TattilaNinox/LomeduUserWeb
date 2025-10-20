@@ -32,13 +32,12 @@ class LoginScreenState extends State<LoginScreen> {
 
   // Magyar Firebase Auth hibaüzenetek
   static const Map<String, String> _firebaseErrorHu = {
-    'wrong-password': 'Helytelen jelszó.',
-    'user-not-found': 'Ez az e-mail cím nem szerepel a rendszerben.',
-    'invalid-email': 'Érvénytelen e-mail cím formátum.',
-    'user-disabled': 'A fiók le lett tiltva.',
-    'too-many-requests':
-        'Túl sok sikertelen próbálkozás. Kérlek, próbáld meg később.',
-    'invalid-credential': 'A megadott bejelentkezési adatok helytelenek.',
+    'wrong-password': 'A jelszó helytelen. Kérjük, próbáld újra.',
+    'user-not-found': 'Ez az e-mail cím nincs regisztrálva. Kérjük, regisztrálj vagy ellenőrizd az e-mail címet.',
+    'invalid-email': 'Az e-mail cím formátuma helytelen.',
+    'user-disabled': 'A felhasználói fiók le van tiltva.',
+    'too-many-requests': 'Túl sok sikertelen bejelentkezési kísérlet. Kérjük, próbáld meg később.',
+    'invalid-credential': 'Az e-mail cím vagy jelszó helytelen. Kérjük, ellenőrizd az adataidat.',
   };
 
   // Egy állapotváltozó a bejelentkezési hibaüzenetek tárolására.

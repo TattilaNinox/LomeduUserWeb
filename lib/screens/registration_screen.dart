@@ -75,6 +75,37 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return regExp.hasMatch(email);
   }
 
+  /// Firebase hibákat átfordítja felhasználóbarát magyar üzenetekre
+  String _getUserFriendlyError(String error) {
+    final errorLower = error.toLowerCase();
+    
+    // Firebase Auth hibakódok
+    if (errorLower.contains('email-already-in-use')) {
+      return 'Ez az e-mail cím már regisztrálva van. Kérjük, használj egy másik e-mail címet.';
+    }
+    if (errorLower.contains('invalid-email') || errorLower.contains('invalid email')) {
+      return 'Az e-mail cím formátuma helytelen.';
+    }
+    if (errorLower.contains('weak-password')) {
+      return 'A jelszó túl gyenge. Használj legalább 6 karaktert.';
+    }
+    if (errorLower.contains('too-many-requests')) {
+      return 'Túl sok próbálkozás. Kérjük, próbáld újra később.';
+    }
+    if (errorLower.contains('operation-not-allowed')) {
+      return 'Ez a művelet jelenleg nem elérhető. Kérjük, próbáld újra később.';
+    }
+    if (errorLower.contains('user-disabled')) {
+      return 'A felhasználói fiók le van tiltva.';
+    }
+    if (errorLower.contains('network')) {
+      return 'Hálózati hiba. Ellenőrizd az internetkapcsolatodat és próbáld újra.';
+    }
+    
+    // Egyéb hibák
+    return 'Hiba történt a regisztrációban. Kérjük, próbáld újra később.';
+  }
+
   Future<void> _register() async {
     // Jelszó erősség ellenőrzése
     final pwd = _passwordController.text;
@@ -199,12 +230,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     } on FirebaseAuthException catch (e) {
       debugPrint("!!! HIBA (FirebaseAuthException): ${e.code} - ${e.message}");
       setState(() {
-        _errorMessage = e.message;
+        _errorMessage = _getUserFriendlyError(e.message ?? e.code);
       });
     } catch (e) {
       debugPrint("!!! HIBA (Általános Exception): $e");
       setState(() {
-        _errorMessage = 'Hiba történt a regisztráció során: $e';
+        _errorMessage = _getUserFriendlyError(e.toString());
       });
     } finally {
       debugPrint("8. Finally blokk lefutott.");

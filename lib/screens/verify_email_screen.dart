@@ -20,6 +20,35 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   bool _verifying = false;
   String? _error;
 
+  /// Firebase hibákat átfordítja felhasználóbarát magyar üzenetekre
+  String _getUserFriendlyError(String error) {
+    final errorLower = error.toLowerCase();
+    
+    if (errorLower.contains('expired-action-code') || errorLower.contains('lejárt')) {
+      return 'A megerősítő link lejárt. Kérjük, kattints az "Újraküldés" gombra új link megkéréséhez.';
+    }
+    if (errorLower.contains('invalid-action-code') || errorLower.contains('invalid')) {
+      return 'Érvénytelen vagy már felhasznált megerősítő link.';
+    }
+    if (errorLower.contains('user-disabled')) {
+      return 'A felhasználói fiók le van tiltva.';
+    }
+    if (errorLower.contains('user-not-found')) {
+      return 'A felhasználó nem található. Kérjük, regisztrálj újra.';
+    }
+    if (errorLower.contains('too-many-requests')) {
+      return 'Túl sok próbálkozás. Kérjük, próbáld újra később.';
+    }
+    if (errorLower.contains('network')) {
+      return 'Hálózati hiba. Ellenőrizd az internetkapcsolatodat és próbáld újra.';
+    }
+    if (errorLower.contains('email') && errorLower.contains('error')) {
+      return 'Hiba az email küldésekor. Kérjük, próbáld újra később.';
+    }
+    
+    return 'Hiba történt. Kérjük, próbáld újra később.';
+  }
+
   void _listenForVerificationFromOtherTab() {
     if (!kIsWeb) return;
     try {
@@ -94,7 +123,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         _navigateToLoginAfterVerify();
       } on FirebaseAuthException catch (e) {
         setState(() {
-          _error = _mapVerifyError(e.code) ?? 'Hiba a megerősítés során.';
+          _error = _getUserFriendlyError(e.code);
         });
       } catch (e) {
         setState(() {
@@ -117,21 +146,6 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       } catch (_) {}
     }
     context.go('/login?from=verify');
-  }
-
-  String? _mapVerifyError(String code) {
-    switch (code) {
-      case 'expired-action-code':
-        return 'A megerősítő link lejárt. Kérj újat.';
-      case 'invalid-action-code':
-        return 'Érvénytelen megerősítő link.';
-      case 'user-disabled':
-        return 'A fiók le van tiltva.';
-      case 'user-not-found':
-        return 'A felhasználó nem található.';
-      default:
-        return null;
-    }
   }
 
   @override
@@ -188,7 +202,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     } catch (e) {
       debugPrint("Email resend hiba: $e");
       setState(() {
-        _error = 'Hiba az email küldésekor: $e';
+        _error = _getUserFriendlyError(e.toString());
       });
     }
   }
