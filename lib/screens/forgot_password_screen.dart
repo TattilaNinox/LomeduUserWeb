@@ -47,12 +47,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       _successMessage = null;
     });
     try {
-      // Appon belüli befejezés: a reset link a /#/reset-password oldalra mutasson
-      final origin = Uri.base.origin; // web környezetben az aktuális origin
+      // Jelszó visszaállító link a lomedu.hu domain-re mutat
       await FirebaseAuth.instance.sendPasswordResetEmail(
         email: email,
         actionCodeSettings: ActionCodeSettings(
-          url: '$origin/#/reset-password',
+          url: 'https://lomedu.hu/#/reset-password',
           handleCodeInApp: true,
         ),
       );
