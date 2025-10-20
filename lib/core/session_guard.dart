@@ -44,18 +44,7 @@ class SessionGuard extends ChangeNotifier {
         return;
       }
 
-      // Email verifikáció szükséges: ha nincs megerősítve, állapot emailUnverified
-      // TEMPORARILY DISABLED: Allow login even if email is not verified
-      // if (!user.emailVerified) {
-      //   _authStatus = AuthStatus.emailUnverified;
-      //   _deviceAccess = DeviceAccess.loading;
-      //   await _cancelUserDocSubscription();
-      //   debugPrint('[SessionGuard] email NOT verified -> emailUnverified');
-      //   notifyListeners();
-      //   return;
-      // }
-
-      // Be van jelentkezve (most már email verifikáció nélkül is)
+      // Be van jelentkezve
       _authStatus = AuthStatus.loggedIn;
       _deviceAccess = DeviceAccess.loading;
       debugPrint('[SessionGuard] loggedIn -> start device check');
@@ -144,6 +133,6 @@ class SessionGuard extends ChangeNotifier {
   }
 }
 
-enum AuthStatus { loggedOut, emailUnverified, loggedIn }
+enum AuthStatus { loggedOut, loggedIn }
 
 enum DeviceAccess { loading, allowed, denied }

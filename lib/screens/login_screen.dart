@@ -1,12 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:js' as js;
 // import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../core/session_guard.dart';
-import '../core/app_messenger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// A bejelentkezési képernyőt megvalósító widget.
@@ -73,15 +70,9 @@ class LoginScreenState extends State<LoginScreen> {
       if (userCredential.user != null) {
         debugPrint('Bejelentkezés sikeres, guard állapot ellenőrzése...');
         await SessionGuard.instance.ensureInitialized();
-        // final auth = SessionGuard.instance.authStatus; // email verifikáció ideiglenesen nem használatos
         final device = SessionGuard.instance.deviceAccess;
 
         if (!mounted) return;
-        // If email verification is disabled, skip this block
-        // if (SessionGuard.instance.authStatus == AuthStatus.emailUnverified) {
-        //   context.go('/verify-email-code');
-        //   return;
-        // }
         if (device == DeviceAccess.denied) {
           context.go('/device-change');
           return;
@@ -128,7 +119,6 @@ class LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     // A `Scaffold` egy alapvető Material Design vizuális elrendezési struktúra.
-    // Ha a verifikációs linkről jöttünk (web), jelzünk a másik fülnek
     if (kIsWeb) {
       final qp = Uri.base.queryParameters;
       // Eszközváltásból visszatérve előtöltjük az e-mailt, ha üres
@@ -137,20 +127,6 @@ class LoginScreenState extends State<LoginScreen> {
           prefillEmail.isNotEmpty &&
           _emailController.text.isEmpty) {
         _emailController.text = prefillEmail;
-      }
-      if (qp['from'] == 'verify') {
-        try {
-          // Web BroadcastChannel JS API hívása dart:js használatával
-          // ignore: avoid_dynamic_calls
-          final channel =
-              js.context['BroadcastChannel'].callMethod('new', ['lomedu-auth']);
-          channel.callMethod('postMessage', ['email-verified']);
-        } catch (_) {}
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          AppMessenger.showSuccess(
-              'Az e-mail címedet sikeresen megerősítetted. Jelentkezz be.');
-        });
       }
     } else {
       // Nem web környezet: az átadott initialEmail-t használjuk, ha van

@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../utils/password_validation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/device_fingerprint.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -23,8 +22,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   bool _passwordsVisible = false;
   String? _errorMessage;
   bool _isLoading = false;
-
-  // E-mail verifikáció ideiglenesen eltávolítva – tiszta újraépítéshez
 
   bool _isValidEmail(String email) {
     // Javított regex: raw string + helyes egy backslash-es escape a regexben
@@ -111,8 +108,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       debugPrint(
           "2. Firebase Auth felhasználó sikeresen létrehozva: ${user.uid}");
 
-      // 2. (ÁTUGORVA) Email verifikáció – ideiglenesen kikapcsolva
-
       // 3. Próbaidőszak kiszámítása (most + 5 nap)
       final now = DateTime.now();
       final trialEnd = now.add(const Duration(days: 5));
@@ -158,14 +153,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           .set(newUserDoc, SetOptions(merge: true));
       debugPrint("6. Firestore dokumentum sikeresen elmentve.");
 
-      // --- EMAIL VALIDATION DISABLED TEMPORARILY --- START
-      // Removed 6. Kód kiküldése (6 jegyű) – szerveroldali generálás
-      // Removed 7. UI: átirányítás a kódos verifikáció képernyőre
-      // --- EMAIL VALIDATION DISABLED TEMPORARILY --- END
-
       if (mounted) {
-        context.go(
-            '/login'); // Redirect to login after successful registration (no email verification for now)
+        // Új felhasználó regisztrációja után azonnal az eszközregisztrációra irányítás.
+        context.go('/device-change');
       }
     } on FirebaseAuthException catch (e) {
       debugPrint("!!! HIBA (FirebaseAuthException): ${e.code} - ${e.message}");

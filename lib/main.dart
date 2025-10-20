@@ -62,7 +62,6 @@ final _router = GoRouter(
     final shouldUseBaseParams = {
       '/',
       '/reset-password',
-      '/verify-email-code',
     }.contains(loc);
     final modeParam =
         qp['mode'] ?? (shouldUseBaseParams ? baseQp['mode'] : null);
@@ -82,7 +81,6 @@ final _router = GoRouter(
       // (mode=oobCode a base URL-ben még megmaradt)
       return null;
     }
-    // Email verify redirect ideiglenesen eltávolítva – tiszta újraépítéshez
     // resetPassword
     if (loc != '/reset-password' &&
         modeParam == 'resetPassword' &&
@@ -91,8 +89,6 @@ final _router = GoRouter(
       return '/reset-password?mode=resetPassword&oobCode=$code';
     }
 
-    // Gyári verifyEmail átirányítás ideiglenesen kikapcsolva
-    // resetPassword
     if (loc == '/' && modeParam == 'resetPassword' && codeParam != null) {
       final code = codeParam;
       return '/reset-password?mode=resetPassword&oobCode=$code';
@@ -108,12 +104,6 @@ final _router = GoRouter(
       };
       return publicRoutes.contains(loc) ? null : '/login';
     }
-
-    // Email verifikációs kényszerítés VAGY KIKAPCSOLVA.
-    // A felhasználó az email verifikáció nélkül is beléphet, ha ez a cél.
-    // if (auth == AuthStatus.emailUnverified) {
-    //   return loc == '/verify-email-code' ? null : '/verify-email-code';
-    // }
 
     if (device == DeviceAccess.loading) {
       return loc == '/guard' ? null : '/guard';
@@ -166,7 +156,6 @@ final _router = GoRouter(
       path: '/register',
       builder: (context, state) => const RegistrationScreen(),
     ),
-    // Removed GoRoute for Verify email kód képernyő
     // Guard / splash képernyő
     GoRoute(
       path: '/guard',
