@@ -27,7 +27,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   Future<void> _sendVerificationEmail(User user) async {
     try {
       debugPrint("Verifikációs email küldése indítása...");
-      
+
       if (kIsWeb) {
         // Web: ActionCodeSettings-szel
         const origin = 'https://www.lomedu.hu';
@@ -39,7 +39,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         // Native: egyszerű módban
         await user.sendEmailVerification();
       }
-      
+
       debugPrint("Email sikeresen elküldve!");
     } on TypeError catch (e) {
       debugPrint("MFA TypeError elkapva (nem kritikus): $e");
@@ -150,10 +150,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
       // 4. Firestore adatok összeállítása a specifikáció szerint
       // Először töröljük a korábbi ujjlenyomatot, hogy új stabilat generáljon
-      await DeviceFingerprint.clearWebFingerprint();
-      final deviceFingerprint = await DeviceFingerprint.getCurrentFingerprint();
-      debugPrint('=== REGISTRATION DEBUG ===');
-      debugPrint('Generated Device Fingerprint: $deviceFingerprint');
+      String deviceFingerprint = 'unknown';
+      try {
+        await DeviceFingerprint.clearWebFingerprint();
+        deviceFingerprint = await DeviceFingerprint.getCurrentFingerprint();
+        debugPrint('=== REGISTRATION DEBUG ===');
+        debugPrint('Generated Device Fingerprint: $deviceFingerprint');
+      } catch (e) {
+        debugPrint('Device Fingerprint hiba (fallback): $e');
+        deviceFingerprint = 'fallback_${DateTime.now().millisecondsSinceEpoch}';
+      }
 
       final newUserDoc = {
         'email': user.email,
