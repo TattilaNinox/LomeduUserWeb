@@ -7,6 +7,7 @@ import 'dart:js' as js;
 import 'package:go_router/go_router.dart';
 import '../core/session_guard.dart';
 import '../core/app_messenger.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// A bejelentkezési képernyőt megvalósító widget.
 ///
@@ -203,7 +204,45 @@ class LoginScreenState extends State<LoginScreen> {
                         color: Color(0xFF1E3A8A),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
+                      child: Center(
+                        child: InkWell(
+                          onTap: () async {
+                            final uri =
+                                Uri.parse('https://lomedu-public.web.app/');
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.platformDefault,
+                              webOnlyWindowName: '_self',
+                            );
+                          },
+                          hoverColor: Colors.transparent,
+                          highlightColor: Colors.transparent,
+                          splashColor: Colors.transparent,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Text(
+                                'Adatvédelmi irányelvek és felhasználási feltételek',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black54,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              SizedBox(width: 6),
+                              Icon(
+                                Icons.open_in_new,
+                                size: 14,
+                                color: Colors.black38,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     // E-mail beviteli mező
                     TextField(
                       controller: _emailController,
