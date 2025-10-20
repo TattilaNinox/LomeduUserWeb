@@ -59,6 +59,16 @@ final _router = GoRouter(
     final device = SessionGuard.instance.deviceAccess;
     final loc = state.uri.path;
     final qp = state.uri.queryParameters;
+    final baseQp = Uri.base.queryParameters; // query a hash előttről
+    final shouldUseBaseParams = {
+      '/',
+      '/verify-email',
+      '/reset-password',
+    }.contains(loc);
+    final modeParam =
+        qp['mode'] ?? (shouldUseBaseParams ? baseQp['mode'] : null);
+    final codeParam =
+        qp['oobCode'] ?? (shouldUseBaseParams ? baseQp['oobCode'] : null);
     final isAuthRoute = {
       '/login',
       '/register',
@@ -69,14 +79,38 @@ final _router = GoRouter(
       '/reset-password',
     }.contains(loc);
 
+    if (loc == '/login') {
+      // Már a login oldalon vagyunk: ne fussanak az email-link redirectek, különben hurok lesz
+      // (mode=oobCode a base URL-ben még megmaradt)
+      return null;
+    }
+    // Firebase action linkek kezelése bárhonnan (függetlenül a hash útvonaltól)
+    // verifyEmail
+    if (loc != '/verify-email' &&
+        modeParam == 'verifyEmail' &&
+        codeParam != null) {
+      final code = codeParam;
+      return '/verify-email?mode=verifyEmail&oobCode=$code';
+    }
+    // resetPassword
+    if (loc != '/reset-password' &&
+        modeParam == 'resetPassword' &&
+        codeParam != null) {
+      final code = codeParam;
+      return '/reset-password?mode=resetPassword&oobCode=$code';
+    }
+
     // Ha a gyári email link a gyökérre érkezik ("/"), query-ben oobCode-dal,
-    // akkor tereljük át a saját reset képernyőnkre.
-    if (loc == '/' &&
-        (qp['mode'] == 'resetPassword' ||
-            Uri.base.queryParameters['mode'] == 'resetPassword') &&
-        ((qp['oobCode'] ?? Uri.base.queryParameters['oobCode']) != null)) {
-      final code = qp['oobCode'] ?? Uri.base.queryParameters['oobCode'];
-      return '/reset-password?oobCode=$code';
+    // akkor tereljük át a megfelelő saját képernyőnkre. (visszafelé kompatibilitás)
+    // verifyEmail
+    if (loc == '/' && modeParam == 'verifyEmail' && codeParam != null) {
+      final code = codeParam;
+      return '/verify-email?mode=verifyEmail&oobCode=$code';
+    }
+    // resetPassword
+    if (loc == '/' && modeParam == 'resetPassword' && codeParam != null) {
+      final code = codeParam;
+      return '/reset-password?mode=resetPassword&oobCode=$code';
     }
 
     if (auth == AuthStatus.loggedOut) {

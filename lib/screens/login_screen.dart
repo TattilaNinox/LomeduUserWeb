@@ -6,7 +6,7 @@ import 'dart:js' as js;
 // import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../core/session_guard.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../core/app_messenger.dart';
 
 /// A bejelentkezési képernyőt megvalósító widget.
 ///
@@ -142,6 +142,11 @@ class LoginScreenState extends State<LoginScreen> {
               js.context['BroadcastChannel'].callMethod('new', ['lomedu-auth']);
           channel.callMethod('postMessage', ['email-verified']);
         } catch (_) {}
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          AppMessenger.showSuccess(
+              'Az e-mail címedet sikeresen megerősítetted. Jelentkezz be.');
+        });
       }
     } else {
       // Nem web környezet: az átadott initialEmail-t használjuk, ha van
@@ -167,7 +172,7 @@ class LoginScreenState extends State<LoginScreen> {
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.zero,
+                  borderRadius: BorderRadius.circular(8),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withAlpha(25),
@@ -198,52 +203,14 @@ class LoginScreenState extends State<LoginScreen> {
                         color: Color(0xFF1E3A8A),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
-                      child: Center(
-                        child: InkWell(
-                          onTap: () async {
-                            final uri =
-                                Uri.parse('https://lomedu-public.web.app/');
-                            await launchUrl(
-                              uri,
-                              mode: LaunchMode.platformDefault,
-                              webOnlyWindowName: '_self',
-                            );
-                          },
-                          hoverColor: Colors.transparent,
-                          highlightColor: Colors.transparent,
-                          splashColor: Colors.transparent,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              Text(
-                                'Adatvédelmi irányelvek és felhasználási feltételek',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.black54,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              SizedBox(width: 6),
-                              Icon(
-                                Icons.open_in_new,
-                                size: 14,
-                                color: Colors.black38,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 24),
                     // E-mail beviteli mező
                     TextField(
                       controller: _emailController,
                       decoration: InputDecoration(
                         labelText: 'E-mail',
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.zero,
+                          borderRadius: BorderRadius.circular(4),
                           borderSide:
                               const BorderSide(color: Color(0xFF6B7280)),
                         ),
@@ -262,7 +229,7 @@ class LoginScreenState extends State<LoginScreen> {
                       decoration: InputDecoration(
                         labelText: 'Jelszó',
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.zero,
+                          borderRadius: BorderRadius.circular(4),
                           borderSide:
                               const BorderSide(color: Color(0xFF6B7280)),
                         ),
@@ -320,8 +287,8 @@ class LoginScreenState extends State<LoginScreen> {
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 24, vertical: 12),
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
                         ),
                       ),
                       child: const Text(
@@ -339,20 +306,10 @@ class LoginScreenState extends State<LoginScreen> {
                       children: [
                         TextButton(
                           onPressed: () => context.go('/forgot-password'),
-                          style: TextButton.styleFrom(
-                            shape: const RoundedRectangleBorder(
-                              borderRadius: BorderRadius.zero,
-                            ),
-                          ),
                           child: const Text('Elfelejtett jelszó?'),
                         ),
                         TextButton(
                           onPressed: () => context.go('/register'),
-                          style: TextButton.styleFrom(
-                            shape: const RoundedRectangleBorder(
-                              borderRadius: BorderRadius.zero,
-                            ),
-                          ),
                           child: const Text('Regisztráció'),
                         ),
                       ],
@@ -370,11 +327,6 @@ class LoginScreenState extends State<LoginScreen> {
                         color: Color(0xFF1E3A8A),
                       ),
                       label: const Text('Eszköz regisztráció'),
-                      style: TextButton.styleFrom(
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.zero,
-                        ),
-                      ),
                     ),
                   ],
                 ),

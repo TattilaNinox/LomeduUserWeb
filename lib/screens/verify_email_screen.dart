@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:js' as js;
+import 'package:cloud_functions/cloud_functions.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
   const VerifyEmailScreen({super.key});
@@ -16,6 +17,8 @@ class VerifyEmailScreen extends StatefulWidget {
 class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   Timer? _timer;
   int _cooldown = 0;
+  bool _verifying = false;
+  String? _error;
 
   void _listenForVerificationFromOtherTab() {
     if (!kIsWeb) return;
@@ -41,6 +44,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   @override
   void initState() {
     super.initState();
+    _applyVerifyCodeIfPresent();
     _listenForVerificationFromOtherTab();
     _timer = Timer.periodic(const Duration(seconds: 5), (_) async {
       final u = FirebaseAuth.instance.currentUser;
@@ -64,6 +68,72 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     });
   }
 
+  Future<void> _applyVerifyCodeIfPresent() async {
+    if (!kIsWeb) return;
+    final qp = Uri.base.queryParameters;
+    final mode = qp['mode'];
+    final code = qp['oobCode'];
+    if (mode == 'verifyEmail' && code != null && code.isNotEmpty) {
+      setState(() {
+        _verifying = true;
+        _error = null;
+      });
+      try {
+        await FirebaseAuth.instance.applyActionCode(code);
+        try {
+          await FirebaseAuth.instance.currentUser?.reload();
+        } catch (_) {}
+        if (!mounted) return;
+        // Jelzés a login képernyő felé, majd átirányítás
+        try {
+          // ignore: avoid_dynamic_calls
+          final channel =
+              js.context['BroadcastChannel'].callMethod('new', ['lomedu-auth']);
+          channel.callMethod('postMessage', ['email-verified']);
+        } catch (_) {}
+        _navigateToLoginAfterVerify();
+      } on FirebaseAuthException catch (e) {
+        setState(() {
+          _error = _mapVerifyError(e.code) ?? 'Hiba a megerősítés során.';
+        });
+      } catch (e) {
+        setState(() {
+          _error = 'Ismeretlen hiba történt: $e';
+        });
+      } finally {
+        if (mounted) setState(() => _verifying = false);
+      }
+    }
+  }
+
+  void _navigateToLoginAfterVerify() {
+    if (!mounted) return;
+    if (kIsWeb) {
+      try {
+        final history = js.context['history'];
+        const origin = 'https://www.lomedu.hu';
+        history.callMethod(
+            'replaceState', [null, '', '$origin/#/login?from=verify']);
+      } catch (_) {}
+    }
+    context.go('/login?from=verify');
+  }
+
+  String? _mapVerifyError(String code) {
+    switch (code) {
+      case 'expired-action-code':
+        return 'A megerősítő link lejárt. Kérj újat.';
+      case 'invalid-action-code':
+        return 'Érvénytelen megerősítő link.';
+      case 'user-disabled':
+        return 'A fiók le van tiltva.';
+      case 'user-not-found':
+        return 'A felhasználó nem található.';
+      default:
+        return null;
+    }
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
@@ -76,7 +146,38 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     if (u == null) return;
 
     try {
-      await u.sendEmailVerification();
+      debugPrint("Email újraküldés indítása...");
+
+      try {
+        // Próbáljuk meg a Cloud Function-t
+        final callable =
+            FirebaseFunctions.instance.httpsCallable('sendVerificationEmail');
+        final result = await callable.call({'uid': u.uid});
+        debugPrint("Cloud Function eredménye: ${result.data}");
+        debugPrint("Email sikeresen újraküldve Cloud Function-ön keresztül!");
+      } catch (cfError) {
+        debugPrint("Cloud Function hiba, fallback módra váltás: $cfError");
+        // Fallback: Próbáljuk meg az ActionCodeSettings-szel
+        if (kIsWeb) {
+          try {
+            const origin = 'https://www.lomedu.hu';
+            await u.sendEmailVerification(ActionCodeSettings(
+              url: '$origin/#/verify-email',
+              handleCodeInApp: true,
+            ));
+            debugPrint("ActionCodeSettings-szel email újraküldve!");
+          } catch (e) {
+            debugPrint("ActionCodeSettings hiba, egyszerű módra váltás: $e");
+            // Ha az ActionCodeSettings nem működik, használjunk egyszerű módot
+            await u.sendEmailVerification();
+            debugPrint("Egyszerű módban email újraküldve!");
+          }
+        } else {
+          await u.sendEmailVerification();
+          debugPrint("Native módban email újraküldve!");
+        }
+      }
+      debugPrint("Email sikeresen újraküldve!");
       setState(() => _cooldown = 30);
       _tickCooldown();
     } on TypeError catch (e) {
@@ -86,6 +187,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       _tickCooldown();
     } catch (e) {
       debugPrint("Email resend hiba: $e");
+      setState(() {
+        _error = 'Hiba az email küldésekor: $e';
+      });
     }
   }
 
@@ -132,6 +236,11 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  if (_verifying) ...[
+                    const SizedBox(height: 8),
+                    const LinearProgressIndicator(minHeight: 4),
+                    const SizedBox(height: 8),
+                  ],
                   Container(
                     width: 72,
                     height: 72,
@@ -165,6 +274,105 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                       height: 1.6,
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  // Hasznos tippek
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF4E6),
+                      borderRadius: BorderRadius.circular(8),
+                      border:
+                          Border.all(color: const Color(0xFFFFB74D), width: 1),
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '💡 Tippek:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFE65100),
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          '• Ellenőrizd a levélszemét mappát\n'
+                          '• Várj 1-2 percet az email megérkezésére\n'
+                          '• Gmail-nél a "További" tab-ban nézz\n'
+                          '• Ha nem érkezik, kattints az "Újraküldés" gombra',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFFE65100),
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Jelenlegi email információ
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F4F8),
+                      borderRadius: BorderRadius.circular(8),
+                      border:
+                          Border.all(color: const Color(0xFFD0D8E0), width: 1),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Megerősítéshez szükséges email:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF475569),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          FirebaseAuth.instance.currentUser?.email ??
+                              'Ismeretlen',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF1E3A8A),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEBEE),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red, width: 1),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Hiba:',
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _error!,
+                            style: const TextStyle(
+                                color: Colors.red, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 20),
                   SizedBox(
                     width: double.infinity,

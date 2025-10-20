@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../utils/password_validation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/device_fingerprint.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -23,23 +24,47 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _errorMessage;
   bool _isLoading = false;
 
-  /// Külön segédfüggvény az email megerősítő levél küldésére (weben ActionCodeSettings-szel).
+  /// Külön segédfüggvény az email megerősítő levél küldésére Cloud Function-ön keresztül.
   Future<void> _sendVerificationEmail(User user) async {
     try {
-      if (kIsWeb) {
-        final origin = Uri.base
-            .origin; // pl. https://lomedu-user-web.web.app vagy http://localhost:xxxx
-        await user.sendEmailVerification(ActionCodeSettings(
-          url: '$origin/#/login?from=verify',
-          handleCodeInApp: true,
-        ));
-      } else {
-        await user.sendEmailVerification();
+      debugPrint(
+          "Verifikációs email küldése indítása Cloud Function-ön keresztül...");
+
+      try {
+        // Próbáljuk meg a Cloud Function-t
+        final callable =
+            FirebaseFunctions.instance.httpsCallable('sendVerificationEmail');
+        final result = await callable.call({'uid': user.uid});
+        debugPrint("Cloud Function eredménye: ${result.data}");
+        debugPrint("Email sikeresen küldve Cloud Function-ön keresztül!");
+      } catch (cfError) {
+        debugPrint("Cloud Function hiba, fallback módra váltás: $cfError");
+        // Fallback: Próbáljuk meg az ActionCodeSettings-szel
+        if (kIsWeb) {
+          try {
+            const origin = 'https://www.lomedu.hu';
+            await user.sendEmailVerification(ActionCodeSettings(
+              url: '$origin/#/verify-email',
+              handleCodeInApp: true,
+            ));
+            debugPrint("ActionCodeSettings-szel sikeresen elküldve!");
+          } catch (e) {
+            debugPrint("ActionCodeSettings hiba, egyszerű módra váltás: $e");
+            // Ha az ActionCodeSettings nem működik, használjunk egyszerű módot
+            await user.sendEmailVerification();
+            debugPrint("Egyszerű módban elküldve!");
+          }
+        } else {
+          await user.sendEmailVerification();
+          debugPrint("Native módban elküldve!");
+        }
       }
+      debugPrint("Verifikációs email sikeresen elküldve!");
     } on TypeError catch (e) {
       debugPrint("MFA TypeError elkapva (nem kritikus): $e");
     } catch (e) {
       debugPrint("Hiba a megerősítő email küldésekor: $e");
+      rethrow; // Továbbdobjuk a hibát, hogy a caller kezelje
     }
   }
 
