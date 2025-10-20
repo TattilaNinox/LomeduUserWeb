@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:js' as js;
-import 'package:cloud_functions/cloud_functions.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
   const VerifyEmailScreen({super.key});
@@ -163,33 +162,13 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       debugPrint("Email újraküldés indítása...");
 
       try {
-        // Próbáljuk meg a Cloud Function-t
-        final callable =
-            FirebaseFunctions.instance.httpsCallable('sendVerificationEmail');
-        final result = await callable.call({'uid': u.uid});
-        debugPrint("Cloud Function eredménye: ${result.data}");
-        debugPrint("Email sikeresen újraküldve Cloud Function-ön keresztül!");
-      } catch (cfError) {
-        debugPrint("Cloud Function hiba, fallback módra váltás: $cfError");
-        // Fallback: Próbáljuk meg az ActionCodeSettings-szel
-        if (kIsWeb) {
-          try {
-            const origin = 'https://www.lomedu.hu';
-            await u.sendEmailVerification(ActionCodeSettings(
-              url: '$origin/#/verify-email',
-              handleCodeInApp: true,
-            ));
-            debugPrint("ActionCodeSettings-szel email újraküldve!");
-          } catch (e) {
-            debugPrint("ActionCodeSettings hiba, egyszerű módra váltás: $e");
-            // Ha az ActionCodeSettings nem működik, használjunk egyszerű módot
-            await u.sendEmailVerification();
-            debugPrint("Egyszerű módban email újraküldve!");
-          }
-        } else {
-          await u.sendEmailVerification();
-          debugPrint("Native módban email újraküldve!");
-        }
+        await u.sendEmailVerification();
+        debugPrint("Email sikeresen újraküldve!");
+      } catch (e) {
+        debugPrint("Email resend hiba: $e");
+        setState(() {
+          _error = _getUserFriendlyError(e.toString());
+        });
       }
       debugPrint("Email sikeresen újraküldve!");
       setState(() => _cooldown = 30);
