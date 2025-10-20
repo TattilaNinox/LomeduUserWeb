@@ -33,11 +33,14 @@ class LoginScreenState extends State<LoginScreen> {
   // Magyar Firebase Auth hibaüzenetek
   static const Map<String, String> _firebaseErrorHu = {
     'wrong-password': 'A jelszó helytelen. Kérjük, próbáld újra.',
-    'user-not-found': 'Ez az e-mail cím nincs regisztrálva. Kérjük, regisztrálj vagy ellenőrizd az e-mail címet.',
+    'user-not-found':
+        'Ez az e-mail cím nincs regisztrálva. Kérjük, regisztrálj vagy ellenőrizd az e-mail címet.',
     'invalid-email': 'Az e-mail cím formátuma helytelen.',
     'user-disabled': 'A felhasználói fiók le van tiltva.',
-    'too-many-requests': 'Túl sok sikertelen bejelentkezési kísérlet. Kérjük, próbáld meg később.',
-    'invalid-credential': 'Az e-mail cím vagy jelszó helytelen. Kérjük, ellenőrizd az adataidat.',
+    'too-many-requests':
+        'Túl sok sikertelen bejelentkezési kísérlet. Kérjük, próbáld meg később.',
+    'invalid-credential':
+        'Az e-mail cím vagy jelszó helytelen. Kérjük, ellenőrizd az adataidat.',
   };
 
   // Egy állapotváltozó a bejelentkezési hibaüzenetek tárolására.
@@ -70,14 +73,15 @@ class LoginScreenState extends State<LoginScreen> {
       if (userCredential.user != null) {
         debugPrint('Bejelentkezés sikeres, guard állapot ellenőrzése...');
         await SessionGuard.instance.ensureInitialized();
-        final auth = SessionGuard.instance.authStatus;
+        // final auth = SessionGuard.instance.authStatus; // email verifikáció ideiglenesen nem használatos
         final device = SessionGuard.instance.deviceAccess;
 
         if (!mounted) return;
-        if (auth == AuthStatus.emailUnverified) {
-          context.go('/verify-email');
-          return;
-        }
+        // If email verification is disabled, skip this block
+        // if (SessionGuard.instance.authStatus == AuthStatus.emailUnverified) {
+        //   context.go('/verify-email-code');
+        //   return;
+        // }
         if (device == DeviceAccess.denied) {
           context.go('/device-change');
           return;

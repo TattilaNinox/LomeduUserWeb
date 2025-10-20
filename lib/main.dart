@@ -12,7 +12,6 @@ import 'screens/note_list_screen.dart';
 import 'theme/app_theme.dart'; // <-- AppTheme importálása
 // flashcard/kvíz admin képernyők eltávolítva
 // import 'screens/verify_otp_screen.dart'; // 2FA csak az admin webben
-import 'screens/verify_email_screen.dart';
 import 'screens/device_change_screen.dart';
 // import 'screens/two_factor_auth_screen.dart';
 // public doc admin képernyők eltávolítva
@@ -62,8 +61,8 @@ final _router = GoRouter(
     final baseQp = Uri.base.queryParameters; // query a hash előttről
     final shouldUseBaseParams = {
       '/',
-      '/verify-email',
       '/reset-password',
+      '/verify-email-code',
     }.contains(loc);
     final modeParam =
         qp['mode'] ?? (shouldUseBaseParams ? baseQp['mode'] : null);
@@ -84,14 +83,7 @@ final _router = GoRouter(
       // (mode=oobCode a base URL-ben még megmaradt)
       return null;
     }
-    // Firebase action linkek kezelése bárhonnan (függetlenül a hash útvonaltól)
-    // verifyEmail
-    if (loc != '/verify-email' &&
-        modeParam == 'verifyEmail' &&
-        codeParam != null) {
-      final code = codeParam;
-      return '/verify-email?mode=verifyEmail&oobCode=$code';
-    }
+    // Email verify redirect ideiglenesen eltávolítva – tiszta újraépítéshez
     // resetPassword
     if (loc != '/reset-password' &&
         modeParam == 'resetPassword' &&
@@ -100,13 +92,7 @@ final _router = GoRouter(
       return '/reset-password?mode=resetPassword&oobCode=$code';
     }
 
-    // Ha a gyári email link a gyökérre érkezik ("/"), query-ben oobCode-dal,
-    // akkor tereljük át a megfelelő saját képernyőnkre. (visszafelé kompatibilitás)
-    // verifyEmail
-    if (loc == '/' && modeParam == 'verifyEmail' && codeParam != null) {
-      final code = codeParam;
-      return '/verify-email?mode=verifyEmail&oobCode=$code';
-    }
+    // Gyári verifyEmail átirányítás ideiglenesen kikapcsolva
     // resetPassword
     if (loc == '/' && modeParam == 'resetPassword' && codeParam != null) {
       final code = codeParam;
@@ -124,9 +110,11 @@ final _router = GoRouter(
       return publicRoutes.contains(loc) ? null : '/login';
     }
 
-    if (auth == AuthStatus.emailUnverified) {
-      return loc == '/verify-email' ? null : '/verify-email';
-    }
+    // Email verifikációs kényszerítés VAGY KIKAPCSOLVA.
+    // A felhasználó az email verifikáció nélkül is beléphet, ha ez a cél.
+    // if (auth == AuthStatus.emailUnverified) {
+    //   return loc == '/verify-email-code' ? null : '/verify-email-code';
+    // }
 
     if (device == DeviceAccess.loading) {
       return loc == '/guard' ? null : '/guard';
@@ -179,11 +167,7 @@ final _router = GoRouter(
       path: '/register',
       builder: (context, state) => const RegistrationScreen(),
     ),
-    // Verify email képernyő
-    GoRoute(
-      path: '/verify-email',
-      builder: (context, state) => const VerifyEmailScreen(),
-    ),
+    // Removed GoRoute for Verify email kód képernyő
     // Guard / splash képernyő
     GoRoute(
       path: '/guard',

@@ -202,6 +202,32 @@ exports.verifyAndChangeDevice = onCall(async (request) => {
   }
 });
 
+// ============================================================
+// EMAIL VERIFICATION VIA 6-DIGIT CODE (no deep links)
+// ============================================================
+
+/**
+ * requestEmailVerificationCode
+ * Input: { userId }
+ * Behavior: generates 6-digit code, stores under users/{uid}.emailVerification,
+ *           rate limits resends (60s), code expires in 15 minutes, attemptsLeft=5.
+ *           Sends branded email with the code via Nodemailer.
+ */
+// Removed exports.requestEmailVerificationCode = onCall({ cors: true }, async (request) => {
+//     // ... (lines 217-282 removed)
+// });
+
+/**
+ * verifyEmailWithCode
+ * Input: { userId, code }
+ * Behavior: checks code, expiry, attempts; marks Auth emailVerified=true; clears code block.
+ */
+// Removed exports.verifyEmailWithCode = onCall({ cors: true }, async (request) => {
+//    // ... (lines 290-351 removed)
+// });
+
+// ---- HTTP (onRequest) változatok, explicit CORS headerekkel ----
+
 // ============================================================================
 // WEBES FIZETÉSI FUNKCIÓK - OTP SIMPLEPAY v2 INTEGRÁCIÓ
 // ============================================================================
@@ -1144,48 +1170,7 @@ exports.fixExpiredSubscriptions = onCall(async (request) => {
   }
 });
 
-// Email verifikáció indítása
-exports.initiateVerification = onCall(async (request) => {
-  try {
-    const { userId } = request.data || {};
-    if (!userId) {
-      throw new Error('invalid-argument: userId szükséges');
-    }
-
-    // Felhasználó email címének lekérése
-    const userRecord = await admin.auth().getUser(userId);
-    const email = userRecord.email;
-    if (!email) {
-      throw new Error('invalid-argument: A felhasználóhoz nincs email cím rendelve');
-    }
-
-    // Email verification link generálása
-    const actionCodeSettings = {
-      url: 'https://lomedu-user-web.web.app/login',
-      handleCodeInApp: false,
-    };
-    const verificationLink = await admin.auth().generateEmailVerificationLink(email, actionCodeSettings);
-
-    const subject = 'Email-cím megerősítése';
-    const text = `Kedves felhasználó!\n\nKérjük, erősítsd meg email-címedet a következő linkre kattintva:\n\n${verificationLink}\n\nÜdvözlettel,\nA Lomedu csapat`;
-    const bodyHtml = `<p>Kedves felhasználó!</p><p>Kérjük, erősítsd meg email-címedet az alábbi gombra kattintva:</p><p style="text-align:center;margin:32px 0;"><a href="${verificationLink}" style="background:#0d6efd;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:4px;display:inline-block;">Email megerősítése</a></p><p>Ha a gomb nem működik, másold be ezt a linket a böngésződbe:<br><a href="${verificationLink}">${verificationLink}</a></p><p>Üdvözlettel,<br>A Lomedu csapat</p>`;
-
-    await transport.sendMail({
-      from: 'Lomedu <info@lomedu.hu>',
-      to: email,
-      subject,
-      text,
-      html: buildTemplate(bodyHtml),
-      attachments: [logoAttachment()],
-    });
-
-    console.log('Verification email sent to', email);
-    return { success: true };
-  } catch (error) {
-    console.error('Initiate verification error:', error);
-    throw new Error(`internal: Initiate verification failed: ${error.message}`);
-  }
-});
+// initiateVerification eltávolítva – a kliens a Firebase beépített verifikációját használja
 
 // Előfizetések összehangolása
 exports.reconcileSubscriptions = onCall(async (request) => {

@@ -24,22 +24,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _errorMessage;
   bool _isLoading = false;
 
-  /// Külön segédfüggvény az email megerősítő levél küldésére Cloud Function-ön keresztül.
-  Future<void> _sendVerificationEmail(User user) async {
-    try {
-      debugPrint("Email megerősítés Cloud Function-ön keresztül...");
-      
-      final callable = FirebaseFunctions.instance.httpsCallable('initiateVerification');
-      final result = await callable.call({'userId': user.uid});
-      
-      debugPrint("Email sikeresen elküldve: ${result.data}");
-    } on TypeError catch (e) {
-      debugPrint("MFA TypeError elkapva (nem kritikus): $e");
-    } catch (e) {
-      debugPrint("Hiba a megerősítő email küldésekor: $e");
-      rethrow;
-    }
-  }
+  // E-mail verifikáció ideiglenesen eltávolítva – tiszta újraépítéshez
 
   bool _isValidEmail(String email) {
     // Javított regex: raw string + helyes egy backslash-es escape a regexben
@@ -126,14 +111,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       debugPrint(
           "2. Firebase Auth felhasználó sikeresen létrehozva: ${user.uid}");
 
-      // 2. Verifikációs email küldése AZONNAL
-      try {
-        await _sendVerificationEmail(user);
-        debugPrint("3. Email megerősítő függvény lefutott.");
-      } catch (e) {
-        debugPrint("3. Email megerősítő hiba (de folytatjuk): $e");
-        // Folytatjuk a regisztrációt, még ha az email küldés hibás is
-      }
+      // 2. (ÁTUGORVA) Email verifikáció – ideiglenesen kikapcsolva
 
       // 3. Próbaidőszak kiszámítása (most + 5 nap)
       final now = DateTime.now();
@@ -180,48 +158,37 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           .set(newUserDoc, SetOptions(merge: true));
       debugPrint("6. Firestore dokumentum sikeresen elmentve.");
 
-      // 6. UI: irányítás a "Ellenőrizd az emailed!" képernyőre
+      // --- EMAIL VALIDATION DISABLED TEMPORARILY --- START
+      // Removed 6. Kód kiküldése (6 jegyű) – szerveroldali generálás
+      // Removed 7. UI: átirányítás a kódos verifikáció képernyőre
+      // --- EMAIL VALIDATION DISABLED TEMPORARILY --- END
+
       if (mounted) {
-        debugPrint("7. Átirányítás a /verify-email oldalra...");
-        // Kis késleltetés, hogy a DeviceChecker ne zavarjon
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) {
-            try {
-              context.go('/verify-email');
-              debugPrint("8. Sikeres átirányítás a /verify-email oldalra");
-            } catch (e) {
-              debugPrint("8. Átirányítási hiba: $e");
-              // Fallback: próbáljuk meg újra
-              Future.delayed(const Duration(milliseconds: 1000), () {
-                if (mounted) {
-                  try {
-                    context.go('/verify-email');
-                    debugPrint("9. Második átirányítási kísérlet sikeres");
-                  } catch (e2) {
-                    debugPrint(
-                        "9. Második átirányítási kísérlet is hibás: $e2");
-                  }
-                }
-              });
-            }
-          }
-        });
+        context.go(
+            '/login'); // Redirect to login after successful registration (no email verification for now)
       }
     } on FirebaseAuthException catch (e) {
       debugPrint("!!! HIBA (FirebaseAuthException): ${e.code} - ${e.message}");
-      setState(() {
-        _errorMessage = _getUserFriendlyError(e.message ?? e.code);
-      });
+      // Mindig a HIBAKÓD alapján fordítunk (megbízhatóbb, mint a szöveg)
+      if (mounted) {
+        setState(() {
+          _errorMessage = _getUserFriendlyError(e.code);
+        });
+      }
     } catch (e) {
       debugPrint("!!! HIBA (Általános Exception): $e");
-      setState(() {
-        _errorMessage = _getUserFriendlyError(e.toString());
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = _getUserFriendlyError(e.toString());
+        });
+      }
     } finally {
       debugPrint("8. Finally blokk lefutott.");
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
