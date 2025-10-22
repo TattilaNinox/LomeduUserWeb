@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/web_payment_service.dart';
+import 'data_transfer_consent_dialog.dart';
 
 /// Webes fizetési csomagok widget
 ///
@@ -369,7 +371,20 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
       }
       final uid = authUser.uid;
 
-      // Fizetés indítása Cloud Function-nel
+      // 1. KÖTELEZŐ: Adattovábbítási nyilatkozat elfogadása
+      final consentAccepted = await DataTransferConsentDialog.show(context);
+      if (!consentAccepted) {
+        // Felhasználó nem fogadta el a nyilatkozatot
+        _showError('A fizetés folytatásához el kell fogadnia az adattovábbítási nyilatkozatot.');
+        return;
+      }
+
+      // 2. Firestore frissítése: consent elfogadás dátumának rögzítése
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'dataTransferConsentLastAcceptedDate': FieldValue.serverTimestamp(),
+      });
+
+      // 3. Fizetés indítása Cloud Function-nel
       final result = await WebPaymentService.initiatePaymentViaCloudFunction(
         planId: plan.id,
         userId: uid,

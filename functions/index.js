@@ -266,6 +266,21 @@ exports.initiateWebPayment = onCall({
     }
 
     const userData = userDoc.data();
+    
+    // SZERVER OLDALI ELLENŐRZÉS: Adattovábbítási nyilatkozat elfogadása
+    if (!userData.dataTransferConsentLastAcceptedDate) {
+      console.log('[initiateWebPayment] HIBA: Adattovábbítási nyilatkozat nincs elfogadva', { userId });
+      throw new HttpsError(
+        'failed-precondition', 
+        'Az adattovábbítási nyilatkozat elfogadása szükséges a fizetés indításához. Kérjük, fogadja el a nyilatkozatot és próbálja újra.'
+      );
+    }
+    
+    console.log('[initiateWebPayment] Adattovábbítási nyilatkozat elfogadva:', {
+      userId,
+      acceptedDate: userData.dataTransferConsentLastAcceptedDate
+    });
+    
     const email = userData.email;
     const name = userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}`.trim() : userData.displayName;
 
