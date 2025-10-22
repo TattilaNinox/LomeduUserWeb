@@ -34,6 +34,8 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
   bool _isLoading = false;
   SubscriptionStatusColor _statusColor = SubscriptionStatusColor.free;
   List<PaymentPlan> _availablePlans = [];
+  bool _canRenew = true;
+  String? _renewalBlockReason;
 
   @override
   void initState() {
@@ -51,13 +53,55 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
               user.uid);
       final availablePlans = HybridPaymentService.getAvailablePlans();
 
+      // Előfizetés lejárati dátumának lekérése
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      DateTime? endDate;
+      bool canRenew = true;
+      String? blockReason;
+
+      if (userDoc.exists) {
+        final data = userDoc.data()!;
+        final isActive = data['isSubscriptionActive'] ?? false;
+        final endDateField = data['subscriptionEndDate'];
+
+        if (endDateField != null && isActive) {
+          if (endDateField is Timestamp) {
+            endDate = endDateField.toDate();
+          } else if (endDateField is String) {
+            endDate = DateTime.parse(endDateField);
+          }
+
+          // Ellenőrzés: csak 3 napon belül lehet megújítani
+          if (endDate != null) {
+            final now = DateTime.now();
+            final daysUntilExpiry = endDate.difference(now).inDays;
+
+            if (daysUntilExpiry > 3) {
+              canRenew = false;
+              blockReason =
+                  'Az előfizetés megújítása csak 3 nappal a lejárat előtt lehetséges. Jelenlegi lejárat: ${_formatDate(endDate)}';
+            }
+          }
+        }
+      }
+
       setState(() {
         _statusColor = statusColor;
         _availablePlans = availablePlans;
+        _canRenew = canRenew;
+        _renewalBlockReason = blockReason;
       });
     } catch (e) {
       // Hiba esetén alapértelmezett értékek
     }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.year}. ${date.month.toString().padLeft(2, '0')}. ${date.day.toString().padLeft(2, '0')}.';
   }
 
   @override
@@ -147,14 +191,22 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
       );
     }
 
-    return ElevatedButton.icon(
-      onPressed: _handleButtonPress,
-      icon: Icon(_getButtonIcon(), size: 18),
-      label: Text(widget.customText ?? _getButtonText()),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _getButtonColor(),
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+    // Premium előfizetés esetén gomb disabled, ha nem lehet még megújítani
+    final isDisabled = _statusColor == SubscriptionStatusColor.premium && !_canRenew;
+
+    return Tooltip(
+      message: isDisabled ? (_renewalBlockReason ?? '') : '',
+      child: ElevatedButton.icon(
+        onPressed: isDisabled ? null : _handleButtonPress,
+        icon: Icon(_getButtonIcon(), size: 18),
+        label: Text(widget.customText ?? _getButtonText()),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _getButtonColor(),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+          disabledBackgroundColor: Colors.grey[400],
+          disabledForegroundColor: Colors.grey[600],
+        ),
       ),
     );
   }
