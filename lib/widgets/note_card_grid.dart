@@ -60,12 +60,17 @@ class NoteCardGrid extends StatelessWidget {
 
         final userData = userSnapshot.data?.data() ?? {};
         final bool hasPremiumAccess = _checkPremiumAccess(userData);
+        // Felhasználó tudományága - KÖTELEZŐ szűrés
+        final userScience = userData['science'] as String? ?? 'Egészségügyi kártevőírtó';
 
         Query<Map<String, dynamic>> query =
             FirebaseConfig.firestore.collection('notes');
 
-        // Alap szűrés a publikus jegyzetekre
-        query = query.where('status', whereIn: ['Published', 'Public']);
+        // KÖTELEZŐ: Csak a felhasználó tudományágához tartozó jegyzetek
+        query = query.where('science', isEqualTo: userScience);
+
+        // Alap szűrés a publikus jegyzetekre (Published VAGY Public)
+        query = query.where('status', isEqualTo: 'Published');
 
         // FREEMIUM MODEL: Minden jegyzet látszik, de a zártak nem nyithatók meg
         // Nem szűrünk isFree alapján, hogy a prémium jegyzetek is látszódjanak
@@ -77,9 +82,7 @@ class NoteCardGrid extends StatelessWidget {
         if (selectedCategory != null && selectedCategory!.isNotEmpty) {
           query = query.where('category', isEqualTo: selectedCategory);
         }
-        if (selectedScience != null && selectedScience!.isNotEmpty) {
-          query = query.where('science', isEqualTo: selectedScience);
-        }
+        // selectedScience szűrő NEM kell, mert már a userScience alapján szűrünk
         if (selectedTag != null && selectedTag!.isNotEmpty) {
           query = query.where('tags', arrayContains: selectedTag);
         }
