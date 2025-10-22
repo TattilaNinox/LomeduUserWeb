@@ -47,6 +47,7 @@ class Filters extends StatefulWidget {
 class _FiltersState extends State<Filters> {
   String? _status;
   String? _category;
+  String? _science;
   String? _tag;
   String? _type;
 
@@ -64,6 +65,7 @@ class _FiltersState extends State<Filters> {
     super.initState();
     _status = widget.selectedStatus;
     _category = widget.selectedCategory;
+    _science = widget.selectedScience;
     _tag = widget.selectedTag;
     _type = widget.selectedType;
   }
@@ -76,6 +78,9 @@ class _FiltersState extends State<Filters> {
     }
     if (widget.selectedCategory != oldWidget.selectedCategory) {
       _category = widget.selectedCategory;
+    }
+    if (widget.selectedScience != oldWidget.selectedScience) {
+      _science = widget.selectedScience;
     }
     if (widget.selectedTag != oldWidget.selectedTag) {
       _tag = widget.selectedTag;
@@ -136,8 +141,7 @@ class _FiltersState extends State<Filters> {
       isExpanded: widget.vertical,
     ));
 
-    // Tudomány szűrő ideiglenesen inaktív, fix értékkel
-    const String allowedScience = 'Egészségügyi kártevőírtó';
+    // Tudomány szűrő - fix értékkel, de automatikusan a felhasználó tudományára beállítva
     add(Opacity(
       opacity: 0.6,
       child: Theme(
@@ -149,15 +153,15 @@ class _FiltersState extends State<Filters> {
         child: DropdownButton<String>(
           hint: const Text('Tudomány',
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-          value: allowedScience,
+          value: _science,
           isExpanded: widget.vertical,
-          items: const [
-            DropdownMenuItem<String>(
-              value: allowedScience,
-              child: Text(allowedScience, style: TextStyle(fontSize: 12)),
-            )
-          ],
-          onChanged: null, // inaktív
+          items: widget.sciences.map((science) {
+            return DropdownMenuItem<String>(
+              value: science,
+              child: Text(science, style: const TextStyle(fontSize: 12)),
+            );
+          }).toList(),
+          onChanged: null, // inaktív, mert automatikusan a felhasználó tudományára van állítva
         ),
       ),
     ));
