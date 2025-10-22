@@ -1,0 +1,132 @@
+Általános Szerződési Feltételek (ÁSZF)
+Lomedu Webalkalmazás - Általános Szerződési Feltételek (ÁSZF)
+Hatálybalépés dátuma: 2025. szeptember 01.
+
+1. Bevezetés
+1.1. A dokumentum célja
+Jelen Általános Szerződési Feltételek (a továbbiakban: „ÁSZF") a Lomedu Webalkalmazás (a továbbiakban: „Webalkalmazás") használatára vonatkozó jogokat és kötelezettségeket, a szolgáltatás igénybevételének feltételeit, valamint a Szolgáltató és a Felhasználó közötti jogviszony részleteit szabályozza.
+
+1.2. A Szolgáltató azonosító adatai
+Név: Oak Quality Kft. (a továbbiakban: „Szolgáltató")
+Székhely: 2113 Erdőkertes, Bocskai utca 13.
+Cégjegyzékszám: 13 09 084075
+Adószám: 11803010-2-13
+E-mail cím (ügyfélszolgálat): support@lomedu.hu
+Tárhelyszolgáltató: Google LLC (Firebase)
+1.3. A Webalkalmazás rövid bemutatása
+A Lomedu egy Flutter alapú webes tanulási alkalmazás, amely a spaced repetition (időzített ismétlés) módszertanára épül, elsősorban orvosi és egészségügyi témakörök hatékony elsajátításának támogatására. A webalkalmazás böngészőben érhető el, és nem igényel telepítést.
+
+2. Fogalommeghatározások
+Szolgáltató: A jelen ÁSZF 1.2. pontjában meghatározott gazdasági társaság.
+Felhasználó: Az a természetes személy, aki a Webalkalmazást megnyitja, regisztrál, és a Szolgáltatást igénybe veszi.
+Webalkalmazás: A Lomedu nevű, böngészőben elérhető webes alkalmazás.
+Szolgáltatás: A Webalkalmazáson keresztül a Szolgáltató által nyújtott összes funkció, tartalom és lehetőség összessége.
+Fiók: A Felhasználó által a regisztráció során létrehozott, személyes hozzáférést biztosító profil.
+Tartalom: Minden, a Webalkalmazásban elérhető adat, szöveg, kép, videó, hanganyag és egyéb jegyzet, amelyet a Szolgáltató biztosít.
+Előfizetés: A Webalkalmazás prémium funkcióihoz való hozzáférést biztosító, díjköteles szolgáltatási csomag.
+Eszközazonosító: A Felhasználó böngészőjének és eszközének egyedi azonosítása biztonsági célokból.
+Helyi tárhely: A böngésző által biztosított helyi tárolási lehetőségek (Local Storage, Session Storage).
+3. A szerződés létrejötte
+A Felhasználó és a Szolgáltató közötti szerződéses jogviszony az alábbi lépésekkel jön létre:
+
+A Webalkalmazás megnyitása böngészőben.
+A regisztrációs folyamat elvégzése.
+Jelen ÁSZF és a kapcsolódó Adatvédelmi Irányelvek kifejezett elfogadása a regisztráció során egy erre szolgáló jelölőnégyzet bepipálásával.
+Az ÁSZF és az Adatvédelmi Irányelvek elfogadása a Szolgáltatás igénybevételének előfeltétele. A Felhasználó a regisztrációval elismeri, hogy ezen dokumentumokat megismerte, megértette és magára nézve kötelezőnek fogadja el.
+
+4. Szolgáltatás tartalma
+4.1. A Webalkalmazás funkciói
+A Webalkalmazás a következő főbb funkciókat biztosítja:
+
+Kártya alapú tanulás (flashcard) a spaced repetition módszerrel (SM-2 algoritmus)
+Jegyzetek rendszerezése kategóriákba és tudományágak szerint
+Kvíz funkciók a tudás tesztelésére
+Multimédiás tartalmak (videó, hang) lejátszása
+Személyre szabott tanulási terv, statisztikák készítése
+Webes előfizetés kezelése és fizetési előzmények megtekintése
+4.2. Szolgáltatás igénybevételének feltételei
+A Szolgáltatás igénybevételéhez megfelelő böngésző, operációs rendszer és aktív internetkapcsolat szükséges. A Webalkalmazás offline módban nem használható. A következő böngészők támogatottak:
+
+Google Chrome (legújabb verzió)
+Mozilla Firefox (legújabb verzió)
+Microsoft Edge (legújabb verzió)
+Safari (legújabb verzió)
+4.3. Böngésző kompatibilitás
+A Webalkalmazás a modern böngészők szabványos funkcióit használja. A Szolgáltató nem vállal felelősséget a régebbi böngésző verziókkal való kompatibilitásért.
+
+5. Felhasználói fiók
+5.1. Regisztráció, jelszókezelés
+A Fiók létrehozásához a Felhasználónak meg kell adnia egy érvényes e-mail címet és egy jelszót. A Felhasználó opcionálisan megadhatja keresztnevét, vezetéknevét és választhat tudományágat. A Felhasználó teljes mértékben felelős a jelszavának titokban tartásáért és a Fiókján keresztül végzett minden tevékenységért.
+
+5.2. Felhasználó kötelezettségei
+A Felhasználó vállalja, hogy a regisztráció során valós adatokat ad meg, és a Webalkalmazást kizárólag rendeltetésszerűen, a jogszabályoknak és a jelen ÁSZF-nek megfelelően használja.
+
+5.3. Fiók megosztásának tilalma és következményei
+A Fiók személyes, és kizárólag egy böngésző munkamenetben használható egyidejűleg. A Fiók megosztása más személyekkel vagy több böngésző munkamenetben való párhuzamos használata szigorúan tilos. A Szolgáltató technikai intézkedéseket (böngésző ujjlenyomat, Firebase App Check) alkalmaz a szabálysértések felderítésére. A Fiók jogosulatlan megosztása esetén a Szolgáltató jogosult a Fiókot előzetes értesítés nélkül, azonnali hatállyal megszüntetni.
+
+5.4. Fiók törlése
+A Felhasználó bármikor jogosult a Fiókját a Webalkalmazás beállításaiban véglegesen törölni. A Fiók törlésével minden, a Fiókhoz kapcsolódó személyes adat törlődik az Adatvédelmi Irányelvekben foglaltak szerint.
+
+6. Díjazás, fizetési feltételek
+6.1. Ingyenes próbaidőszak és Előfizetés
+A Webalkalmazás a regisztrációt követően 5 napos ingyenes próbaidőszakot biztosít. A próbaidőszak lejárta után a prémium funkciók eléréséhez Előfizetés szükséges.
+
+6.2. Előfizetés feltételei
+Időtartam: Az Előfizetés kizárólag havi időtartamra vásárolható meg (bruttó 4350 HUF/hó).
+Megújítás: Az Előfizetés nem újul meg automatikusan. A lejáratot követően a prémium funkciók eléréséhez a Felhasználónak minden hónapban újra elő kell fizetnie.
+Árváltozás: Az Előfizetés díjának esetleges változásáról a Szolgáltató legalább 30 nappal a változás hatálybalépése előtt értesíti a Felhasználót.
+6.3. Fizetési módok, számlázás
+Az Előfizetések megvásárlása kizárólag a Webalkalmazáson keresztül, az OTP SimplePay fizetési rendszeren történik. A fizetési folyamatot az OTP SimplePay bonyolítja le a saját feltételeik szerint. A fizetési adatok (bankkártya, banki adatok) nem kerülnek a Szolgáltató rendszereibe.
+
+6.4. Webes fizetési folyamat
+A fizetési folyamat a következő lépésekből áll:
+- A Felhasználó kiválasztja a kívánt előfizetési csomagot
+- A Webalkalmazás átirányítja a Felhasználót az OTP SimplePay biztonságos fizetési felületére
+- A fizetés sikeres befejezése után a Felhasználó visszairányításra kerül a Webalkalmazásba
+- Az előfizetési státusz automatikusan frissül a rendszerben
+
+6.5. Elállási jog, visszatérítés
+A digitális tartalomra vonatkozó szolgáltatások esetében az elállási jog gyakorlására a vonatkozó jogszabályok az irányadók. A visszatérítési kérelmeket az OTP SimplePay felé kell benyújtani.
+
+7. Felhasználási feltételek
+7.1. Engedélyezett és tiltott felhasználás
+A Szolgáltató a Felhasználó részére egy személyes, nem átruházható, nem kizárólagos licencet biztosít a Webalkalmazás használatára. Tilos:
+
+A Webalkalmazás vagy annak bármely részének másolása, módosítása, terjesztése, értékesítése
+A Fiók megosztása más személyekkel
+A Webalkalmazásban található Tartalom bármilyen módon történő másolása, rögzítése (pl. képernyőfelvétellel), sokszorosítása vagy terjesztése
+A hang- és videóanyagokról különálló felvétel készítése vagy engedély nélküli megosztása
+A Webalkalmazás kereskedelmi célú felhasználása a Szolgáltató előzetes írásbeli engedélye nélkül
+A Webalkalmazás automatizált eszközökkel (bot, scraper) való elérése
+7.2. Szellemi tulajdonjogok
+A Webalkalmazás, annak forráskódja, grafikai elemei, valamint a Szolgáltató által biztosított minden Tartalom a Szolgáltató vagy jogtulajdonos partnereinek kizárólagos szellemi tulajdonát képezi.
+
+8. Adatkezelés és biztonság
+8.1. Adatkezelés
+A Felhasználó személyes adatainak kezelésére vonatkozó részletes információkat az Adatvédelmi Irányelvek tartalmazzák, amelyek a jelen ÁSZF szerves részét képezik.
+
+8.2. Biztonsági intézkedések
+A Szolgáltató a következő biztonsági intézkedéseket alkalmazza:
+
+Böngésző ujjlenyomat alapú biztonsági ellenőrzés
+Firebase App Check aktiválás
+AES-256 titkosítás helyi adatokhoz
+HTTPS kommunikáció (TLS 1.3)
+Szerepkör alapú hozzáférés-szabályozás
+Content Security Policy (CSP) alkalmazása
+8.3. Helyi adatok kezelés
+A Webalkalmazás a böngésző helyi tárolását használja a felhasználói beállítások és munkamenet adatok tárolásához. A helyi adatok kezelésének részletei az Adatvédelmi Irányelvekben találhatók.
+
+9. Felelősségkorlátozás
+A Szolgáltató minden tőle telhetőt megtesz a Szolgáltatás folyamatos működéséért, de azt „adott állapotában" (as is) biztosítja, és nem vállal felelősséget a szolgáltatás esetleges leállásából vagy az információk pontosságából eredő károkért. A Szolgáltató nem vállal felelősséget a böngésző kompatibilitási problémákért vagy a helyi adatok elvesztéséért.
+
+10. A szerződés megszűnése
+A Felhasználó a szerződést a Fiókjának törlésével bármikor felmondhatja. A Szolgáltató jogosult a Fiókot azonnali hatállyal megszüntetni, ha a Felhasználó megszegi a jelen ÁSZF-ben foglaltakat.
+
+11. Panaszkezelés, jogorvoslat
+A Felhasználó a Szolgáltatással kapcsolatos panaszaival az support@lomedu.hu e-mail címen keresheti meg a Szolgáltatót. Jogvita esetén a Felhasználó a fogyasztóvédelmi hatósághoz, békéltető testülethez vagy bírósághoz fordulhat.
+
+12. Záró rendelkezések
+A jelen ÁSZF-ben nem szabályozott kérdésekben a magyar jog az irányadó. A Szolgáltató jogosult az ÁSZF-et egyoldalúan módosítani, amelyről a Felhasználókat értesíti. A szolgáltatás további használata a módosított ÁSZF elfogadásának minősül.
+
+Utolsó frissítés: 2025. szeptember 01.

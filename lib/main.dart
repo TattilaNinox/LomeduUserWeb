@@ -164,7 +164,10 @@ final _router = GoRouter(
     // Eszközváltás képernyő
     GoRoute(
       path: '/device-change',
-      builder: (context, state) => const DeviceChangeScreen(),
+      builder: (context, state) {
+        final email = state.uri.queryParameters['email'];
+        return DeviceChangeScreen(email: email);
+      },
     ),
     // Felhasználói appban a regisztráció/jelszó elfelejtése elrejtve (ha nem kell)
     // Jegyzetek listájának képernyője.

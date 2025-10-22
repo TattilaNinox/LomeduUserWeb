@@ -146,7 +146,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
       if (mounted) {
         // Új felhasználó regisztrációja után azonnal az eszközregisztrációra irányítás.
-        context.go('/device-change');
+        // Átadjuk az email címet query paraméterként.
+        final email = _emailController.text.trim();
+        context.go('/device-change?email=$email');
       }
     } on FirebaseAuthException catch (e) {
       debugPrint("!!! HIBA (FirebaseAuthException): ${e.code} - ${e.message}");

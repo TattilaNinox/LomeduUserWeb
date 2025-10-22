@@ -299,3 +299,4 @@ Ha új Cloud Function-t adsz hozzá, vagy új alkalmazást fejlesztesz, kérlek,
 **Létrehozva:** 2025-10-20  
 **Projekt:** orlomed-f8f9f
 
+

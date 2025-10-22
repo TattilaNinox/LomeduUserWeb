@@ -1,8 +1,9 @@
-Lomedu Mobil- és Webalkalmazás – Adatvédelmi Irányelvek
+Adatvédelmi irányelvek
+Lomedu Webalkalmazás - Adatvédelmi Irányelvek
 Hatálybalépés dátuma: 2025. szeptember 01.
 
 Bevezetés
-Köszönjük, hogy a Lomedu mobil- vagy webalkalmazását (a továbbiakban együtt: „Alkalmazás”) használja. Az Ön személyes adatainak védelme kiemelten fontos számunkra. Jelen Adatvédelmi Irányelvek (a továbbiakban: „Irányelvek”) célja, hogy átlátható tájékoztatást nyújtson arról, hogyan gyűjtjük, használjuk, tároljuk és védjük az Ön személyes adatait az Alkalmazás használata során, összhangban az Európai Unió Általános Adatvédelmi Rendeletével (GDPR).
+Köszönjük, hogy a Lomedu Web alkalmazást (a továbbiakban: „Webalkalmazás") használja. Az Ön személyes adatainak védelme kiemelten fontos számunkra. Jelen Adatvédelmi Irányelvek (a továbbiakban: „Irányelvek") célja, hogy tájékoztassuk Önt arról, hogyan gyűjtjük, használjuk, tároljuk és védjük az Ön személyes adatait a Webalkalmazás használata során, összhangban az Európai Unió Általános Adatvédelmi Rendeletével (GDPR).
 
 Az adatkezelő adatai
 Név: Oak Quality Kft.
@@ -11,103 +12,181 @@ Cégjegyzékszám: 13 09 084075
 Adószám: 11803010-2-13
 E-mail cím: support@lomedu.hu
 Adatvédelmi tisztviselő: Tölgyesi Attila
-(A továbbiakban: „Adatkezelő”, „mi”)
+(A továbbiakban: „Adatkezelő" vagy „mi")
 
 A dokumentum célja
-Az Irányelvek célja, hogy egyaránt bemutassák a mobil- és webalkalmazás adatkezelési folyamatait. Részletesen ismertetjük, milyen adatokat gyűjtünk, azokat milyen jogalapokon és célokra kezeljük, mennyi ideig őrizzük meg, kik férhetnek hozzá, és milyen jogok illetik meg Önt az adatai kezelésével kapcsolatban.
+Ezen Irányelvek célja, hogy átlátható és közérthető módon bemutassuk adatkezelési gyakorlatunkat. Részletesen ismertetjük, hogy milyen adatokat gyűjtünk, azokat milyen célból és jogalapon kezeljük, mennyi ideig őrizzük meg, kik férhetnek hozzá, és milyen jogok illetik meg Önt az adatai kezelésével kapcsolatban.
 
 Kezelt adatok köre
 1. Regisztráció során megadott adatok
-   A fiók létrehozásához és a szolgáltatásainkhoz való hozzáféréshez az alábbi, minimálisan szükséges adatokat kérjük el, akár mobilon, akár a webes felületen regisztrál:
-   • E-mail cím: azonosításhoz, bejelentkezéshez és kapcsolattartáshoz.
-   • Jelszó: biztonságosan, titkosított formában (hash) tároljuk. A hitelesítést a Google Firebase Authentication szolgáltatása végzi.
-   • Keresztnév és vezetéknév: opcionális adatok, a személyre szabott szolgáltatás nyújtásához.
-   • Tudományág: a felhasználó által választott tudományág (alapértelmezett: „Alap”), amely segít a személyre szabott tartalom biztosításában.
+A fiók létrehozásához és a szolgáltatásainkhoz való hozzáféréshez az alábbi, minimálisan szükséges adatokat kérjük el:
 
+E-mail cím: Azonosításra, bejelentkezéshez és kapcsolattartásra szolgál.
+Jelszó: Biztonságosan, titkosított formában (hash) tároljuk. A hitelesítést a Google Firebase Authentication szolgáltatása végzi.
+Keresztnév és vezetéknév: Opcionális adatok, amelyeket a személyre szabott szolgáltatás nyújtásához használunk.
+Tudományág: A felhasználó által választott tudományág (alapértelmezett: "Alap"), amely segít a személyre szabott tartalom kínálásában.
 2. Használat során keletkező adatok
-   • Tanulási előzmények: a spaced repetition (SM-2) algoritmus működéséhez szükséges adatok (kártyák ismétlési időpontjai és állapota, kvízeredmények, tanulási paraméterek, kategória-specifikus statisztikák).
-   • Használati statisztikák: anonimizált vagy pseudonymizált adatok az Alkalmazás funkcióinak igénybevételéről (pl. tanulással töltött idő, használt modulok) a szolgáltatás fejlesztése érdekében.
-   • Technikai adatok (logok): hibanaplók és technikai információk (eszköz/böngésző típusa, operációs rendszer, alkalmazásverzió) a stabilitás és biztonság fenntartásához.
+A Webalkalmazás funkcióinak használata közben az alábbi adatok keletkeznek:
 
-3. Eszköz- és böngészőazonosítók
-   • Mobilalkalmazás: egyedi eszközazonosító (Android ID, eszközmodell, márka, platform) gyűjtése a fiókbiztonság és a jogosulatlan fiókmegosztás megelőzése érdekében. Az eszközazonosítót a Firebase Firestore tárolja.
-   • Webalkalmazás: a böngészőnk által biztosított eszköz- és munkamenet-azonosítókat (pl. böngésző típusa, nyelvi beállítások, IP-cím maszkolt formában) rövid ideig logoljunk a jogosulatlan hozzáférések kiszűréséhez és a szolgáltatás védelméhez.
+Tanulási előzmények: A spaced repetition (SM-2) algoritmus működéséhez szükséges adatok, mint például:
+Kártyák ismétlési időpontjai és állapota
+Kvízek eredményei és értékelései
+Tanulási állapot paraméterei (interval, ease factor, repetitions)
+Kategória-specifikus tanulási statisztikák
+Használati statisztikák: Anonimizált vagy pseudonymizált adatok a Webalkalmazás használatáról (pl. tanulással töltött idő, használt funkciók), amelyek segítenek a szolgáltatás fejlesztésében és a felhasználói élmény javításában.
+Technikai adatok (logok): Hibanaplók és technikai információk (böngésző típusa, operációs rendszer verziója, IP-cím) a szolgáltatás stabilitásának és biztonságának fenntartása érdekében.
+3. Webes eszközazonosítás (Device Fingerprinting)
+A Webalkalmazás biztonsága és a szolgáltatással való visszaélés megelőzése érdekében egyedi eszközazonosítót gyűjtünk, amely az alábbi információk kombinációjából áll:
 
-4. Helyi és felhőalapú tárolók
-   • Mobilalkalmazás: bizonyos, gyorsítást szolgáló adatokat az eszközön AES-256 titkosítással tárolunk, a kulcsokat Flutter Secure Storage kezeli.
-   • Webalkalmazás: a böngészőben sütiket, helyi vagy munkameneti tárat (local/session storage) használhatunk a bejelentkezési munkamenet fenntartásához, a felhasználói felület beállításainak megjegyzéséhez és a jogosultságkezeléshez.
+Böngésző ujjlenyomat (browser fingerprint)
+IP-cím (anonimizált formában)
+Böngésző típusa és verziója
+Operációs rendszer
+Képernyő felbontás
+Nyelvi beállítások
+Ez az adat a fiók biztonságának ellenőrzésére és a jogosulatlan fiókmegosztás megelőzésére szolgál. Az eszközazonosító a Firebase Firestore adatbázisban tárolódik, és csak a fiók biztonságának ellenőrzésére használjuk.
 
-5. Fizetési adatok kezelése
-   Az Alkalmazás prémium előfizetéseit külső, megbízható szolgáltatók (Google Play Store) kezelik. Nem gyűjtünk és nem tárolunk bankkártya- vagy egyéb pénzügyi adatokat. Kizárólag az előfizetés állapotáról (aktív, lejárt, próbaidőszak) és típusáról kapunk információt.
+4. Fizetési adatok kezelése
+A Webalkalmazás prémium előfizetéseit külső, megbízható szolgáltatók (OTP SimplePay) kezelik. Nem gyűjtünk és nem tárolunk bankkártya- vagy egyéb pénzügyi adatokat. Kizárólag az előfizetés állapotáról (aktív, lejárt, próbaidőszak) és típusáról kapunk információt a szolgáltatótól.
 
-6. Felhasználói fiók adatok
-   • Felhasználói típus: normál, teszt vagy admin.
-   • Előfizetési státusz: ingyenes, prémium vagy lejárt.
-   • Próbaidőszak adatok: kezdő- és befejező dátumok.
-   • Fiók létrehozásának és frissítésének dátuma, aktív státusz.
+5. Felhasználói fiók adatok
+A felhasználói fiókhoz kapcsolódó további adatok:
 
+Felhasználói típus: normál, teszt vagy admin felhasználó
+Előfizetési státusz: ingyenes, prémium vagy lejárt
+Próbaidőszak adatok: kezdő és befejező dátumok
+Fiók létrehozás és frissítés dátuma
+Aktív fiók státusz
+Webes fizetési előzmények: SimplePay tranzakció azonosítók és státuszok
+6. Webes technológiák és helyi tárhely
+A Webalkalmazás működéséhez a következő technológiákat használjuk:
+
+Firebase SDK: A Firebase szolgáltatások megfelelő működéséhez szükséges technológiák
+Helyi tárhely (Local Storage): A felhasználói beállítások és munkamenet adatok tárolásához
+Session Storage: Ideiglenes adatok tárolásához a böngésző munkamenete során
+
+6.1. Helyi tárhely adatok részletes leírása
+A Webalkalmazás a böngésző helyi tárhelyét a következő adatok tárolására használja:
+
+**Hosszú távú tárolás (Local Storage):**
+- Próbaidőszak kezdő és befejező dátuma
+- Felhasználói beállítások és preferenciák
+- Szűrési beállítások (keresési szöveg, kategória, státusz, tudományág, címke, típus)
+- Nyelvi beállítások
+- Téma beállítások (sötét/világos téma)
+- Egyéb felhasználói preferenciák
+
+**Munkamenet tárolás (Session Storage):**
+- Bejelentkezési állapot és munkamenet adatok
+- Ideiglenes beállítások a böngésző munkamenete során
+- Navigációs állapot és szűrő beállítások
+- Rendszer munkamenet adatok
+
+**Fontos megjegyzések:**
+- A helyi tárhely adatok csak a felhasználó eszközén tárolódnak
+- Nem kerülnek a Szolgáltató szervereire
+- A Felhasználó bármikor törölheti ezeket az adatokat a böngészőjében
+- A böngésző bezárásakor a Session Storage adatok automatikusan törlődnek
+- A Local Storage adatok a felhasználó vagy a böngésző adatainak törlésekor törlődnek
 Adatkezelés célja és jogalapja
-Személyes adatait az alábbi célokból és jogalapok mentén kezeljük:
+Személyes adatait az alábbi célokból és jogalapokon kezeljük a GDPR előírásainak megfelelően:
 
-• Szerződés teljesítése (GDPR 6. cikk (1) bekezdés b) pont)
-  – Felhasználói fiók létrehozása és azonosítás: az e-mail címet, jelszót és Firebase UID-t a fiók létrehozásához és a szolgáltatásba való biztonságos bejelentkezéshez használjuk.
-  – Tanulási szolgáltatás nyújtása: a tanulási előzményeket a mobil- és webalkalmazás alapvető funkcióinak biztosításához kezeljük.
-  – Előfizetések kezelése: az előfizetés állapotát a prémium funkciókhoz való hozzáférés érdekében kezeljük.
-  – Kapcsolattartás: az e-mail címet a szolgáltatással kapcsolatos fontos értesítések, frissítések kiküldésére használjuk.
-
-• Jogos érdek (GDPR 6. cikk (1) bekezdés f) pont)
-  – Fiókbiztonság és visszaélések megelőzése: eszköz- és böngészőazonosítók, IP-naplók kezelése a jogosulatlan megosztás és visszaélés megelőzésére.
-  – Szolgáltatás fejlesztése és hibaelhárítás: használati statisztikák, technikai logok elemzése a teljesítmény és felhasználói élmény javítása érdekében.
-
-• Jogi kötelezettség teljesítése (GDPR 6. cikk (1) bekezdés c) pont)
-  – Számlázási és számviteli kötelezettségek teljesítése esetén az adatokat a vonatkozó jogszabályok által előírt ideig megőrizzük.
-
+Szerződés teljesítése (GDPR 6. cikk (1) bekezdés b) pont)
+Felhasználói fiók létrehozása és azonosítás: Az Ön e-mail címét, jelszavát és Firebase felhasználói azonosítóját (UID) a fiók létrehozásához és a szolgáltatásba való biztonságos bejelentkezéshez használjuk.
+A tanulási szolgáltatás nyújtása: Az Ön tanulási előzményeit azért kezeljük, hogy biztosítani tudjuk a Webalkalmazás alapvető funkcióit, beleértve a spaced repetition algoritmus működését.
+Előfizetések kezelése: Az előfizetésének állapotát a prémium funkciókhoz való hozzáférés biztosítása érdekében kezeljük.
+Kapcsolattartás és értesítések küldése: E-mail címét a szolgáltatással kapcsolatos fontos értesítések küldésére használjuk.
+Jogos érdek (GDPR 6. cikk (1) bekezdés f) pont)
+Fiókbiztonság és a jogosulatlan megosztás megelőzése: Az eszközazonosítót a fiók biztonságának fenntartásához és a felhasználási feltételek betartatásához fűződő jogos érdekünk alapján kezeljük.
+Szolgáltatás fejlesztése és hibaelhárítás: A használati statisztikákat és technikai adatokat a szolgáltatás minőségének javítása és a hibák elhárítása érdekében elemezzük.
+Webes biztonsági ellenőrzések: IP-címek és böngésző adatok kezelése a biztonsági fenyegetések észlelésére és megelőzésére.
+Hozzájárulás (GDPR 6. cikk (1) bekezdés a) pont)
+Helyi tárhely használata: A nem szükséges helyi tárhely használatához az Ön hozzájárulását kérjük.
+Jogi kötelezettség teljesítése (GDPR 6. cikk (1) bekezdés c) pont)
+Jogi kötelezettségek teljesítése: Amennyiben releváns (pl. számlázás), az adatokat a ránk vonatkozó jogi előírásoknak való megfelelés érdekében is kezelhetjük.
 Adatok megőrzési ideje
-• Személyes és tanulási adatok: a felhasználói fiók aktív fennállásáig, illetve a fiók törléséig kezeljük. A törlést követően az adatok visszaállíthatatlanul törlődnek, kivéve, ha jogszabály hosszabb megőrzési időt ír elő.
-• Jogi kötelezettség alapján kezelt adatok: a számviteli törvény szerinti (jellemzően 8 év) megőrzési időig tároljuk.
-• Eszköz- és munkamenet-azonosítók: a fiók törléséig, illetve az adott munkamenet lezárásáig vagy az eszköz regisztrációjának módosításáig.
-
+Személyes és tanulási adatok: A felhasználói fiók aktív fennállásáig, illetve a fiók törléséig kezeljük. A fiók törlését követően az adatok visszaállíthatatlanul törlődnek rendszereinkből, kivéve, ha jogszabály hosszabb megőrzési időt ír elő.
+Jogi kötelezettség alapján kezelt adatok (pl. számlák): A számviteli törvény által előírt ideig (jellemzően 8 évig) őrizzük meg.
+Eszközazonosító: A fiók törléséig vagy az eszköz regisztrációjának módosításáig.
+Helyi tárhely adatok: A helyi tárhely adatok megőrzési ideje a típusuktól függően változó (session storage: a böngésző bezárásáig, local storage: a felhasználó törléséig vagy a böngésző adatainak törléséig).
 Adattovábbítás, adatfeldolgozóink
-Adatait bizalmasan kezeljük, és csak a szolgáltatás biztosításához szükséges adatfeldolgozókkal osztjuk meg:
-• Google LLC (Firebase Authentication, Firestore, Storage, Cloud Functions europe-west1 régióban, App Check): felhőszolgáltatások a felhasználói és tanulási adatok kezeléséhez, hitelesítéshez, biztonsági ellenőrzésekhez.
-• Google Play Store: a prémium előfizetések kezelésére.
+Az Ön adatait bizalmasan kezeljük, és nem osztjuk meg harmadik felekkel, kivéve azokat az adatfeldolgozókat, akik a szolgáltatásunk működéséhez elengedhetetlenek.
 
-Az adatok az Európai Gazdasági Térségen kívülre is továbbításra kerülhetnek (pl. Google szerverei). Ilyen esetekben gondoskodunk az adattovábbítás megfelelőségéről, például az Európai Bizottság által jóváhagyott általános szerződési feltételek (SCC) alkalmazásával.
+Főbb adatfeldolgozóink:
+Google LLC (Firebase szolgáltatások):
 
-Sütik és hasonló technológiák
-• Mobilalkalmazás: hagyományos webes sütiket nem használ, azonban a Firebase SDK-k eszközazonosítókat és tokeneket kezelhetnek a működéshez.
-• Webalkalmazás: technikai sütiket, helyi és munkameneti tárhelyet használunk a munkamenet fenntartására, a bejelentkezési státusz biztosítására, valamint a jogosultságok és felhasználói beállítások kezelésére. Ezek a sütik nélkülözhetetlenek a szolgáltatás működéséhez („nélkülözhetetlen sütik”), ezért törlésük esetén a szolgáltatás egyes funkciói nem lesznek elérhetők. A böngésző beállításaiban bármikor módosíthatja sütikre vonatkozó preferenciáit.
+Firebase Authentication: Felhasználói hitelesítés és fiókkezelés
+Firebase Firestore: Adatbázis-szolgáltatás a felhasználói és tanulási adatok tárolására
+Firebase Storage: Médiafájlok tárolása
+Firebase Cloud Functions: Szerveroldali logikák futtatása (europe-west1 régió)
+Firebase App Check: Alkalmazás biztonsági ellenőrzések
+Firebase Hosting: Webes tartalom szolgáltatás
+A Google adatvédelmi irányelvei itt érhetők el: https://policies.google.com/privacy
+
+Fizetési szolgáltatók:
+
+OTP SimplePay: A webes előfizetések biztonságos kezelését végzi
+Az OTP SimplePay adatvédelmi irányelvei itt érhetők el: https://simplepay.hu/vasarloi-informaciok
+
+Webes analitikai szolgáltatások:
+
+Jelenleg nem használunk külső analitikai szolgáltatásokat. A használati statisztikákat anonimizált formában, saját rendszerünkben gyűjtjük.
+
+Az adatok az Európai Gazdasági Térségen (EGT) kívülre is továbbításra kerülhetnek (pl. a Google szervereire). Ilyen esetekben biztosítjuk, hogy az adattovábbítás megfelelő védelmi mechanizmusok, például az Európai Bizottság által jóváhagyott általános adatvédelmi szerződési feltételek (SCC) alapján történjen.
 
 Felhasználói jogok
-Önt az alábbi jogok illetik meg adatkezelésünkkel kapcsolatban:
-• Hozzáférés joga: tájékoztatást kérhet az általunk kezelt adatokról.
-• Helyesbítés joga: kérheti pontatlan adatainak javítását.
-• Törléshez való jog („elfeledtetés joga”): kérheti személyes adatainak törlését fiókja megszüntetésével.
-• Adatkezelés korlátozásához való jog: bizonyos esetekben kérheti az adatkezelés korlátozását.
-• Adathordozhatóság joga: kérheti, hogy adatait géppel olvasható formátumban megkapja.
-• Tiltakozáshoz való jog: tiltakozhat a jogos érdeken alapuló adatkezelés ellen.
-Jogait az Alkalmazáson belül, valamint a support@lomedu.hu e-mail címen, írásban gyakorolhatja.
+Önt az alábbi jogok illetik meg személyes adatai kezelésével kapcsolatban:
+
+Hozzáférés joga: Kérhet tájékoztatást arról, hogy milyen személyes adatait kezeljük.
+Helyesbítés joga: Kérheti pontatlan adatainak helyesbítését.
+Törléshez való jog („elfeledtetés joga"): Kérheti személyes adatainak törlését a fiókja megszüntetésével.
+Adatkezelés korlátozásához való jog: Bizonyos esetekben kérheti az adatkezelés korlátozását.
+Adathordozhatóság joga: Kérheti, hogy adatait géppel olvasható formátumban megkapja.
+Tiltakozáshoz való jog: Tiltakozhat személyes adatainak jogos érdeken alapuló kezelése ellen.
+Helyi tárhely kezelése: Bármikor törölheti a helyi tárhely adatokat a böngészőjében vagy a Webalkalmazás beállításaiban.
+Ezen jogait a Webalkalmazás beállításaiban vagy a fent megadott e-mail címen keresztül gyakorolhatja.
 
 Adatbiztonság
-Elkötelezettek vagyunk az Ön adatainak védelme mellett. A biztonság érdekében az alábbi műszaki és szervezési intézkedéseket alkalmazzuk:
-• Titkosítás: minden hálózati kommunikáció HTTPS (TLS) protokollon keresztül történik; a mobilalkalmazásban helyileg tárolt adatokat AES-256-al titkosítjuk; a weben használt tokeneket biztonságos,fokozott védelemmel kezeljük.
-• Hozzáférés-szabályozás: szerepkör alapú jogosultságkezelést alkalmazunk a Firebase szabályokon keresztül; minden felhasználó csak saját adataihoz férhet hozzá; admin jogosultságok kizárólag arra feljogosított munkatársakhoz kötődnek.
-• Adat-elkülönítés: a felhasználói adatokat logikailag elkülönítve tároljuk; a Firestore offline tárolását kikapcsoltuk a mobilalkalmazásban a biztonság növelése érdekében; a webes felületen munkamenet-tokenek lejárattal rendelkeznek.
-• Infrastruktúra biztonsága: a Google Firebase magas szintű biztonsági megoldásaira támaszkodunk, beleértve a Firebase App Check és a naplózott hozzáférés-ellenőrzéseket.
+Elkötelezettek vagyunk az Ön adatainak védelme mellett. A biztonság érdekében az alábbi főbb műszaki és szervezési intézkedéseket alkalmazzuk:
+
+Titkosítás:
+A böngészőben helyileg tárolt, a gyorsabb működést szolgáló adatokat AES-256 algoritmussal titkosítjuk.
+A titkosítási kulcsokat biztonságosan tároljuk a böngésző helyi tárhelyén.
+A hálózati kommunikáció minden esetben HTTPS (TLS 1.3) protokollon keresztül zajlik.
+Hozzáférési kontroll:
+Szigorú, szerepkör alapú hozzáférés-szabályozást alkalmazunk a Firebase Firestore szabályokon keresztül.
+Minden felhasználó csak a saját adataihoz férhet hozzá.
+Admin jogosultságok csak a megfelelő e-mail címekhez vannak rendelve.
+Adat-elkülönítés:
+Minden felhasználó adatait logikailag elkülönítve tároljuk.
+A Firestore offline tároló ki van kapcsolva a biztonság növelése érdekében.
+Infrastruktúra biztonsága:
+A Google Firebase által nyújtott magas szintű biztonsági megoldásokra támaszkodunk.
+Firebase App Check aktiválva van a biztonság növelése érdekében.
+Webes biztonsági intézkedések:
+Content Security Policy (CSP) alkalmazása a kártékony kódok betöltésének megelőzésére.
+X-Frame-Options és X-Content-Type-Options fejlécek beállítása.
+Biztonságos helyi tárhely kezelés a böngésző beépített biztonsági funkcióival.
+3. Rendszer adatok:
+- Rendszer munkamenet adatok: A szolgáltatások megfelelő működéséhez
+- Automatikusan kezelve a rendszer által
+
+A helyi tárhely adatokat bármikor törölheti a böngészőjében vagy a Webalkalmazás beállításaiban.
 
 Kapcsolattartás, panaszkezelés
-Amennyiben kérdése merül fel az adatkezeléssel kapcsolatban, forduljon hozzánk a support@lomedu.hu e-mail címen.
+Ha bármilyen kérdése van az adatkezeléssel kapcsolatban, kérjük, vegye fel velünk a kapcsolatot az support@lomedu.hu e-mail címen.
 
-Ha úgy érzi, hogy megsértettük adatvédelemhez fűződő jogait, panaszt tehet a Nemzeti Adatvédelmi és Információszabadság Hatóságnál (NAIH):
-• Cím: 1055 Budapest, Falk Miksa utca 9-11.
-• Postacím: 1363 Budapest, Pf. 9.
-• Weboldal: http://www.naih.hu
-• E-mail: ugyfelszolgalat@naih.hu
-Jogainak érvényesítése érdekében bírósághoz is fordulhat.
+Ha úgy érzi, hogy megsértettük az adatvédelemhez fűződő jogait, panaszt tehet a magyar adatvédelmi hatóságnál:
+
+Nemzeti Adatvédelmi és Információszabadság Hatóság (NAIH)
+
+Cím: 1055 Budapest, Falk Miksa utca 9-11.
+Postacím: 1363 Budapest, Pf. 9.
+Weboldal: http://www.naih.hu
+E-mail: ugyfelszolgalat@naih.hu
+Továbbá lehetősége van bírósághoz fordulni jogainak érvényesítése érdekében.
 
 Záró rendelkezések
-Jelen Irányelvek 2025. szeptember 01. napján lépnek hatályba, és a Lomedu mobil- és webalkalmazás valamennyi felhasználójára érvényesek. Fenntartjuk a jogot, hogy az Irányelveket egyoldalúan módosítsuk. A lényeges változásokról az Alkalmazáson belül, a webes felületen vagy e-mailben értesítjük felhasználóinkat. A szolgáltatás további használatával Ön elfogadja a módosított Irányelveket.
+Jelen Adatvédelmi Irányelvek 2025. szeptember 01. napján lépnek hatályba. Fenntartjuk a jogot, hogy az Irányelveket egyoldalúan módosítsuk. A lényeges változásokról a Webalkalmazáson keresztül vagy e-mailben értesítjük Önt. A szolgáltatás további használatával Ön elfogadja a módosított Irányelveket.
 
-
-
-
+Utolsó frissítés: 2025. szeptember 01.

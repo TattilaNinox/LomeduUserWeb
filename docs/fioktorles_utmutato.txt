@@ -1,0 +1,51 @@
+Fióktörlési Folyamat - Útmutató
+Lomedu Web- és Mobilalkalmazás
+Hatálybalépés dátuma: 2025. szeptember 01.
+
+Ez a dokumentum bemutatja, mi történik, amikor törlöd a Lomedu fiókodat, akár a webes, akár a mobilalkalmazást használod.
+
+### 1. A Fióktörlés Folyamata
+
+1.  **Kezdeményezés**: A fiókod törlését az alkalmazásban indíthatod el:
+    -   **Webalkalmazásban**: A **"Fiók adatok"** oldalon, a **"Fiók végleges törlése"** gombra kattintva.
+    -   **Mobilalkalmazásban**: A **"Beállítások"** menüpontban, a **"Fiók végleges törlése"** opcióval.
+2.  **Figyelmeztetés**: Egy ablakban megerősítést kérünk, hogy biztosan törölni szeretnéd-e a fiókodat. Felhívjuk a figyelmed, hogy a művelet végleges és nem vonható vissza.
+3.  **Jelszó-megerősítés**: Biztonsági okokból meg kell adnod a jelszavadat a törlés véglegesítéséhez.
+4.  **Törlés**: A jelszó megerősítése után a rendszerünk automatikusan és véglegesen törli az összes hozzád kapcsolódó adatot.
+5.  **Kijelentkezés**: A folyamat végén a rendszer automatikusan kijelentkeztet.
+
+### 2. Milyen Adatok Törlődnek?
+
+A fiókod törlésével minden személyes és a használat során keletkezett adatodat véglegesen eltávolítjuk.
+
+*   **Személyes Adataid**:
+    -   E-mail címed, neved
+    -   Személyes beállításaid (pl. választott tudományág)
+    -   Előfizetésed állapota és a próbaidőszak adatai.
+    -   Eszközazonosító (a fiók biztonságához kapcsolódóan)
+
+*   **Tanulási Előzményeid**:
+    -   Minden tanulókártyád állapota, kvízeredményeid és tanulási statisztikáid.
+
+*   **Webes Fizetési Előzmények**:
+    -   A webes felületen végrehajtott fizetéseid előzményei, amiket a mi rendszerünk tárol.
+
+*   **Böngészőben Tárolt Adatok (webes használat esetén)**:
+    -   A böngésződ helyi tárolójában lévő beállítások (pl. sötét/világos téma).
+
+### 3. Milyen Adatok Maradnak Meg?
+
+Bizonyos adatok külső szolgáltatóknál vannak, így azokat mi nem tudjuk törölni:
+
+*   **Fizetési Szolgáltató Adatai**:
+    -   **Webalkalmazás**: Az OTP SimplePay által kezelt tranzakciós előzmények megmaradnak a SimplePay rendszerében.
+    -   **Mobilalkalmazás**: A Google Play Store-ban tárolt vásárlási előzmények megmaradnak a Google fiókodban.
+*   **Rendszer-naplók**: Biztonsági okokból a rendszereink által generált, anonimizált technikai naplóbejegyzések megmaradhatnak, de ezek nem köthetők a személyedhez.
+
+### 4. Adatvédelem és GDPR Megfelelőség
+
+A fióktörlési folyamatunk megfelel az európai uniós adatvédelmi előírásoknak (GDPR), biztosítva az „elfeledtetés jogát”. Ez garantálja, hogy az adataidat kérésedre teljes körűen és visszavonhatatlanul töröljük.
+
+### 5. Kapcsolat
+
+Ha kérdésed van a folyamattal kapcsolatban, keress minket a `support@lomedu.hu` e-mail címen.

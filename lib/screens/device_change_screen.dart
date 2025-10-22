@@ -6,7 +6,8 @@ import '../services/device_change_service.dart';
 import '../utils/device_fingerprint.dart';
 
 class DeviceChangeScreen extends StatefulWidget {
-  const DeviceChangeScreen({super.key});
+  final String? email;
+  const DeviceChangeScreen({super.key, this.email});
 
   @override
   State<DeviceChangeScreen> createState() => _DeviceChangeScreenState();
@@ -20,6 +21,14 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
   bool _isLoading = false;
   int _cooldown = 0;
   final FocusNode _codeFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.email != null) {
+      _emailController.text = widget.email!;
+    }
+  }
 
   @override
   void dispose() {
@@ -176,7 +185,7 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
                       padding:
                           EdgeInsets.symmetric(horizontal: isMobile ? 8 : 0),
                       child: Text(
-                        'Biztonsági okokból egy felhasználói fiókhoz egyszerre csak egy eszköz társítható. Ha új számítógépet, telefont vagy privát böngészőablakot szeretnél használni, először regisztrálnod kell azt. Kérj egy hatjegyű kódot az e-mail címedre, majd írd be a kódot, hogy igazold az új eszköz használatát.',
+                        'Biztonsági okokból, az eszközt regisztrálni kell. Minden új regsiztráció esetén, illetve ha új számitógépet, telefont vagy privát böngészőablakot szeretnél használni, először regisztrálnod kell azt. Kérj egy hatjegyű kódot az e-mail címedre, majd írd be a kódot, hogy regisztráld az eszközt',
                         style: TextStyle(
                           fontSize: isMobile ? 14 : 16,
                           color: const Color(0xFF6B7280),
