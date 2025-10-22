@@ -108,14 +108,49 @@ class _NoteListScreenState extends State<NoteListScreen> {
   }
 
   /// Betölti a kategóriákat a Firestore `categories` kollekciójából.
+  /// Csak azokat a kategóriákat tölti be, amelyek science mezője megegyezik
+  /// a felhasználó tudományágával.
   Future<void> _loadCategories() async {
-    final snapshot =
-        await FirebaseConfig.firestore.collection('categories').get();
-    // A `setState` frissíti a widget állapotát a betöltött adatokkal,
-    // ami újraépíti a UI-t, és a `Filters` widget megkapja a kategóriákat.
-    setState(() {
-      _categories = snapshot.docs.map((doc) => doc['name'] as String).toList();
-    });
+    try {
+      // Lekérjük a bejelentkezett felhasználó tudományágát
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        setState(() => _categories = []);
+        return;
+      }
+
+      final userDoc = await FirebaseConfig.firestore
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (!userDoc.exists) {
+        setState(() => _categories = []);
+        return;
+      }
+
+      final userScience = userDoc.data()?['science'] as String?;
+      if (userScience == null || userScience.isEmpty) {
+        setState(() => _categories = []);
+        return;
+      }
+
+      // Lekérjük a kategóriákat, szűrve a felhasználó tudományágára
+      final snapshot = await FirebaseConfig.firestore
+          .collection('categories')
+          .where('science', isEqualTo: userScience)
+          .get();
+
+      setState(() {
+        _categories =
+            snapshot.docs.map((doc) => doc['name'] as String).toList();
+      });
+    } catch (e) {
+      // Hiba esetén üres lista
+      if (mounted) {
+        setState(() => _categories = []);
+      }
+    }
   }
 
   /// Betölti a címkéket a Firestore `tags` kollekciójából.
