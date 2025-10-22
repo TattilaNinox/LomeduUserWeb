@@ -168,6 +168,10 @@ exports.verifyAndChangeDevice = onCall(async (request) => {
     
     console.log(`Found user with email ${email}, Firestore ID: ${userDoc.id}, Firebase Auth UID: ${firebaseAuthUid}`);
     
+    // Email cím validálása - ha a 6 jegyű kód helyes, az email is hitelesített
+    await admin.auth().updateUser(firebaseAuthUid, { emailVerified: true });
+    console.log(`Email verified for user ${firebaseAuthUid}`);
+    
     // A Firebase Auth UID-val frissítjük a dokumentumot
     const targetDoc = db.collection('users').doc(firebaseAuthUid);
     
