@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/hybrid_payment_service.dart';
 import '../services/subscription_reminder_service.dart';
 import '../services/web_payment_service.dart';
+import 'data_transfer_consent_dialog.dart';
 
 /// Előfizetés megújítási gomb widget
 ///
@@ -169,6 +171,22 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
       if (user == null) {
         _showError('Nincs bejelentkezett felhasználó');
         return;
+      }
+
+      // WEB esetén: KÖTELEZŐ adattovábbítási nyilatkozat elfogadása
+      if (HybridPaymentService.isWeb) {
+        final consentAccepted = await DataTransferConsentDialog.show(context);
+        if (!consentAccepted) {
+          // Felhasználó nem fogadta el a nyilatkozatot
+          _showError(
+              'A fizetés folytatásához el kell fogadnia az adattovábbítási nyilatkozatot.');
+          return;
+        }
+
+        // Firestore frissítése: consent elfogadás dátumának rögzítése
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+          'dataTransferConsentLastAcceptedDate': FieldValue.serverTimestamp(),
+        });
       }
 
       // Ha van egyedi csomag ID, használjuk azt

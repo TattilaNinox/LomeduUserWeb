@@ -32,6 +32,10 @@ class _DataTransferConsentDialogState
 
   @override
   Widget build(BuildContext context) {
+    // Reszponzív magasság: képernyő méret 60%-a, de max 500px, min 300px
+    final screenHeight = MediaQuery.of(context).size.height;
+    final dialogHeight = (screenHeight * 0.6).clamp(300.0, 500.0);
+    
     return AlertDialog(
       title: const Text(
         'Adattovábbítási nyilatkozat',
@@ -48,9 +52,9 @@ class _DataTransferConsentDialogState
               style: TextStyle(fontSize: 14, color: Colors.black87),
             ),
             const SizedBox(height: 12),
-            // Scrollozható tartalom
+            // Scrollozható tartalom - RESZPONZÍV magasság
             Container(
-              height: 400,
+              height: dialogHeight,
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.grey.shade300),
                 borderRadius: BorderRadius.circular(8),
