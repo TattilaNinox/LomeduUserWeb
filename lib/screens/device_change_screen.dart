@@ -4,10 +4,10 @@ import 'package:pinput/pinput.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/device_change_service.dart';
 import '../utils/device_fingerprint.dart';
+import '../services/registration_state_service.dart';
 
 class DeviceChangeScreen extends StatefulWidget {
-  final String? email;
-  const DeviceChangeScreen({super.key, this.email});
+  const DeviceChangeScreen({super.key});
 
   @override
   State<DeviceChangeScreen> createState() => _DeviceChangeScreenState();
@@ -25,8 +25,10 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.email != null) {
-      _emailController.text = widget.email!;
+    if (RegistrationStateService.newlyRegisteredUserEmail != null) {
+      _emailController.text =
+          RegistrationStateService.newlyRegisteredUserEmail!;
+      RegistrationStateService.newlyRegisteredUserEmail = null;
     }
   }
 

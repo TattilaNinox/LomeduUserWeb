@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../utils/password_validation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../utils/device_fingerprint.dart';
+import '../services/registration_state_service.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -97,21 +97,21 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     });
 
     try {
-      debugPrint("1. Regisztráció megkezdése...");
+      // Email elmentése az állapotba a legelején, hogy a redirect ne írja felül.
+      final emailToRegister = _emailController.text.trim();
+      RegistrationStateService.newlyRegisteredUserEmail = emailToRegister;
+
       // 1. Auth fiók létrehozása
       final userCredential =
           await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
+        email: emailToRegister,
         password: _passwordController.text.trim(),
       );
       final user = userCredential.user!;
-      debugPrint(
-          "2. Firebase Auth felhasználó sikeresen létrehozva: ${user.uid}");
 
       // 3. Próbaidőszak kiszámítása (most + 5 nap)
       final now = DateTime.now();
       final trialEnd = now.add(const Duration(days: 5));
-      debugPrint("4. Próbaidőszak adatai kiszámítva.");
 
       // 4. Firestore adatok összeállítása a specifikáció szerint
       // NE állítsuk be az authorizedDeviceFingerprint mezőt itt!
@@ -135,38 +135,33 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       };
-      debugPrint("5. Firestore dokumentum összeállítva.");
 
       // 5. Firestore írás (merge: true opcióval)
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .set(newUserDoc, SetOptions(merge: true));
-      debugPrint("6. Firestore dokumentum sikeresen elmentve.");
+
+      // 7. Kijelentkezés, hogy a redirect logika ne kavarjon be
+      await FirebaseAuth.instance.signOut();
 
       if (mounted) {
-        // Új felhasználó regisztrációja után azonnal az eszközregisztrációra irányítás.
-        // Átadjuk az email címet query paraméterként.
-        final email = _emailController.text.trim();
-        context.go('/device-change?email=$email');
+        // Átirányítás az eszközregisztrációra. Az email már az állapotban van.
+        context.go('/device-change');
       }
     } on FirebaseAuthException catch (e) {
-      debugPrint("!!! HIBA (FirebaseAuthException): ${e.code} - ${e.message}");
-      // Mindig a HIBAKÓD alapján fordítunk (megbízhatóbb, mint a szöveg)
       if (mounted) {
         setState(() {
           _errorMessage = _getUserFriendlyError(e.code);
         });
       }
     } catch (e) {
-      debugPrint("!!! HIBA (Általános Exception): $e");
       if (mounted) {
         setState(() {
           _errorMessage = _getUserFriendlyError(e.toString());
         });
       }
     } finally {
-      debugPrint("8. Finally blokk lefutott.");
       if (mounted) {
         setState(() {
           _isLoading = false;
