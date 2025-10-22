@@ -1,0 +1,609 @@
+════════════════════════════════════════════════════════════════════════════════
+LOMEDU WEBALKALMAZÁS - REGISZTRÁCIÓS ÉS VALIDÁLÁSI FOLYAMAT
+════════════════════════════════════════════════════════════════════════════════
+Utolsó frissítés: 2025. október 22.
+Hatályos: Web alkalmazás (Flutter Web)
+
+════════════════════════════════════════════════════════════════════════════════
+I. REGISZTRÁCIÓS FOLYAMAT ÁTTEKINTÉSE
+════════════════════════════════════════════════════════════════════════════════
+
+A Lomedu webalkalmazásban a regisztráció egy többlépcsős, biztonságos folyamat,
+amely a következő fázisokból áll:
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         REGISZTRÁCIÓS FOLYAMAT                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. REGISZTRÁCIÓS ADATOK BEVITELE                                          │
+│     ↓                                                                       │
+│  2. KLIENS-OLDALI VALIDÁLÁS                                                │
+│     ↓                                                                       │
+│  3. FIREBASE AUTH FIÓK LÉTREHOZÁSA                                         │
+│     ↓                                                                       │
+│  4. FIRESTORE FELHASZNÁLÓI DOKUMENTUM LÉTREHOZÁSA                          │
+│     ↓                                                                       │
+│  5. AUTOMATIKUS KIJELENTKEZÉS                                              │
+│     ↓                                                                       │
+│  6. ESZKÖZREGISZTRÁCIÓS FOLYAMAT                                           │
+│     ↓                                                                       │
+│  7. BEJELENTKEZÉS ÉS ESZKÖZ UJJLENYOMAT ELLENŐRZÉS                        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+════════════════════════════════════════════════════════════════════════════════
+II. RÉSZLETES LÉPÉSEK ÉS VALIDÁLÁSI FOLYAMATOK
+════════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────────
+1. REGISZTRÁCIÓS ADATOK BEVITELE
+────────────────────────────────────────────────────────────────────────────────
+
+Felelős komponens: lib/screens/registration_screen.dart
+
+A felhasználó az alábbi mezőket tölti ki:
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ Mező                    │ Kötelező │ Megjegyzés                            │
+├────────────────────────────────────────────────────────────────────────────┤
+│ Vezetéknév (lastName)   │    ✓     │ Text input, minimum 1 karakter        │
+│ Keresztnév (firstName)  │    ✓     │ Text input, minimum 1 karakter        │
+│ E-mail cím (email)      │    ✓     │ Email input, validált formátum        │
+│ Jelszó (password)       │    ✓     │ Password input, 8+ karakter, erős     │
+│ Jelszó megerősítése     │    ✓     │ Password input, egyeznie kell         │
+└────────────────────────────────────────────────────────────────────────────┘
+
+────────────────────────────────────────────────────────────────────────────────
+2. KLIENS-OLDALI VALIDÁLÁS
+────────────────────────────────────────────────────────────────────────────────
+
+A validálás AZONNAL megtörténik a "Regisztráció" gomb megnyomásakor,
+MIELŐTT bármilyen hálózati kérés indulna.
+
+════════════════════════════════════════════════════════════════════════════════
+A) JELSZÓ VALIDÁLÁS
+════════════════════════════════════════════════════════════════════════════════
+
+Felelős: lib/utils/password_validation.dart (PasswordValidation osztály)
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│                        JELSZÓ BIZTONSÁGI KÖVETELMÉNYEK                      │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ✓  Minimum 8 karakter hosszú                                              │
+│  ✓  Legalább 1 nagybetű (A-Z)                                              │
+│  ✓  Legalább 1 kisbetű (a-z)                                               │
+│  ✓  Legalább 1 számjegy (0-9)                                              │
+│  ✓  Legalább 1 speciális karakter (!@#$%^&*() stb.)                       │
+│                                                                             │
+├────────────────────────────────────────────────────────────────────────────┤
+│  Regex pattern:                                                             │
+│  ^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$                  │
+└────────────────────────────────────────────────────────────────────────────┘
+
+Validálási példák:
+
+  ❌ "password"        → Hiányzik: nagybetű, szám, speciális karakter
+  ❌ "Password"        → Hiányzik: szám, speciális karakter
+  ❌ "Pass1!"          → Túl rövid (csak 6 karakter)
+  ✓  "Password1!"      → Helyes ✓
+  ✓  "MyS3cur€P@ss"    → Helyes ✓
+
+Validálási hibák (magyar nyelvű üzenetek):
+
+  • "Legalább 8 karakter szükséges."
+  • "Legalább egy nagybetű szükséges."
+  • "Legalább egy kisbetű szükséges."
+  • "Legalább egy szám szükséges."
+  • "Legalább egy speciális karakter szükséges."
+
+════════════════════════════════════════════════════════════════════════════════
+B) JELSZÓ MEGERŐSÍTÉS VALIDÁLÁS
+════════════════════════════════════════════════════════════════════════════════
+
+A két jelszó mezőnek karakterről karakterre egyeznie kell:
+
+  if (pwd != confirmPwd) {
+    setState(() => _errorMessage = 'A két jelszó nem egyezik.');
+    return;
+  }
+
+════════════════════════════════════════════════════════════════════════════════
+C) NÉV VALIDÁLÁS
+════════════════════════════════════════════════════════════════════════════════
+
+Követelmények:
+  • Vezetéknév: nem lehet üres (trim után)
+  • Keresztnév: nem lehet üres (trim után)
+
+Hiba üzenetek:
+  • "Vezetéknév kötelező."
+  • "Keresztnév kötelező."
+
+════════════════════════════════════════════════════════════════════════════════
+D) E-MAIL VALIDÁLÁS
+════════════════════════════════════════════════════════════════════════════════
+
+Felelős: _isValidEmail() metódus (registration_screen.dart)
+
+Regex pattern:
+^(?:[a-zA-Z0-9_'^&/+-])+(?:\.(?:[a-zA-Z0-9_'^&/+-])+)*@(?:(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})$
+
+Validálási példák:
+
+  ✓  user@example.com
+  ✓  first.last@company.co.uk
+  ✓  user+tag@domain.org
+  ❌ invalid.email         → Hiányzik @
+  ❌ @domain.com           → Hiányzik lokális rész
+  ❌ user@                 → Hiányzik domain
+  ❌ user@domain           → Hiányzik TLD (.com, .hu stb.)
+
+Hiba üzenet:
+  • "Kérjük, adjon meg egy érvényes email címet."
+
+════════════════════════════════════════════════════════════════════════════════
+E) VALIDÁLÁSI SORREND
+════════════════════════════════════════════════════════════════════════════════
+
+A validálás SORRENDBEN történik (első hiba megáll és jelzi):
+
+  1. Jelszó erősség ellenőrzése
+  2. Jelszó egyezés ellenőrzése
+  3. Vezetéknév ellenőrzése
+  4. Keresztnév ellenőrzése
+  5. E-mail formátum ellenőrzése
+
+────────────────────────────────────────────────────────────────────────────────
+3. FIREBASE AUTH FIÓK LÉTREHOZÁSA
+────────────────────────────────────────────────────────────────────────────────
+
+Ha a kliens-oldali validálás sikeres, a rendszer:
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│  Firebase Authentication: createUserWithEmailAndPassword()                 │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Input:                                                                     │
+│    • email: [trim-elt és lowercase email cím]                              │
+│    • password: [a validált jelszó]                                         │
+│                                                                             │
+│  Output (siker):                                                            │
+│    • UserCredential objektum                                                │
+│    • user.uid: Firebase Authentication User ID                             │
+│                                                                             │
+│  Firebase-oldali validálás (szerveroldal):                                 │
+│    • Email formátum ellenőrzése (ismételt)                                 │
+│    • Email egyediség ellenőrzése (már regisztrált?)                        │
+│    • Jelszó minimum hossz (min. 6 karakter - de mi 8-at kérünk)           │
+│                                                                             │
+└────────────────────────────────────────────────────────────────────────────┘
+
+════════════════════════════════════════════════════════════════════════════════
+FIREBASE AUTH HIBAKEZELÉS
+════════════════════════════════════════════════════════════════════════════════
+
+Felelős: _getUserFriendlyError() metódus
+
+A Firebase hibakódokat MAGYAR nyelvű, felhasználóbarát üzenetekre fordítjuk:
+
+┌─────────────────────────────────────┬──────────────────────────────────────┐
+│ Firebase hibakód                    │ Magyar üzenet                        │
+├─────────────────────────────────────┼──────────────────────────────────────┤
+│ email-already-in-use                │ Ez az e-mail cím már regisztrálva    │
+│                                     │ van. Kérjük, használj egy másik      │
+│                                     │ e-mail címet.                        │
+├─────────────────────────────────────┼──────────────────────────────────────┤
+│ invalid-email                       │ Az e-mail cím formátuma helytelen.   │
+├─────────────────────────────────────┼──────────────────────────────────────┤
+│ weak-password                       │ A jelszó túl gyenge. Használj        │
+│                                     │ legalább 6 karaktert.                │
+├─────────────────────────────────────┼──────────────────────────────────────┤
+│ too-many-requests                   │ Túl sok próbálkozás. Kérjük, próbáld │
+│                                     │ újra később.                         │
+├─────────────────────────────────────┼──────────────────────────────────────┤
+│ operation-not-allowed               │ Ez a művelet jelenleg nem elérhető.  │
+│                                     │ Kérjük, próbáld újra később.         │
+├─────────────────────────────────────┼──────────────────────────────────────┤
+│ user-disabled                       │ A felhasználói fiók le van tiltva.   │
+├─────────────────────────────────────┼──────────────────────────────────────┤
+│ network-*                           │ Hálózati hiba. Ellenőrizd az         │
+│                                     │ internetkapcsolatodat és próbáld     │
+│                                     │ újra.                                │
+├─────────────────────────────────────┼──────────────────────────────────────┤
+│ [egyéb]                             │ Hiba történt a regisztrációban.      │
+│                                     │ Kérjük, próbáld újra később.         │
+└─────────────────────────────────────┴──────────────────────────────────────┘
+
+────────────────────────────────────────────────────────────────────────────────
+4. FIRESTORE FELHASZNÁLÓI DOKUMENTUM LÉTREHOZÁSA
+────────────────────────────────────────────────────────────────────────────────
+
+A Firebase Auth fiók sikeres létrehozása után AUTOMATIKUSAN létrejön a 
+Firestore felhasználói dokumentum a következő struktúrával:
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│  Firestore: /users/{userId}                                                │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  userId: [Firebase Auth UID]                                               │
+│                                                                             │
+│  Dokumentum mezők:                                                          │
+│                                                                             │
+│    email: string                  → Felhasználó email címe                 │
+│    firstName: string              → Keresztnév                             │
+│    lastName: string               → Vezetéknév                             │
+│    userType: "normal"             → Felhasználó típusa (normal/test/admin) │
+│    science: "Egészségügyi         → Alapértelmezett tudományág             │
+│             kártevőírtó"          │                                        │
+│                                                                             │
+│  ╔════════════════════════════════════════════════════════════════════════╗│
+│  ║                    ELŐFIZETÉSI ADATOK (Subscription)                   ║│
+│  ╠════════════════════════════════════════════════════════════════════════╣│
+│  ║  subscriptionStatus: "free"   → Előfizetés típusa                      ║│
+│  ║  isSubscriptionActive: false  → Aktív előfizetés?                      ║│
+│  ║  subscriptionEndDate: null    → Előfizetés lejárati dátuma             ║│
+│  ║  lastPaymentDate: null        → Utolsó fizetés dátuma                  ║│
+│  ╚════════════════════════════════════════════════════════════════════════╝│
+│                                                                             │
+│  ╔════════════════════════════════════════════════════════════════════════╗│
+│  ║                    PRÓBAIDŐSZAK ADATOK (Trial)                         ║│
+│  ╠════════════════════════════════════════════════════════════════════════╣│
+│  ║  freeTrialStartDate: Timestamp → Próbaidőszak kezdete (most)           ║│
+│  ║  freeTrialEndDate: Timestamp   → Próbaidőszak vége (most + 5 nap)      ║│
+│  ╚════════════════════════════════════════════════════════════════════════╝│
+│                                                                             │
+│  ╔════════════════════════════════════════════════════════════════════════╗│
+│  ║                  ESZKÖZ REGISZTRÁCIÓ (Device Management)               ║│
+│  ╠════════════════════════════════════════════════════════════════════════╣│
+│  ║  deviceRegistrationDate: Timestamp  → Regisztráció dátuma              ║│
+│  ║  authorizedDeviceFingerprint: null  → Engedélyezett eszköz ujjlenyomat ║│
+│  ║                                       (később lesz beállítva!)          ║│
+│  ╚════════════════════════════════════════════════════════════════════════╝│
+│                                                                             │
+│    isActive: true                 → Aktív fiók?                            │
+│    createdAt: serverTimestamp     → Létrehozás dátuma (szerver idő)       │
+│    updatedAt: serverTimestamp     → Frissítés dátuma (szerver idő)        │
+│                                                                             │
+└────────────────────────────────────────────────────────────────────────────┘
+
+FONTOS MEGJEGYZÉSEK:
+
+  1. authorizedDeviceFingerprint: A regisztráció során NEM állítjuk be!
+     Ez csak az ESZKÖZREGISZTRÁCIÓS folyamat során lesz beállítva.
+
+  2. freeTrialEndDate: Automatikusan kiszámítva (now + 5 nap)
+     A felhasználó 5 napig INGYENESEN próbálhatja a prémium funkciókat.
+
+  3. SetOptions(merge: true): A dokumentum merge-elve történik,
+     hogy ne írjunk felül semmit, ha már létezik.
+
+────────────────────────────────────────────────────────────────────────────────
+5. AUTOMATIKUS KIJELENTKEZÉS
+────────────────────────────────────────────────────────────────────────────────
+
+A Firestore dokumentum létrehozása után a rendszer AZONNAL kijelentkezteti
+a felhasználót:
+
+  await FirebaseAuth.instance.signOut();
+
+INDOKLÁS:
+  • Megakadályozza az automatikus átirányítást a fő alkalmazásba
+  • Biztosítja, hogy a felhasználó az eszközregisztrációs folyamaton
+    menjen keresztül
+  • Biztonságosabb: a felhasználó csak regisztrált eszközről
+    jelentkezhet be
+
+────────────────────────────────────────────────────────────────────────────────
+6. ESZKÖZREGISZTRÁCIÓS FOLYAMAT
+────────────────────────────────────────────────────────────────────────────────
+
+A kijelentkezés után a felhasználó átirányításra kerül:
+
+  context.go('/device-change');
+
+════════════════════════════════════════════════════════════════════════════════
+ESZKÖZREGISZTRÁCIÓ LÉPÉSEI
+════════════════════════════════════════════════════════════════════════════════
+
+Felelős komponens: lib/screens/device_change_screen.dart
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  1. FELHASZNÁLÓ MEGADJA AZ EMAIL CÍMÉT                                     │
+│     (automatikusan kitöltve a regisztráció után)                           │
+│     ↓                                                                       │
+│  2. "KÓD KÉRÉSE" GOMB MEGNYOMÁSA                                           │
+│     ↓                                                                       │
+│  3. CLOUD FUNCTION MEGHÍVÁSA (requestDeviceChange)                         │
+│     ↓                                                                       │
+│  4. 6 JEGYŰ KÓD GENERÁLÁSA (random, 100000-999999)                        │
+│     ↓                                                                       │
+│  5. KÓD MENTÉSE FIRESTORE-BA (/users/{uid}/deviceChange)                  │
+│     • code: "123456"                                                       │
+│     • expiresAt: timestamp (most + 15 perc)                                │
+│     • requestedAt: serverTimestamp                                         │
+│     ↓                                                                       │
+│  6. KÓD ELKÜLDÉSE EMAILBEN (Nodemailer SMTP)                               │
+│     • Feladó: info@lomedu.hu                                               │
+│     • Tárgy: "Eszközváltási kód"                                           │
+│     • Sablon: emailTemplates.js (HTML + Lomedu logó)                      │
+│     ↓                                                                       │
+│  7. FELHASZNÁLÓ BEÍRJA A 6 JEGYŰ KÓDOT                                    │
+│     (Pinput widget - automatikus validálás 6 számjegy után)               │
+│     ↓                                                                       │
+│  8. "ESZKÖZ REGISZTRÁCIÓ" GOMB / AUTOMATIKUS BEKÜLDÉS                      │
+│     ↓                                                                       │
+│  9. CLOUD FUNCTION MEGHÍVÁSA (verifyAndChangeDevice)                       │
+│     • email                                                                │
+│     • code                                                                 │
+│     • fingerprint (eszköz ujjlenyomat)                                    │
+│     ↓                                                                       │
+│ 10. KÓD VALIDÁLÁSA (helyes? lejárt?)                                       │
+│     ↓                                                                       │
+│ 11. ESZKÖZ UJJLENYOMAT BEÁLLÍTÁSA FIRESTORE-BAN                           │
+│     authorizedDeviceFingerprint: "web_1234567890"                          │
+│     ↓                                                                       │
+│ 12. ÁTIRÁNYÍTÁS LOGIN KÉPERNYŐRE (email előre kitöltve)                   │
+│                                                                             │
+└────────────────────────────────────────────────────────────────────────────┘
+
+════════════════════════════════════════════════════════════════════════════════
+ESZKÖZ UJJLENYOMAT (DEVICE FINGERPRINT) GENERÁLÁSA
+════════════════════════════════════════════════════════════════════════════════
+
+Felelős: lib/utils/device_fingerprint.dart
+
+A webes alkalmazásban az eszköz ujjlenyomatot a böngésző jellemzői alapján
+generáljuk. Ez egy DETERMINISZTIKUS folyamat, amely mindig UGYANAZT az
+ujjlenyomatot adja vissza ugyanabban a böngészőben.
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│                     WEB FINGERPRINT GENERÁLÁSI FOLYAMAT                     │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. ELLENŐRZÉS: Van-e már mentett fingerprint SharedPreferences-ben?       │
+│     ↓ IGEN → Visszaadjuk a mentett értéket                                │
+│     ↓ NEM  → Új generálás                                                 │
+│                                                                             │
+│  2. BÖNGÉSZŐ INFORMÁCIÓK GYŰJTÉSE (device_info_plus)                       │
+│     • userAgent:           "Mozilla/5.0 (Windows NT 10.0; Win64)..."      │
+│     • vendor:              "Google Inc."                                   │
+│     • platform:            "Win32"                                         │
+│     • hardwareConcurrency: "8" (CPU magok száma)                          │
+│                                                                             │
+│  3. ÖSSZERAKÁS ÉS HASH GENERÁLÁSA                                          │
+│     raw = "userAgent|vendor|platform|hardwareConcurrency"                  │
+│     hash = _simpleHash(raw)  → egyedi szám (pl: 1234567890)              │
+│     fingerprint = "web_1234567890"                                         │
+│                                                                             │
+│  4. MENTÉS SharedPreferences-BE (kulcs: "device_fingerprint")              │
+│                                                                             │
+│  5. VISSZAADÁS                                                              │
+│                                                                             │
+└────────────────────────────────────────────────────────────────────────────┘
+
+FINGERPRINT TULAJDONSÁGOK:
+
+  ✓ STABIL:        Ugyanabban a böngészőben mindig ugyanaz
+  ✓ EGYEDI:        Különböző böngészők/gépek → különböző ujjlenyomat
+  ✓ NEM TÖRÖLHETŐ: Csak akkor változik, ha a felhasználó törli a
+                   böngésző adatait (localStorage)
+  ✓ BIZTONSÁGOS:   Nem tartalmaz személyes információt
+
+PÉLDA FINGERPRINT ÉRTÉKEK:
+
+  • Chrome Windows:     "web_1234567890"
+  • Firefox Windows:    "web_9876543210"
+  • Safari macOS:       "web_5555555555"
+  • Chrome Android:     "android_xyz123_Samsung_SM-G991_android"
+  • Safari iOS:         "ios_abc456_iPhone14,5_iPhone_ios"
+
+════════════════════════════════════════════════════════════════════════════════
+KÓD VALIDÁLÁS (verifyAndChangeDevice Cloud Function)
+════════════════════════════════════════════════════════════════════════════════
+
+A Cloud Function az alábbi ellenőrzéseket végzi:
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│  1. PARAMÉTER ELLENŐRZÉS                                                   │
+│     ✓ email nem üres?                                                      │
+│     ✓ code nem üres?                                                       │
+│     ✓ fingerprint nem üres?                                                │
+│     ❌ Hiba: "invalid-argument: Hiányzó mezők"                             │
+│                                                                             │
+│  2. FELHASZNÁLÓ KERESÉSE                                                   │
+│     ✓ Létezik-e az email címhez tartozó felhasználó?                      │
+│     ❌ Hiba: "not-found: Nem található felhasználó ezzel az email címmel." │
+│                                                                             │
+│  3. DEVICE CHANGE KÓD ELLENŐRZÉSE                                          │
+│     ✓ Van-e deviceChange mező a Firestore dokumentumban?                  │
+│     ❌ Hiba: "invalid-code: Nincs aktív eszközváltási kérés."             │
+│                                                                             │
+│  4. KÓD LEJÁRAT ELLENŐRZÉSE                                                │
+│     ✓ expiresAt > most?                                                    │
+│     ❌ Hiba: "expired-code: A kód lejárt. Kérj újat."                     │
+│                                                                             │
+│  5. KÓD EGYEZÉS ELLENŐRZÉSE                                                │
+│     ✓ code == deviceChange.code?                                           │
+│     ❌ Hiba: "invalid-code: Hibás kód."                                    │
+│                                                                             │
+│  6. ESZKÖZ UJJLENYOMAT BEÁLLÍTÁSA                                          │
+│     ✓ authorizedDeviceFingerprint = newFingerprint                         │
+│     ✓ deviceChange mező törlése (már nem kell)                            │
+│                                                                             │
+└────────────────────────────────────────────────────────────────────────────┘
+
+────────────────────────────────────────────────────────────────────────────────
+7. BEJELENTKEZÉS ÉS ESZKÖZ UJJLENYOMAT ELLENŐRZÉS
+────────────────────────────────────────────────────────────────────────────────
+
+Az eszközregisztráció után a felhasználó a bejelentkezési oldalra kerül,
+ahol az email cím már előre kitöltve van.
+
+════════════════════════════════════════════════════════════════════════════════
+BEJELENTKEZÉS FOLYAMATA
+════════════════════════════════════════════════════════════════════════════════
+
+Felelős komponens: lib/screens/login_screen.dart
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  1. FELHASZNÁLÓ BEÍRJA AZ EMAIL CÍMÉT ÉS JELSZAVÁT                         │
+│     ↓                                                                       │
+│  2. FIREBASE AUTH BEJELENTKEZÉS                                            │
+│     signInWithEmailAndPassword(email, password)                            │
+│     ↓                                                                       │
+│  3. FIRESTORE FELHASZNÁLÓI DOKUMENTUM LEKÉRÉSE                             │
+│     ↓                                                                       │
+│  4. ESZKÖZ UJJLENYOMAT GENERÁLÁSA                                          │
+│     currentFingerprint = await DeviceFingerprint.getCurrentFingerprint()   │
+│     ↓                                                                       │
+│  5. ESZKÖZ UJJLENYOMAT ÖSSZEHASONLÍTÁSA                                    │
+│     ┌─────────────────────────────────────────────────────────────────┐   │
+│     │ Ha authorizedDeviceFingerprint == currentFingerprint            │   │
+│     │   ✓ ENGEDÉLYEZVE: Belépés az alkalmazásba                       │   │
+│     │                                                                  │   │
+│     │ Ha authorizedDeviceFingerprint != currentFingerprint            │   │
+│     │   ❌ LETILTVA: Átirányítás /device-change oldalra               │   │
+│     │   Üzenet: "Ez az eszköz nincs engedélyezve. Kérj kódot!"       │   │
+│     │                                                                  │   │
+│     │ Ha authorizedDeviceFingerprint == null                          │   │
+│     │   ❌ NINCS REGISZTRÁLVA: Átirányítás /device-change oldalra    │   │
+│     │   Üzenet: "Kérlek, regisztráld az eszközödet!"                 │   │
+│     └─────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+└────────────────────────────────────────────────────────────────────────────┘
+
+════════════════════════════════════════════════════════════════════════════════
+III. BIZTONSÁGI INTÉZKEDÉSEK
+════════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────────
+1. JELSZÓ BIZTONSÁG
+────────────────────────────────────────────────────────────────────────────────
+
+  ✓ Erős jelszó követelmény (8+ karakter, nagybetű, kisbetű, szám, speciális)
+  ✓ Firebase Authentication hash-eli a jelszót (bcrypt/scrypt)
+  ✓ Jelszó SOHA nem kerül plain text-ben tárolásra
+  ✓ Jelszó nem látható a Firestore-ban (csak Firebase Auth-ban, hash-elve)
+
+────────────────────────────────────────────────────────────────────────────────
+2. EMAIL VALIDÁLÁS
+────────────────────────────────────────────────────────────────────────────────
+
+  ✓ Kliens-oldali regex validálás
+  ✓ Firebase Auth szerveroldali validálás
+  ✓ Email egyediség ellenőrzése (egy email = egy fiók)
+  ✓ Nincs email verifikáció (egyszerűsített folyamat)
+
+────────────────────────────────────────────────────────────────────────────────
+3. ESZKÖZ BIZTONSÁG
+────────────────────────────────────────────────────────────────────────────────
+
+  ✓ Egy felhasználó = egy engedélyezett eszköz (authorizedDeviceFingerprint)
+  ✓ Eszköz ujjlenyomat deterministikus (nem változik)
+  ✓ 6 jegyű kód 15 percig érvényes
+  ✓ Kód csak egyszer használható (törlésre kerül felhasználás után)
+  ✓ Kód email-ben kerül elküldésre (nem látszik a UI-ban)
+
+────────────────────────────────────────────────────────────────────────────────
+4. RATE LIMITING
+────────────────────────────────────────────────────────────────────────────────
+
+  ✓ "Kód kérése" gomb 30 másodperces cooldown-nal
+  ✓ Firebase Auth automatikus rate limiting (túl sok próbálkozás esetén)
+  ✓ Cloud Functions timeout: 60 másodperc (automatikus megszakítás)
+
+────────────────────────────────────────────────────────────────────────────────
+5. ADATVÉDELEM (GDPR)
+────────────────────────────────────────────────────────────────────────────────
+
+  ✓ Minimális adatgyűjtés (név, email, jelszó hash)
+  ✓ Eszköz ujjlenyomat NEM tartalmaz személyes adatot
+  ✓ Felhasználó törölheti a fiókját (requestAccountDeletion Cloud Function)
+  ✓ Adatok titkosítva Firestore-ban (Firebase alapértelmezett titkosítás)
+
+════════════════════════════════════════════════════════════════════════════════
+IV. HIBAKEZELÉS ÉS FELHASZNÁLÓI VISSZAJELZÉS
+════════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────────
+FELHASZNÁLÓI ÉLMÉNY (UX)
+────────────────────────────────────────────────────────────────────────────────
+
+  ✓ AZONNALI visszajelzés validálási hibákról (nem kell szerver válaszra várni)
+  ✓ MAGYAR nyelvű hibaüzenetek (felhasználóbarát, nem technikai)
+  ✓ VIZUÁLIS visszajelzés (piros szöveg hibáknál, zöld siker esetén)
+  ✓ LOADING indikátor hálózati kérések alatt (CircularProgressIndicator)
+  ✓ LETILTOTT gombok loading alatt (nem lehet duplán kattintani)
+  ✓ AUTOMATIKUS fokusz (kód mező automatikusan fókuszba kerül)
+  ✓ AUTOMATIKUS beküldés (6 számjegy beírása után automatikus validálás)
+
+════════════════════════════════════════════════════════════════════════════════
+V. ÖSSZEFOGLALÁS: VALIDÁLÁSI RÉTEGEK
+════════════════════════════════════════════════════════════════════════════════
+
+A Lomedu webalkalmazás TÖBBRÉTEGŰ validálást alkalmaz:
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│                          VALIDÁLÁSI RÉTEGEK                                 │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. KLIENS-OLDALI VALIDÁLÁS (Flutter Dart)                                 │
+│     • Jelszó erősség                                                       │
+│     • Jelszó egyezés                                                       │
+│     • Email formátum                                                       │
+│     • Név kötelező mezők                                                   │
+│     → Azonnali visszajelzés, nincs hálózati forgalom                      │
+│                                                                             │
+│  2. FIREBASE AUTH VALIDÁLÁS (Szerveroldal)                                 │
+│     • Email formátum (ismételt)                                            │
+│     • Email egyediség                                                      │
+│     • Jelszó minimum hossz                                                 │
+│     → Hálózati kérés, Firebase hibakódok                                  │
+│                                                                             │
+│  3. CLOUD FUNCTION VALIDÁLÁS (Szerveroldal)                                │
+│     • Kód létezés                                                          │
+│     • Kód lejárat                                                          │
+│     • Kód helyesség                                                        │
+│     • Eszköz ujjlenyomat validálás                                        │
+│     → Biztonságos, nem megkerülhető                                       │
+│                                                                             │
+│  4. FIRESTORE SECURITY RULES (Szerveroldal)                                │
+│     • Írási jogosultság ellenőrzése                                       │
+│     • Olvasási jogosultság ellenőrzése                                    │
+│     • Admin/felhasználó elkülönítés                                       │
+│     → Automatikus, mindig érvényesül                                      │
+│                                                                             │
+└────────────────────────────────────────────────────────────────────────────┘
+
+════════════════════════════════════════════════════════════════════════════════
+VI. KÜLÖNBSÉGEK A MOBIL ALKALMAZÁSHOZ KÉPEST
+════════════════════════════════════════════════════════════════════════════════
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ Funkció                          │ Web App           │ Mobil App          │
+├──────────────────────────────────┼───────────────────┼────────────────────┤
+│ Email verifikáció                │ NINCS             │ NINCS              │
+│ Eszköz ujjlenyomat               │ Web-alapú hash    │ Android ID alapú   │
+│ Eszköz ujjlenyomat tárolás       │ SharedPreferences │ Secure Storage     │
+│ Fizetési mód                     │ SimplePay (web)   │ Google Play Store  │
+│ Előfizetés típus                 │ Prepaid (havi)    │ Subscription       │
+│ Eszközregisztráció               │ Kötelező          │ Kötelező           │
+│ Próbaidőszak                     │ 5 nap             │ 5 nap              │
+│ Offline mód                      │ NINCS             │ VAN (limitált)     │
+└────────────────────────────────────────────────────────────────────────────┘
+
+════════════════════════════════════════════════════════════════════════════════
+FONTOS: A mobil alkalmazás használja UGYANAZT a Firestore szabályt,
+ezért a webes változtatások NEM befolyásolják a mobil működését,
+mivel a mobil kliensoldali kódja továbbra is csak az isFree: true
+jegyzeteket kérdezi le.
+════════════════════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════════════════
+DOKUMENTUM VÉGE
+═══════════════════════════════════════════════════════════════════════════════
+
+

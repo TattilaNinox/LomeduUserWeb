@@ -33,12 +33,20 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
           .collection('notes')
           .doc(widget.deckId)
           .get();
-      
+
+      if (!doc.exists) {
+        if (mounted) {
+          _showAccessDeniedAndGoBack();
+        }
+        return;
+      }
+
       if (mounted) {
         final data = doc.data();
         final categoryId = data?['category'] as String? ?? 'default';
-        final flashcards = List<Map<String, dynamic>>.from(data?['flashcards'] ?? []);
-        
+        final flashcards =
+            List<Map<String, dynamic>>.from(data?['flashcards'] ?? []);
+
         // Tanulási adatok betöltése
         Map<int, Map<String, dynamic>> learningData = {};
         if (flashcards.isNotEmpty) {
@@ -46,12 +54,14 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
             final user = FirebaseAuth.instance.currentUser;
             if (user != null) {
               // Batch lekérdezés a tanulási adatokhoz (10-es blokkokban)
-              final allCardIds = List.generate(flashcards.length, (i) => '${widget.deckId}#$i');
+              final allCardIds = List.generate(
+                  flashcards.length, (i) => '${widget.deckId}#$i');
               const chunkSize = 10;
               final learningDocs = <QueryDocumentSnapshot>[];
-              
+
               for (var i = 0; i < allCardIds.length; i += chunkSize) {
-                final chunk = allCardIds.sublist(i, (i + chunkSize).clamp(0, allCardIds.length));
+                final chunk = allCardIds.sublist(
+                    i, (i + chunkSize).clamp(0, allCardIds.length));
                 final query = await FirebaseFirestore.instance
                     .collection('users')
                     .doc(user.uid)
@@ -62,7 +72,7 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
                     .get();
                 learningDocs.addAll(query.docs);
               }
-              
+
               final now = Timestamp.now();
               for (final doc in learningDocs) {
                 final cardId = doc.id;
@@ -70,11 +80,12 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
                 if (index >= 0) {
                   final docData = doc.data() as Map<String, dynamic>?;
                   final state = docData?['state'] as String? ?? 'NEW';
-                  final lastRating = docData?['lastRating'] as String? ?? 'Again';
+                  final lastRating =
+                      docData?['lastRating'] as String? ?? 'Again';
                   final nextReview = docData?['nextReview'] as Timestamp?;
-                  final isDue = state == 'NEW' || 
-                               (nextReview != null && nextReview.seconds <= now.seconds);
-                  
+                  final isDue = state == 'NEW' ||
+                      (nextReview != null && nextReview.seconds <= now.seconds);
+
                   learningData[index] = {
                     'state': state,
                     'lastRating': lastRating,
@@ -87,7 +98,7 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
             debugPrint('Error loading learning data: $e');
           }
         }
-        
+
         setState(() {
           _deckData = doc;
           _learningData = learningData;
@@ -95,13 +106,46 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Hiba a pakli betöltése közben: $e'),
-            backgroundColor: Colors.red));
+      // Firestore permission denied hiba ellenőrzése
+      if (e.toString().contains('permission-denied') ||
+          e.toString().contains('PERMISSION_DENIED')) {
+        if (mounted) {
+          _showAccessDeniedAndGoBack();
+        }
+      } else {
+        debugPrint('Error loading deck data: $e');
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Hiba a pakli betöltése közben: $e'),
+              backgroundColor: Colors.red));
+        }
       }
     }
+  }
+
+  void _showAccessDeniedAndGoBack() {
+    setState(() => _isLoading = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+            'Ez a tartalom csak előfizetőknek érhető el. Vásárolj előfizetést a teljes hozzáféréshez!'),
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'Előfizetés',
+          onPressed: () {
+            context.go('/account');
+          },
+        ),
+      ),
+    );
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        context.go('/notes');
+      }
+    });
   }
 
   @override
@@ -168,43 +212,43 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
       final content = flashcards.isEmpty
           ? const Center(child: Text('Ez a pakli üres.'))
           : GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: isWide
-                      ? const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 400,
-                          mainAxisSpacing: 16,
-                          crossAxisSpacing: 16,
-                          childAspectRatio: 1.6,
-                        )
-                      : const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 1,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                          childAspectRatio: 0.9,
+              padding: const EdgeInsets.all(16),
+              gridDelegate: isWide
+                  ? const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 400,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      childAspectRatio: 1.6,
+                    )
+                  : const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 1,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 0.9,
+                    ),
+              itemCount: flashcards.length,
+              itemBuilder: (context, index) {
+                final learningInfo = _learningData[index];
+                return Stack(
+                  children: [
+                    FlippableCard(
+                      frontText: flashcards[index]['front'] ?? '',
+                      backText: flashcards[index]['back'] ?? '',
+                    ),
+                    if (learningInfo != null)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: LearningStatusBadge(
+                          state: learningInfo['state'] as String,
+                          lastRating: learningInfo['lastRating'] as String,
+                          isDue: learningInfo['isDue'] as bool,
                         ),
-                  itemCount: flashcards.length,
-                  itemBuilder: (context, index) {
-                    final learningInfo = _learningData[index];
-                    return Stack(
-                      children: [
-                        FlippableCard(
-                          frontText: flashcards[index]['front'] ?? '',
-                          backText: flashcards[index]['back'] ?? '',
-                        ),
-                        if (learningInfo != null)
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: LearningStatusBadge(
-                              state: learningInfo['state'] as String,
-                              lastRating: learningInfo['lastRating'] as String,
-                              isDue: learningInfo['isDue'] as bool,
-                            ),
-                          ),
-                      ],
-                    );
-                  },
+                      ),
+                  ],
                 );
+              },
+            );
 
       if (isWide) {
         final screenWidth = MediaQuery.of(context).size.width;

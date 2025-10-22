@@ -8,6 +8,7 @@ import '../widgets/subscription_reminder_banner.dart';
 import '../widgets/enhanced_subscription_status_card.dart';
 import '../widgets/subscription_renewal_button.dart';
 import '../services/account_deletion_service.dart';
+import '../widgets/trial_period_banner.dart';
 
 /// Egyszerű fiókadatok képernyő, előfizetési státusszal.
 class AccountScreen extends StatelessWidget {
@@ -95,6 +96,9 @@ class AccountScreen extends StatelessWidget {
                 SubscriptionReminderBanner(
                   onRenewPressed: () => context.go('/subscription'),
                 ),
+
+                // Próbaidőszak bannere
+                TrialPeriodBanner(userData: data),
 
                 // Felhasználói adatok + műveletek (felső sávban)
                 Card(

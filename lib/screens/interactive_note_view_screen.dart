@@ -31,6 +31,7 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
   // Using srcdoc, no object URL needed
 
   late final StreamSubscription<DocumentSnapshot> _subscription;
+  bool _accessDenied = false;
 
   @override
   void initState() {
@@ -57,11 +58,56 @@ class _InteractiveNoteViewScreenState extends State<InteractiveNoteViewScreen> {
         .collection('notes')
         .doc(widget.noteId)
         .snapshots()
-        .listen(_handleSnapshot);
+        .listen(
+          _handleSnapshot,
+          onError: (error) {
+            // Firestore permission denied hiba (zárt jegyzet)
+            if (mounted) {
+              setState(() => _accessDenied = true);
+              _showAccessDeniedAndGoBack();
+            }
+          },
+        );
+  }
+
+  void _showAccessDeniedAndGoBack() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+            'Ez a tartalom csak előfizetőknek érhető el. Vásárolj előfizetést a teljes hozzáféréshez!'),
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'Előfizetés',
+          onPressed: () {
+            context.go('/account');
+          },
+        ),
+      ),
+    );
+    // Visszairányítás a jegyzetek listához
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        if (widget.from != null && widget.from!.isNotEmpty) {
+          context.go(widget.from!);
+        } else {
+          context.go('/notes');
+        }
+      }
+    });
   }
 
   void _handleSnapshot(DocumentSnapshot snapshot) {
     if (!mounted) return;
+
+    // Ha a hozzáférés meg lett tagadva, ne dolgozzuk fel
+    if (_accessDenied) return;
+
+    // Ellenőrizzük, hogy létezik-e a dokumentum
+    if (!snapshot.exists) {
+      setState(() => _accessDenied = true);
+      _showAccessDeniedAndGoBack();
+      return;
+    }
 
     // No object URL to revoke when using srcdoc
 

@@ -11,6 +11,15 @@ service cloud.firestore {
              ];
     }
 
+    // Helper function to check for premium access
+    function hasPremiumAccess() {
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      let now = request.time;
+      // The isSubscriptionActive field provides a simple, reliable check
+      return userData.isSubscriptionActive == true || 
+             (userData.freeTrialEndDate != null && userData.freeTrialEndDate > now);
+    }
+
     // ────────── Felhasználók (+ alsó-gyűjtemények) ──────────
     match /users/{userId} {
       // Admin bármit, a felhasználó csak a saját dokumentumát olvashatja/módosíthatja
@@ -42,8 +51,20 @@ service cloud.firestore {
 
     // ────────── Jegyzetek (minden típus, beleértve: text, interactive, deck, dynamic_quiz, source stb.) ──────────
     match /notes/{noteId} {
-      // Olvasás: admin bármit, más csak Published / Public (a források mindig Public státuszúak)
-      allow read: if request.auth != null && (isAdmin() || resource.data.status in ['Published', 'Public']);
+      // FREEMIUM MODEL:
+      // - LIST: Minden bejelentkezett felhasználó láthatja a Published/Public jegyzetek listáját
+      //         (címek, leírások stb.) függetlenül attól, hogy prémium-e vagy sem.
+      //         Ez lehetővé teszi, hogy a webes UI megjelenítse a "zárt" jegyzeteket lock ikonnal.
+      // - GET: Csak ingyenes jegyzetek (isFree: true) VAGY prémium felhasználók esetén
+      //        (részletes tartalom olvasása).
+      
+      allow list: if request.auth != null &&
+                     (isAdmin() || resource.data.status in ['Published', 'Public']);
+      
+      allow get: if request.auth != null &&
+                    (isAdmin() ||
+                     (resource.data.status in ['Published', 'Public'] && 
+                      (resource.data.isFree == true || hasPremiumAccess())));
 
       // Létrehozás, törlés: csak admin
       allow create, delete: if isAdmin();

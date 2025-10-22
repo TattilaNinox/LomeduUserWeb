@@ -36,15 +36,53 @@ class _NotePagesScreenState extends State<NotePagesScreen> {
   }
 
   Future<void> _loadNote() async {
-    final snapshot = await FirebaseFirestore.instance
-        .collection('notes')
-        .doc(widget.noteId)
-        .get();
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('notes')
+          .doc(widget.noteId)
+          .get();
 
-    if (mounted) {
-      setState(() => _noteSnapshot = snapshot);
-      _setupMedia(snapshot.data());
+      if (mounted) {
+        // Ha a dokumentum nem létezik vagy a Firestore szabály blokkolja
+        if (!snapshot.exists) {
+          _showAccessDeniedAndGoBack();
+          return;
+        }
+        setState(() => _noteSnapshot = snapshot);
+        _setupMedia(snapshot.data());
+      }
+    } catch (e) {
+      // Firestore permission denied hiba (zárt jegyzet, nincs prémium hozzáférés)
+      if (mounted) {
+        _showAccessDeniedAndGoBack();
+      }
     }
+  }
+
+  void _showAccessDeniedAndGoBack() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+            'Ez a tartalom csak előfizetőknek érhető el. Vásárolj előfizetést a teljes hozzáféréshez!'),
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'Előfizetés',
+          onPressed: () {
+            context.go('/account');
+          },
+        ),
+      ),
+    );
+    // Visszairányítás a jegyzetek listához
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        if (widget.from != null && widget.from!.isNotEmpty) {
+          context.go(widget.from!);
+        } else {
+          context.go('/notes');
+        }
+      }
+    });
   }
 
   void _setupMedia(Map<String, dynamic>? data) {

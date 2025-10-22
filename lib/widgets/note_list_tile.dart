@@ -17,6 +17,7 @@ class NoteListTile extends StatelessWidget {
   final int? deckCount;
   final String? questionBankId;
   final String? audioUrl;
+  final bool isLocked; // Új paraméter a zárt állapot jelzésére
 
   const NoteListTile({
     super.key,
@@ -29,6 +30,7 @@ class NoteListTile extends StatelessWidget {
     this.deckCount,
     this.questionBankId,
     this.audioUrl,
+    this.isLocked = false, // Alapértelmezetten nem zárt
   });
 
   IconData _typeIcon() {
@@ -49,6 +51,24 @@ class NoteListTile extends StatelessWidget {
   }
 
   void _open(BuildContext context) {
+    // Ha a jegyzet zárt, nem nyitjuk meg, hanem üzenetet jelenítünk meg
+    if (isLocked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+              'Ez a tartalom csak előfizetőknek érhető el. Vásárolj előfizetést a teljes hozzáféréshez!'),
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'Előfizetés',
+            onPressed: () {
+              context.go('/account');
+            },
+          ),
+        ),
+      );
+      return;
+    }
+
     // Menteni a szűrők állapotát navigáció előtt
     FilterStorage.saveFilters(
       searchText: FilterStorage.searchText ?? '',
@@ -156,9 +176,24 @@ class NoteListTile extends StatelessWidget {
         ),
       );
     } catch (e) {
+      // Firestore permission denied vagy egyéb hiba
       if (context.mounted) {
+        final isPermissionError = e.toString().contains('permission-denied') ||
+            e.toString().contains('PERMISSION_DENIED');
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Kvíz megnyitási hiba: $e')),
+          SnackBar(
+            content: Text(isPermissionError
+                ? 'Ez a tartalom csak előfizetőknek érhető el. Vásárolj előfizetést a teljes hozzáféréshez!'
+                : 'Kvíz megnyitási hiba: $e'),
+            duration: Duration(seconds: isPermissionError ? 4 : 3),
+            action: isPermissionError
+                ? SnackBarAction(
+                    label: 'Előfizetés',
+                    onPressed: () => context.go('/account'),
+                  )
+                : null,
+          ),
         );
       }
     }
@@ -172,144 +207,170 @@ class NoteListTile extends StatelessWidget {
     final Color shadowColor =
         Colors.black.withValues(alpha: 0.03); // még finomabb árnyék mobilon is
 
+    // Ha a jegyzet zárt, halványabb színeket használunk
+    final effectiveCardColor =
+        isLocked ? cardColor.withValues(alpha: 0.5) : cardColor;
+    final effectiveBorderColor =
+        isLocked ? borderColor.withValues(alpha: 0.5) : borderColor;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Container(
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: borderColor, width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: shadowColor,
-              blurRadius: 6,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => _open(context),
+      child: Opacity(
+        opacity: isLocked ? 0.6 : 1.0, // Elhalványítás zárt jegyzetek esetén
+        child: Container(
+          decoration: BoxDecoration(
+            color: effectiveCardColor,
             borderRadius: BorderRadius.circular(16),
-            splashColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-            highlightColor:
-                Theme.of(context).primaryColor.withValues(alpha: 0.05),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final bool isNarrow = constraints.maxWidth < 520;
+            border: Border.all(color: effectiveBorderColor, width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: shadowColor,
+                blurRadius: 6,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _open(context),
+              borderRadius: BorderRadius.circular(16),
+              splashColor:
+                  Theme.of(context).primaryColor.withValues(alpha: 0.1),
+              highlightColor:
+                  Theme.of(context).primaryColor.withValues(alpha: 0.05),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final bool isNarrow = constraints.maxWidth < 520;
 
-                  Widget audioWidget = const SizedBox.shrink();
-                  if (hasAudio && (audioUrl?.isNotEmpty ?? false)) {
-                    audioWidget = Align(
-                      alignment: Alignment.center,
-                      child: SizedBox(
-                        width: isNarrow ? double.infinity : 150,
-                        child:
-                            MiniAudioPlayer(audioUrl: audioUrl!, compact: true),
-                      ),
-                    );
-                  } else if (hasAudio) {
-                    audioWidget = const Tooltip(
-                      message: 'Hangjegyzet elérhető',
-                      child:
-                          Icon(Icons.audiotrack, size: 16, color: Colors.green),
-                    );
-                  }
+                    Widget audioWidget = const SizedBox.shrink();
+                    if (hasAudio && (audioUrl?.isNotEmpty ?? false)) {
+                      audioWidget = Align(
+                        alignment: Alignment.center,
+                        child: SizedBox(
+                          width: isNarrow ? double.infinity : 150,
+                          child: MiniAudioPlayer(
+                              audioUrl: audioUrl!, compact: true),
+                        ),
+                      );
+                    } else if (hasAudio) {
+                      audioWidget = const Tooltip(
+                        message: 'Hangjegyzet elérhető',
+                        child: Icon(Icons.audiotrack,
+                            size: 16, color: Colors.green),
+                      );
+                    }
 
-                  final Widget titleAndMeta = Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                            color: Color(0xFF2D3748),
-                            height: 1.3,
+                    final Widget titleAndMeta = Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  title,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                    color: Color(0xFF2D3748),
+                                    height: 1.3,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              // Lakatos ikon zárt jegyzetek esetén
+                              if (isLocked) ...[
+                                const SizedBox(width: 8),
+                                const Icon(
+                                  Icons.lock,
+                                  size: 20,
+                                  color: Colors.orange,
+                                ),
+                              ],
+                            ],
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  );
-
-                  if (isNarrow) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context)
-                                    .primaryColor
-                                    .withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(10),
-                                // ikon körül NINCS karmazsin keret a jegyzet-listában
-                              ),
-                              child: Icon(
-                                _typeIcon(),
-                                color: Theme.of(context).primaryColor,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            titleAndMeta,
-                          ],
-                        ),
-                        if (hasAudio) ...[
-                          const SizedBox(height: 12),
-                          audioWidget,
                         ],
-                      ],
-                    );
-                  }
-
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .primaryColor
-                              .withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                          // ikon körül NINCS karmazsin keret a jegyzet-listában
-                        ),
-                        child: Icon(
-                          _typeIcon(),
-                          color: Theme.of(context).primaryColor,
-                          size: 20,
-                        ),
                       ),
-                      const SizedBox(width: 16),
-                      // Bal oldali cím/meta
-                      titleAndMeta,
-                      // Középre igazított lejátszó a sor közepén
-                      if (hasAudio)
-                        Expanded(
-                          child: Center(
-                            child: SizedBox(
-                              width: 150,
-                              child: MiniAudioPlayer(
-                                audioUrl: audioUrl!,
-                                compact: true,
+                    );
+
+                    if (isNarrow) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .primaryColor
+                                      .withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                  // ikon körül NINCS karmazsin keret a jegyzet-listában
+                                ),
+                                child: Icon(
+                                  _typeIcon(),
+                                  color: Theme.of(context).primaryColor,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              titleAndMeta,
+                            ],
+                          ),
+                          if (hasAudio) ...[
+                            const SizedBox(height: 12),
+                            audioWidget,
+                          ],
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .primaryColor
+                                .withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                            // ikon körül NINCS karmazsin keret a jegyzet-listában
+                          ),
+                          child: Icon(
+                            _typeIcon(),
+                            color: Theme.of(context).primaryColor,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        // Bal oldali cím/meta
+                        titleAndMeta,
+                        // Középre igazított lejátszó a sor közepén
+                        if (hasAudio)
+                          Expanded(
+                            child: Center(
+                              child: SizedBox(
+                                width: 150,
+                                child: MiniAudioPlayer(
+                                  audioUrl: audioUrl!,
+                                  compact: true,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                    ],
-                  );
-                },
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ),

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../core/firebase_config.dart';
 import 'note_list_tile.dart';
@@ -21,94 +22,140 @@ class NoteCardGrid extends StatelessWidget {
     this.selectedType,
   });
 
+  bool _checkPremiumAccess(Map<String, dynamic> userData) {
+    final bool isActive = userData['isSubscriptionActive'] ?? false;
+    final trialEndDate = userData['freeTrialEndDate'] as Timestamp?;
+
+    if (isActive) {
+      return true; // Subscription is active
+    }
+
+    if (trialEndDate != null && trialEndDate.toDate().isAfter(DateTime.now())) {
+      return true; // Trial period is active
+    }
+
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    Query<Map<String, dynamic>> query =
-        FirebaseConfig.firestore.collection('notes');
-
-    // Csak publikusan elérhető jegyzetek (szabályokkal összhangban)
-    query = query.where('status', whereIn: ['Published', 'Public']);
-
-    if (selectedStatus != null && selectedStatus!.isNotEmpty) {
-      query = query.where('status', isEqualTo: selectedStatus);
-    }
-    if (selectedCategory != null && selectedCategory!.isNotEmpty) {
-      query = query.where('category', isEqualTo: selectedCategory);
-    }
-    if (selectedScience != null && selectedScience!.isNotEmpty) {
-      query = query.where('science', isEqualTo: selectedScience);
-    }
-    if (selectedTag != null && selectedTag!.isNotEmpty) {
-      query = query.where('tags', arrayContains: selectedTag);
-    }
-    if (selectedType != null && selectedType!.isNotEmpty) {
-      query = query.where('type', isEqualTo: selectedType);
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return const Center(child: Text('Kérjük, jelentkezzen be.'));
     }
 
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: query.snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return const Center(child: Text('Hiba az adatok betöltésekor.'));
-        }
-        final docs = (snapshot.data?.docs ??
-                const <QueryDocumentSnapshot<Map<String, dynamic>>>[])
-            .where((d) => !(d.data()['deletedAt'] != null))
-            .where((d) => (d.data()['title'] ?? '')
-                .toString()
-                .toLowerCase()
-                .contains(searchText.toLowerCase()))
-            .toList();
-
-        if (!snapshot.hasData &&
-            snapshot.connectionState != ConnectionState.active) {
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots(),
+      builder: (context, userSnapshot) {
+        if (userSnapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-
-        if (docs.isEmpty) {
-          return const Center(child: Text('Nincs találat.'));
+        if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+          return const Center(
+              child: Text('Felhasználói profil nem található.'));
         }
 
-        // Csoportosítás kategóriánként
-        final Map<String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>
-            grouped = {};
-        for (var d in docs) {
-          final cat = (d.data()['category'] ?? 'Egyéb') as String;
-          grouped.putIfAbsent(cat, () => []).add(d);
+        final userData = userSnapshot.data?.data() ?? {};
+        final bool hasPremiumAccess = _checkPremiumAccess(userData);
+
+        Query<Map<String, dynamic>> query =
+            FirebaseConfig.firestore.collection('notes');
+
+        // Alap szűrés a publikus jegyzetekre
+        query = query.where('status', whereIn: ['Published', 'Public']);
+
+        // FREEMIUM MODEL: Minden jegyzet látszik, de a zártak nem nyithatók meg
+        // Nem szűrünk isFree alapján, hogy a prémium jegyzetek is látszódjanak
+
+        // További felhasználói szűrők alkalmazása
+        if (selectedStatus != null && selectedStatus!.isNotEmpty) {
+          query = query.where('status', isEqualTo: selectedStatus);
+        }
+        if (selectedCategory != null && selectedCategory!.isNotEmpty) {
+          query = query.where('category', isEqualTo: selectedCategory);
+        }
+        if (selectedScience != null && selectedScience!.isNotEmpty) {
+          query = query.where('science', isEqualTo: selectedScience);
+        }
+        if (selectedTag != null && selectedTag!.isNotEmpty) {
+          query = query.where('tags', arrayContains: selectedTag);
+        }
+        if (selectedType != null && selectedType!.isNotEmpty) {
+          query = query.where('type', isEqualTo: selectedType);
         }
 
-        // Kategórián belüli rendezés típus és cím alapján
-        grouped.forEach((key, value) {
-          value.sort((a, b) {
-            final typeA = a.data()['type'] as String? ?? '';
-            final typeB = b.data()['type'] as String? ?? '';
-            // 'source' típus mindig a lista végére kerüljön
-            final bool isSourceA = typeA == 'source';
-            final bool isSourceB = typeB == 'source';
-            if (isSourceA != isSourceB) {
-              return isSourceA ? 1 : -1; // source után soroljuk
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: query.snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return Center(
+                  child: Text(
+                      'Hiba az adatok betöltésekor: ${snapshot.error.toString()}'));
             }
-            // ha mindkettő ugyanaz a forrás státusz, marad a korábbi logika
-            final typeCompare = typeA.compareTo(typeB);
-            if (typeCompare != 0) {
-              return typeCompare;
-            }
-            final titleA = a.data()['title'] as String? ?? '';
-            final titleB = b.data()['title'] as String? ?? '';
-            return titleA.compareTo(titleB);
-          });
-        });
+            final docs = (snapshot.data?.docs ??
+                    const <QueryDocumentSnapshot<Map<String, dynamic>>>[])
+                .where((d) => !(d.data()['deletedAt'] != null))
+                .where((d) => (d.data()['title'] ?? '')
+                    .toString()
+                    .toLowerCase()
+                    .contains(searchText.toLowerCase()))
+                .toList();
 
-        return ListView(
-          padding: EdgeInsets.zero,
-          children: grouped.entries.map((entry) {
-            final items = entry.value;
-            return _CategorySection(
-              category: entry.key,
-              docs: items,
-              selectedCategory: selectedCategory,
+            if (!snapshot.hasData &&
+                snapshot.connectionState != ConnectionState.active) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (docs.isEmpty) {
+              return const Center(child: Text('Nincs találat.'));
+            }
+
+            // Csoportosítás kategóriánként
+            final Map<String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>
+                grouped = {};
+            for (var d in docs) {
+              final cat = (d.data()['category'] ?? 'Egyéb') as String;
+              grouped.putIfAbsent(cat, () => []).add(d);
+            }
+
+            // Kategórián belüli rendezés típus és cím alapján
+            grouped.forEach((key, value) {
+              value.sort((a, b) {
+                final typeA = a.data()['type'] as String? ?? '';
+                final typeB = b.data()['type'] as String? ?? '';
+                // 'source' típus mindig a lista végére kerüljön
+                final bool isSourceA = typeA == 'source';
+                final bool isSourceB = typeB == 'source';
+                if (isSourceA != isSourceB) {
+                  return isSourceA ? 1 : -1; // source után soroljuk
+                }
+                // ha mindkettő ugyanaz a forrás státusz, marad a korábbi logika
+                final typeCompare = typeA.compareTo(typeB);
+                if (typeCompare != 0) {
+                  return typeCompare;
+                }
+                final titleA = a.data()['title'] as String? ?? '';
+                final titleB = b.data()['title'] as String? ?? '';
+                return titleA.compareTo(titleB);
+              });
+            });
+
+            return ListView(
+              padding: EdgeInsets.zero,
+              children: grouped.entries.map((entry) {
+                final items = entry.value;
+                return _CategorySection(
+                  category: entry.key,
+                  docs: items,
+                  selectedCategory: selectedCategory,
+                  hasPremiumAccess: hasPremiumAccess,
+                );
+              }).toList(),
             );
-          }).toList(),
+          },
         );
       },
     );
@@ -119,11 +166,13 @@ class _CategorySection extends StatefulWidget {
   final String category;
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> docs;
   final String? selectedCategory;
+  final bool hasPremiumAccess;
 
   const _CategorySection({
     required this.category,
     required this.docs,
     this.selectedCategory,
+    required this.hasPremiumAccess,
   });
 
   @override
@@ -258,6 +307,11 @@ class _CategorySectionState extends State<_CategorySection> {
                         final doc = widget.docs[index];
                         final data = doc.data();
                         final type = data['type'] as String? ?? 'standard';
+                        // Ha az isFree mező hiányzik, akkor ZÁRT (false)
+                        final isFree = data['isFree'] as bool? ?? false;
+
+                        final isLocked = !isFree && !widget.hasPremiumAccess;
+
                         return NoteListTile(
                           id: doc.id,
                           title: data['title'] ?? '',
@@ -272,6 +326,7 @@ class _CategorySectionState extends State<_CategorySection> {
                               ? (data['flashcards'] as List<dynamic>? ?? [])
                                   .length
                               : null,
+                          isLocked: isLocked,
                         );
                       },
                     ),

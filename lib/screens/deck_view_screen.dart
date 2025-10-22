@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:go_router/go_router.dart';
 import '../widgets/sidebar.dart';
 
 class DeckViewScreen extends StatefulWidget {
@@ -31,26 +32,67 @@ class _DeckViewScreenState extends State<DeckViewScreen> {
   }
 
   Future<void> _loadData() async {
-    final deckDoc = await FirebaseFirestore.instance.collection('notes').doc(widget.deckId).get();
-    if (!deckDoc.exists) {
-      if (mounted) setState(() => _isLoading = false);
-      return;
+    try {
+      final deckDoc = await FirebaseFirestore.instance
+          .collection('notes')
+          .doc(widget.deckId)
+          .get();
+
+      if (!deckDoc.exists) {
+        if (mounted) {
+          _showAccessDeniedAndGoBack();
+          setState(() => _isLoading = false);
+        }
+        return;
+      }
+
+      final data = deckDoc.data() as Map<String, dynamic>;
+      final cardIds = List<String>.from(data['card_ids'] ?? []);
+
+      if (cardIds.isNotEmpty) {
+        final cardDocs = await FirebaseFirestore.instance
+            .collection('notes')
+            .where(FieldPath.documentId, whereIn: cardIds)
+            .get();
+        // Sorba rendezés a card_ids lista alapján
+        _cards = cardDocs.docs
+          ..sort(
+              (a, b) => cardIds.indexOf(a.id).compareTo(cardIds.indexOf(b.id)));
+      }
+
+      if (mounted) {
+        setState(() {
+          _deck = deckDoc;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      // Firestore permission denied hiba (zárt jegyzet)
+      if (mounted) {
+        _showAccessDeniedAndGoBack();
+      }
     }
-    final data = deckDoc.data() as Map<String, dynamic>;
-    final cardIds = List<String>.from(data['card_ids'] ?? []);
-    
-    if(cardIds.isNotEmpty) {
-      final cardDocs = await FirebaseFirestore.instance.collection('notes').where(FieldPath.documentId, whereIn: cardIds).get();
-      // Sorba rendezés a card_ids lista alapján
-      _cards = cardDocs.docs..sort((a,b) => cardIds.indexOf(a.id).compareTo(cardIds.indexOf(b.id)));
-    }
-    
-    if (mounted) {
-      setState(() {
-        _deck = deckDoc;
-        _isLoading = false;
-      });
-    }
+  }
+
+  void _showAccessDeniedAndGoBack() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+            'Ez a tartalom csak előfizetőknek érhető el. Vásárolj előfizetést a teljes hozzáféréshez!'),
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'Előfizetés',
+          onPressed: () {
+            context.go('/account');
+          },
+        ),
+      ),
+    );
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        context.go('/notes');
+      }
+    });
   }
 
   @override
@@ -59,10 +101,13 @@ class _DeckViewScreenState extends State<DeckViewScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     if (_deck == null) {
-      return Scaffold(appBar: AppBar(), body: const Center(child: Text('A köteg nem található.')));
+      return Scaffold(
+          appBar: AppBar(),
+          body: const Center(child: Text('A köteg nem található.')));
     }
-    
-    final title = (_deck!.data() as Map<String, dynamic>)['title'] ?? 'Névtelen köteg';
+
+    final title =
+        (_deck!.data() as Map<String, dynamic>)['title'] ?? 'Névtelen köteg';
 
     return Scaffold(
       appBar: AppBar(title: Text(title)),
@@ -74,17 +119,22 @@ class _DeckViewScreenState extends State<DeckViewScreen> {
               children: [
                 Expanded(
                   child: _cards.isEmpty
-                      ? const Center(child: Text('Nincsenek kártyák ebben a kötegben.'))
+                      ? const Center(
+                          child: Text('Nincsenek kártyák ebben a kötegben.'))
                       : PageView.builder(
                           controller: _pageController,
                           itemCount: _cards.length,
-                          onPageChanged: (index) => setState(() => _currentPage = index),
+                          onPageChanged: (index) =>
+                              setState(() => _currentPage = index),
                           itemBuilder: (context, index) {
-                            final cardData = _cards[index].data() as Map<String, dynamic>;
-                            final htmlContent = cardData['html'] ?? 'Nincs tartalom.';
+                            final cardData =
+                                _cards[index].data() as Map<String, dynamic>;
+                            final htmlContent =
+                                cardData['html'] ?? 'Nincs tartalom.';
                             return Padding(
                               padding: const EdgeInsets.all(16.0),
-                              child: SingleChildScrollView(child: Html(data: htmlContent)),
+                              child: SingleChildScrollView(
+                                  child: Html(data: htmlContent)),
                             );
                           },
                         ),
@@ -130,4 +180,4 @@ class _DeckViewScreenState extends State<DeckViewScreen> {
       ),
     );
   }
-} 
+}
