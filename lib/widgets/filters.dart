@@ -161,7 +161,8 @@ class _FiltersState extends State<Filters> {
               child: Text(science, style: const TextStyle(fontSize: 12)),
             );
           }).toList(),
-          onChanged: null, // inaktív, mert automatikusan a felhasználó tudományára van állítva
+          onChanged:
+              null, // inaktív, mert automatikusan a felhasználó tudományára van állítva
         ),
       ),
     ));
@@ -186,10 +187,11 @@ class _FiltersState extends State<Filters> {
             _category = null;
             _tag = null;
             _type = null;
+            // _science NEM törlődik, mert fix a felhasználó tudományára
           });
           widget.onClearFilters();
           widget.onTypeChanged(null);
-          widget.onScienceChanged(null);
+          // widget.onScienceChanged(null); <- NEM hívjuk meg, hogy a tudomány megmaradjon
         },
         child: const Text('Szűrők törlése'),
       ),

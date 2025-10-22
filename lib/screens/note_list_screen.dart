@@ -64,10 +64,13 @@ class _NoteListScreenState extends State<NoteListScreen> {
   @override
   void initState() {
     super.initState();
-    // Mentett vagy URL paraméterekből származó szűrők betöltése
+    // AZONNAL beállítjuk a fix tudományágat
+    _selectedScience = 'Egészségügyi kártevőírtó';
+    _sciences = const ['Egészségügyi kártevőírtó'];
+    // Ezután betöltjük a felhasználó adatait és a szűrőket
+    _loadSciences();
     _loadSavedFilters();
     _loadCategories();
-    _loadSciences();
     _loadTags();
   }
 
@@ -81,6 +84,7 @@ class _NoteListScreenState extends State<NoteListScreen> {
   }
 
   /// Betölti a mentett szűrőket vagy az URL paraméterekből származó kezdeti szűrőket.
+  /// A tudomány szűrő NEM törlődik, mert az automatikusan a felhasználó tudományára van állítva.
   void _loadSavedFilters() {
     // Egyszerű megoldás: mindig használjuk az URL paramétereket, ha vannak
     if (widget.initialSearch != null ||
@@ -94,7 +98,11 @@ class _NoteListScreenState extends State<NoteListScreen> {
         _searchController.text = _searchText;
         _selectedStatus = widget.initialStatus;
         _selectedCategory = widget.initialCategory;
-        _selectedScience = widget.initialScience;
+        // _selectedScience NEM törlődik az URL-ből, mert fix a felhasználó tudományára
+        // csak akkor állítjuk be, ha az URL-ben van és megegyezik a felhasználó tudományával
+        if (widget.initialScience != null) {
+          _selectedScience = widget.initialScience;
+        }
         _selectedTag = widget.initialTag;
         _selectedType = widget.initialType;
       });
@@ -172,7 +180,8 @@ class _NoteListScreenState extends State<NoteListScreen> {
           .doc(user.uid)
           .get();
 
-      final userScience = userDoc.data()?['science'] as String? ?? 'Egészségügyi kártevőírtó';
+      final userScience =
+          userDoc.data()?['science'] as String? ?? 'Egészségügyi kártevőírtó';
 
       setState(() {
         _sciences = [userScience];
@@ -324,20 +333,22 @@ class _NoteListScreenState extends State<NoteListScreen> {
     _pushFiltersToUrl();
   }
 
-  /// Törli az összes aktív szűrőt.
+  /// Törli az összes aktív szűrőt, kivéve a tudomány szűrőt.
+  /// A tudomány szűrő automatikusan a felhasználó tudományágára van beállítva,
+  /// és nem törölhető.
   void _onClearFilters() {
     setState(() {
       _searchText = '';
       _searchController.clear();
       _selectedStatus = null;
       _selectedCategory = null;
-      _selectedScience = null;
+      // _selectedScience = null; <- NEM törlődik, fix marad a felhasználó tudományán
       _selectedTag = null;
       _selectedType = null;
     });
     // Törli a szűrőket a FilterStorage-ból is
     FilterStorage.clearFilters();
-    // Törli a CategoryState-et is
+    // Törli a CategoryState-et is, de a science megmarad
     CategoryState.clearState();
     _pushFiltersToUrl();
   }
