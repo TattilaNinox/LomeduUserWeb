@@ -364,7 +364,8 @@ class _EnhancedSubscriptionStatusCardState
             borderRadius: BorderRadius.circular(20),
             child: Padding(
               padding: const EdgeInsets.all(4.0),
-              child: Icon(Icons.info_outline, color: Colors.blue[700], size: 24),
+              child:
+                  Icon(Icons.info_outline, color: Colors.blue[700], size: 24),
             ),
           ),
           const SizedBox(width: 12),
@@ -421,8 +422,8 @@ class _EnhancedSubscriptionStatusCardState
             children: [
               _buildInfoStep(
                 '1',
-                'Válasszon csomagot',
-                'Válassza ki az Önnek megfelelő előfizetési csomagot.',
+                '30 napos előfizetés',
+                'Egy csomag érhető el: 30 napos teljes hozzáférés minden prémium funkcióhoz 4,350 Ft-ért.',
               ),
               const SizedBox(height: 16),
               _buildInfoStep(
@@ -434,13 +435,13 @@ class _EnhancedSubscriptionStatusCardState
               _buildInfoStep(
                 '3',
                 'Azonnali aktiválás',
-                'Sikeres fizetés után előfizetése azonnal aktiválódik és hozzáfér minden prémium funkcióhoz.',
+                'Sikeres fizetés után előfizetése azonnal aktiválódik és 30 napig érvényes.',
               ),
               const SizedBox(height: 16),
               _buildInfoStep(
                 '4',
-                '30 napos érvényesség',
-                'Előfizetése 30 napig érvényes a fizetés dátumától számítva.',
+                'Manuális megújítás',
+                'Az előfizetés NEM újul meg automatikusan. A megújítási gombot 3 nappal a lejárat előtt aktiváljuk, hogy Ön dönthessen a folytatásról.',
               ),
               const SizedBox(height: 20),
               Container(
@@ -458,7 +459,7 @@ class _EnhancedSubscriptionStatusCardState
                         Icon(Icons.security, color: Colors.blue[700], size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          'Biztonság',
+                          'Biztonság és adatvédelem',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.blue[700],
@@ -469,9 +470,33 @@ class _EnhancedSubscriptionStatusCardState
                     const SizedBox(height: 8),
                     const Text(
                       '• Bankkártya adatok nem tárolódnak nálunk\n'
-                      '• 30 napos pénzvisszafizetési garancia\n'
-                      '• Bármikor lemondható',
+                      '• Biztonságos SSL titkosítás\n'
+                      '• Csak akkor fizet, ha Ön megújítja',
                       style: TextStyle(fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.amber[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.amber[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.amber[700], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Fontos: Az előfizetés lejárta után azonnal megszűnik a prémium hozzáférés. Megújításhoz újra fizetnie kell.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[800],
+                        ),
+                      ),
                     ),
                   ],
                 ),
