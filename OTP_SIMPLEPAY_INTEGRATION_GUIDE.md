@@ -4,6 +4,37 @@
 
 Ez a dokumentum leírja a Flutter Web alkalmazás OTP SimplePay v2 integrációjának teljes implementációját. A rendszer hibrid fizetési megoldást biztosít: webes felhasználók SimplePay-en keresztül, mobil felhasználók Google Play Billing-en keresztül fizethetnek.
 
+## 🎯 Új Funkciók (2025. október)
+
+### ✅ Implementált Fejlesztések
+
+1. **IPN Confirm Visszaigazolás** (SimplePay 9.6.2 követelmény)
+   - Aláírt JSON válasz `receiveDate` mezővel
+   - HMAC-SHA384 signature a válasz headerben
+   - Teljes megfelelés az éles környezeti követelményeknek
+
+2. **Audit Log Rendszer**
+   - `payment_audit_logs` Firestore kollekció
+   - Minden tranzakció részletes naplózása
+   - Környezet (sandbox/production) azonosítás
+   - Metaadatok: userId, orderRef, action, timestamp
+
+3. **Környezet Státusz UI**
+   - Sandbox/Production jelzés a subscription képernyőn
+   - Vizuális megkülönböztetés (kék = teszt, piros = éles)
+   - Real-time környezet megjelenítés
+
+4. **Query Státusz Gomb**
+   - Manuális fizetési státusz ellenőrzés
+   - SimplePay Query API integráció
+   - Auto-complete funkció sikeres fizetéseknél
+   - Részletes státusz információk
+
+5. **Részletes Hibaüzenetek**
+   - SimplePay hibakódok emberi nyelvű fordítása
+   - 20+ hibakód magyarázat
+   - Kontextusos hibaüzenetek
+
 ## 🏗️ Architektúra
 
 ### Komponensek
@@ -27,6 +58,7 @@ Hozzon létre egy `.env` fájlt a projekt gyökerében:
 # SimplePay konfiguráció
 SIMPLEPAY_MERCHANT_ID=your_merchant_id_here
 SIMPLEPAY_SECRET_KEY=your_secret_key_here
+SIMPLEPAY_ENV=sandbox  # vagy 'production'
 
 # Firebase konfiguráció
 FIREBASE_PROJECT_ID=orlomed-f8f9f
@@ -41,7 +73,7 @@ NEXTAUTH_SECRET=your_nextauth_secret
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 
-# Környezet
+# Környezet (Flutter build-hez)
 PRODUCTION=false
 ```
 
@@ -138,12 +170,26 @@ firebase functions:log
 
 # Valós idejű logok
 firebase functions:log --follow
+
+# Audit logok lekérdezése
+firebase firestore:get payment_audit_logs
 ```
 
 ### 2. Firestore Adatok Ellenőrzése
 
 ```javascript
-// Firebase Console-ban vagy programmatikusan
+// Audit logok
+db.collection('payment_audit_logs')
+  .orderBy('timestamp', 'desc')
+  .limit(50)
+  .get()
+  .then(snapshot => {
+    snapshot.forEach(doc => {
+      console.log(doc.id, doc.data());
+    });
+  });
+
+// Fizetési rekordok
 db.collection('web_payments').get().then(snapshot => {
   snapshot.forEach(doc => {
     console.log(doc.id, doc.data());
@@ -156,6 +202,26 @@ db.collection('web_payments').get().then(snapshot => {
 ```dart
 // Debug módban automatikusan megjelennek
 debugPrint('Payment initiated: $result');
+```
+
+### 4. Audit Log Struktúra
+
+```json
+{
+  "userId": "user123",
+  "orderRef": "WEB_user123_1234567890",
+  "action": "PAYMENT_INITIATED|PAYMENT_CONFIRMED|WEBHOOK_RECEIVED|PAYMENT_INITIATION_FAILED|PAYMENT_STATUS_QUERIED",
+  "planId": "monthly_premium_prepaid",
+  "amount": 4350,
+  "environment": "sandbox",
+  "timestamp": "2025-10-23T12:34:56Z",
+  "metadata": {
+    "transactionId": "...",
+    "orderId": "...",
+    "errorCodes": [],
+    "queryStatus": "SUCCESS"
+  }
+}
 ```
 
 ## 🔒 Biztonsági Megfontolások
@@ -177,21 +243,23 @@ debugPrint('Payment initiated: $result');
 ### 1. Environment Változók Beállítása
 
 ```bash
-# Firebase Functions environment változók
-firebase functions:config:set simplepay.merchant_id="your_prod_merchant_id"
-firebase functions:config:set simplepay.secret_key="your_prod_secret_key"
+# Firebase Functions environment változók (secrets)
+firebase functions:secrets:set SIMPLEPAY_MERCHANT_ID
+firebase functions:secrets:set SIMPLEPAY_SECRET_KEY
+firebase functions:secrets:set SIMPLEPAY_ENV
+firebase functions:secrets:set NEXTAUTH_URL
 
-# Vercel environment változók (ha használja)
-vercel env add SIMPLEPAY_MERCHANT_ID
-vercel env add SIMPLEPAY_SECRET_KEY
+# Flutter Web build production módban
+flutter build web --dart-define=PRODUCTION=true
 ```
 
 ### 2. SimplePay Production Beállítások
 
 1. Jelentkezzen be a SimplePay merchant portálra
 2. Váltson production környezetre
-3. Állítsa be a webhook URL-t: `https://yourdomain.com/api/webhook/simplepay`
+3. Állítsa be a webhook URL-t: `https://europe-west1-orlomed-f8f9f.cloudfunctions.net/simplepayWebhook`
 4. Tesztelje a production API kulcsokat
+5. **Fontos**: Az IPN Confirm válasz most már teljes mértékben megfelel a SimplePay 9.6.2 követelményének
 
 ### 3. Firebase Production Deploy
 
@@ -204,6 +272,17 @@ firebase deploy --only firestore:rules
 
 # Hosting deployment (ha használja)
 firebase deploy --only hosting
+```
+
+### 4. Firestore Indexek (Audit Logokhoz)
+
+```bash
+# Az alábbi indexek létrehozása szükséges:
+# - payment_audit_logs: userId (ASC), timestamp (DESC)
+# - payment_audit_logs: orderRef (ASC), timestamp (DESC)
+# - payment_audit_logs: environment (ASC), timestamp (DESC)
+
+firebase firestore:indexes
 ```
 
 ## 📈 Teljesítmény Optimalizálás
@@ -293,6 +372,36 @@ final plans = HybridPaymentService.getAvailablePlans();
 #### `getSubscriptionStatus()`
 ```dart
 final status = await HybridPaymentService.getSubscriptionStatus('user123');
+```
+
+### SimplePay Hibakódok
+
+A rendszer automatikusan lefordítja a SimplePay hibakódokat érthető magyar üzenetekre:
+
+| Hibakód | Magyar Magyarázat |
+|---------|-------------------|
+| 5321 | Aláírási hiba: A SimplePay nem tudta ellenőrizni a kérés aláírását |
+| 5001 | Hiányzó merchant azonosító |
+| 5002 | Érvénytelen merchant azonosító |
+| 5101 | Hiányzó vagy érvénytelen orderRef |
+| 5102 | Duplikált orderRef - ez a megrendelés már létezik |
+| 5201 | Érvénytelen összeg - negatív vagy nulla |
+| 5301 | Hiányzó vagy érvénytelen customer email |
+| 5801 | Tranzakció nem található |
+| 5802 | Tranzakció már feldolgozva |
+
+### Query Payment Status
+
+```dart
+// Cloud Function hívás
+final functions = FirebaseFunctions.instanceFor(region: 'europe-west1');
+final callable = functions.httpsCallable('queryPaymentStatus');
+
+final result = await callable.call({'orderRef': 'WEB_user123_1234567890'});
+final data = result.data as Map<String, dynamic>;
+
+print('Status: ${data['status']}');
+print('Transaction ID: ${data['transactionId']}');
 ```
 
 ## 🔄 Frissítések és Karbantartás

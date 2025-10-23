@@ -54,15 +54,14 @@ class AccountScreen extends StatelessWidget {
           }
           final data = snapshot.data!.data()!;
 
-          // Fizetési visszairányítás kezelése: üzenet a query param alapján, majd tisztítás
+          // Fizetési visszairányítás kezelése: üzenet, majd tisztítás
           final qp = GoRouterState.of(context).uri.queryParameters;
           final paymentStatus = qp['payment'];
-          // final orderRef = qp['orderRef'];
           if (paymentStatus != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) async {
               // UI jelzés
               final msg = switch (paymentStatus) {
-                'success' => 'Fizetés sikeres.',
+                'success' => 'Fizetés sikeres! Előfizetése aktiválva.',
                 'fail' => 'Fizetés sikertelen.',
                 'timeout' => 'Fizetés időtúllépés.',
                 'cancelled' => 'Fizetés megszakítva.',
@@ -71,20 +70,9 @@ class AccountScreen extends StatelessWidget {
               ScaffoldMessenger.of(context)
                   .showSnackBar(SnackBar(content: Text(msg)));
 
-              // Csak URL tisztítás – szerver oldali IPN/recon végzi a lezárást
+              // URL tisztítás
               if (context.mounted) {
                 context.go('/account');
-              }
-            });
-          }
-
-          // Fallback: ha nincs query param, próbáljuk lekérdezni a legutóbbi státuszt (csak olvasás)
-          if (paymentStatus == null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) async {
-              try {
-                // nincs extra kliens akció – elhagyjuk az auto-confirmet, a szerver oldali recon/ipn intézi
-              } catch (_) {
-                // csendes fallback
               }
             });
           }

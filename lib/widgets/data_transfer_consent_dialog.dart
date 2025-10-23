@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
 /// SimplePay adattovábbítási nyilatkozat dialog
-/// 
+///
 /// Minden előfizetés indítás előtt meg kell jeleníteni.
 /// A felhasználónak el kell fogadnia a nyilatkozatot a fizetés indítása előtt.
 class DataTransferConsentDialog extends StatefulWidget {
   const DataTransferConsentDialog({super.key});
 
   /// Megjeleníti a consent dialogot
-  /// 
+  ///
   /// Visszatérési érték:
   /// - `true`: a felhasználó elfogadta a nyilatkozatot
   /// - `false`: a felhasználó nem fogadta el vagy bezárta a dialogot
@@ -26,8 +26,7 @@ class DataTransferConsentDialog extends StatefulWidget {
       _DataTransferConsentDialogState();
 }
 
-class _DataTransferConsentDialogState
-    extends State<DataTransferConsentDialog> {
+class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
   bool _accepted = false;
 
   @override
@@ -35,7 +34,7 @@ class _DataTransferConsentDialogState
     // Reszponzív magasság: képernyő méret 60%-a, de max 500px, min 300px
     final screenHeight = MediaQuery.of(context).size.height;
     final dialogHeight = (screenHeight * 0.6).clamp(300.0, 500.0);
-    
+
     return AlertDialog(
       title: const Text(
         'Adattovábbítási nyilatkozat',
@@ -148,7 +147,8 @@ class _DataTransferConsentDialogState
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        _buildDataRow('Név:', 'Oak Quality Kft. (a továbbiakban: „Szolgáltató")'),
+        _buildDataRow(
+            'Név:', 'Oak Quality Kft. (a továbbiakban: „Szolgáltató")'),
         _buildDataRow('Székhely:', '2113 Erdőkertes, Bocskai utca 13.'),
         _buildDataRow('Cégjegyzékszám:', '13 09 084075'),
         _buildDataRow('Adószám:', '11803010-2-13'),
@@ -216,8 +216,10 @@ class _DataTransferConsentDialogState
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        _buildDataRow('Name:', 'Oak Quality Kft. (hereinafter: "Service Provider")'),
-        _buildDataRow('Headquarters:', '2113 Erdőkertes, Bocskai utca 13., Hungary'),
+        _buildDataRow(
+            'Name:', 'Oak Quality Kft. (hereinafter: "Service Provider")'),
+        _buildDataRow(
+            'Headquarters:', '2113 Erdőkertes, Bocskai utca 13., Hungary'),
         _buildDataRow('Company registration number:', '13 09 084075'),
         _buildDataRow('Tax number:', '11803010-2-13'),
         _buildDataRow('Email (customer service):', 'support@lomedu.hu'),
@@ -252,4 +254,3 @@ class _DataTransferConsentDialogState
     );
   }
 }
-

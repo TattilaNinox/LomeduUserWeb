@@ -259,6 +259,49 @@ class _WebSubscriptionScreenState extends State<WebSubscriptionScreen> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    // Környezet megjelenítése
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: WebPaymentService.isProductionEnvironment
+                            ? Colors.red.withValues(alpha: 0.1)
+                            : Colors.blue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: WebPaymentService.isProductionEnvironment
+                              ? Colors.red
+                              : Colors.blue,
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            WebPaymentService.isProductionEnvironment
+                                ? Icons.warning_amber
+                                : Icons.bug_report,
+                            color: WebPaymentService.isProductionEnvironment
+                                ? Colors.red[700]
+                                : Colors.blue[700],
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Környezet: ${WebPaymentService.environmentDisplayName}',
+                            style: TextStyle(
+                              color: WebPaymentService.isProductionEnvironment
+                                  ? Colors.red[700]
+                                  : Colors.blue[700],
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),

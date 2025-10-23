@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/hybrid_payment_service.dart';
 import '../services/subscription_reminder_service.dart';
-import '../services/web_payment_service.dart';
 import 'data_transfer_consent_dialog.dart';
 import 'simplepay_logo.dart';
 
@@ -33,73 +32,6 @@ class SubscriptionRenewalButton extends StatefulWidget {
 
 class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
   bool _isLoading = false;
-  SubscriptionStatusColor _statusColor = SubscriptionStatusColor.free;
-  List<PaymentPlan> _availablePlans = [];
-  bool _canRenew = true;
-  String? _renewalBlockReason;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSubscriptionData();
-  }
-
-  Future<void> _loadSubscriptionData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    try {
-      final statusColor =
-          await SubscriptionReminderService.getSubscriptionStatusColor(
-              user.uid);
-      final availablePlans = HybridPaymentService.getAvailablePlans();
-
-      // Előfizetés lejárati dátumának lekérése
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-
-      DateTime? endDate;
-      bool canRenew = true;
-      String? blockReason;
-
-      if (userDoc.exists) {
-        final data = userDoc.data()!;
-        final isActive = data['isSubscriptionActive'] ?? false;
-        final endDateField = data['subscriptionEndDate'];
-
-        if (endDateField != null && isActive) {
-          if (endDateField is Timestamp) {
-            endDate = endDateField.toDate();
-          } else if (endDateField is String) {
-            endDate = DateTime.parse(endDateField);
-          }
-
-          // Ellenőrzés: csak 3 napon belül lehet megújítani
-          if (endDate != null) {
-            final now = DateTime.now();
-            final daysUntilExpiry = endDate.difference(now).inDays;
-
-            if (daysUntilExpiry > 3) {
-              canRenew = false;
-              blockReason =
-                  'Az előfizetés megújítása csak 3 nappal a lejárat előtt lehetséges. Jelenlegi lejárat: ${_formatDate(endDate)}';
-            }
-          }
-        }
-      }
-
-      setState(() {
-        _statusColor = statusColor;
-        _availablePlans = availablePlans;
-        _canRenew = canRenew;
-        _renewalBlockReason = blockReason;
-      });
-    } catch (e) {
-      // Hiba esetén alapértelmezett értékek
-    }
-  }
 
   String _formatDate(DateTime date) {
     return '${date.year}. ${date.month.toString().padLeft(2, '0')}. ${date.day.toString().padLeft(2, '0')}.';
@@ -107,44 +39,157 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.showAsCard) {
-      return _buildCardButton();
-    } else {
-      return _buildSimpleButton();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return const SizedBox.shrink();
     }
+
+    // StreamBuilder a real-time ellenőrzéshez
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox.shrink();
+        }
+
+        final data = snapshot.data?.data();
+        if (data == null) {
+          return const SizedBox.shrink();
+        }
+
+        // Állapot számítás
+        final statusColor = _calculateStatusColor(data);
+        final canRenew = _checkCanRenew(data);
+        final blockReason = _getBlockReason(data);
+
+        if (widget.showAsCard) {
+          return _buildCardButton(statusColor, canRenew, blockReason);
+        } else {
+          return _buildSimpleButton(statusColor, canRenew, blockReason);
+        }
+      },
+    );
   }
 
-  Widget _buildCardButton() {
+  SubscriptionStatusColor _calculateStatusColor(Map<String, dynamic> data) {
+    final isActive = data['isSubscriptionActive'] ?? false;
+    final status = data['subscriptionStatus'] ?? 'free';
+    final endDateField = data['subscriptionEndDate'];
+
+    if (!isActive || status == 'free') {
+      return SubscriptionStatusColor.free;
+    }
+
+    if (status == 'expired') {
+      return SubscriptionStatusColor.expired;
+    }
+
+    if (endDateField != null) {
+      DateTime? endDate;
+      if (endDateField is Timestamp) {
+        endDate = endDateField.toDate();
+      } else if (endDateField is String) {
+        endDate = DateTime.parse(endDateField);
+      }
+
+      if (endDate != null) {
+        final daysUntilExpiry = endDate.difference(DateTime.now()).inDays;
+        if (daysUntilExpiry <= 3) {
+          return SubscriptionStatusColor.warning;
+        }
+      }
+    }
+
+    return SubscriptionStatusColor.premium;
+  }
+
+  bool _checkCanRenew(Map<String, dynamic> data) {
+    final isActive = data['isSubscriptionActive'] ?? false;
+    final endDateField = data['subscriptionEndDate'];
+
+    if (!isActive) {
+      return true; // Lejárt vagy free esetén lehet megújítani
+    }
+
+    if (endDateField != null) {
+      DateTime? endDate;
+      if (endDateField is Timestamp) {
+        endDate = endDateField.toDate();
+      } else if (endDateField is String) {
+        endDate = DateTime.parse(endDateField);
+      }
+
+      if (endDate != null) {
+        final daysUntilExpiry = endDate.difference(DateTime.now()).inDays;
+        return daysUntilExpiry <= 3; // Csak 3 napon belül
+      }
+    }
+
+    return true;
+  }
+
+  String? _getBlockReason(Map<String, dynamic> data) {
+    final isActive = data['isSubscriptionActive'] ?? false;
+    final endDateField = data['subscriptionEndDate'];
+
+    if (!isActive) {
+      return null;
+    }
+
+    if (endDateField != null) {
+      DateTime? endDate;
+      if (endDateField is Timestamp) {
+        endDate = endDateField.toDate();
+      } else if (endDateField is String) {
+        endDate = DateTime.parse(endDateField);
+      }
+
+      if (endDate != null) {
+        final daysUntilExpiry = endDate.difference(DateTime.now()).inDays;
+        if (daysUntilExpiry > 3) {
+          return 'Az előfizetés megújítása csak 3 nappal a lejárat előtt lehetséges. Jelenlegi lejárat: ${_formatDate(endDate)}';
+        }
+      }
+    }
+
+    return null;
+  }
+
+  Widget _buildCardButton(
+      SubscriptionStatusColor statusColor, bool canRenew, String? blockReason) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _getButtonColor().withValues(alpha: 0.1),
+        color: _getButtonColor(statusColor).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: _getButtonColor().withValues(alpha: 0.3),
+          color: _getButtonColor(statusColor).withValues(alpha: 0.3),
           width: 2,
         ),
       ),
       child: Column(
         children: [
           Icon(
-            _getButtonIcon(),
+            _getButtonIcon(statusColor),
             size: 48,
-            color: _getButtonColor(),
+            color: _getButtonColor(statusColor),
           ),
           const SizedBox(height: 16),
           Text(
-            _getButtonTitle(),
+            _getButtonTitle(statusColor),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: _getButtonColor(),
+              color: _getButtonColor(statusColor),
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
-            _getButtonDescription(),
+            _getButtonDescription(statusColor),
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey[600],
@@ -154,7 +199,7 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
-            child: _buildActionButton(),
+            child: _buildActionButton(statusColor, canRenew, blockReason),
           ),
 
           // SimplePay logó csak webes platformon
@@ -169,16 +214,18 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
     );
   }
 
-  Widget _buildSimpleButton() {
-    return _buildActionButton();
+  Widget _buildSimpleButton(
+      SubscriptionStatusColor statusColor, bool canRenew, String? blockReason) {
+    return _buildActionButton(statusColor, canRenew, blockReason);
   }
 
-  Widget _buildActionButton() {
+  Widget _buildActionButton(
+      SubscriptionStatusColor statusColor, bool canRenew, String? blockReason) {
     if (_isLoading) {
       return ElevatedButton(
         onPressed: null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: _getButtonColor(),
+          backgroundColor: _getButtonColor(statusColor),
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
         ),
@@ -202,16 +249,16 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
 
     // Premium előfizetés esetén gomb disabled, ha nem lehet még megújítani
     final isDisabled =
-        _statusColor == SubscriptionStatusColor.premium && !_canRenew;
+        statusColor == SubscriptionStatusColor.premium && !canRenew;
 
     return Tooltip(
-      message: isDisabled ? (_renewalBlockReason ?? '') : '',
+      message: isDisabled ? (blockReason ?? '') : '',
       child: ElevatedButton.icon(
         onPressed: isDisabled ? null : _handleButtonPress,
-        icon: Icon(_getButtonIcon(), size: 18),
-        label: Text(widget.customText ?? _getButtonText()),
+        icon: Icon(_getButtonIcon(statusColor), size: 18),
+        label: Text(widget.customText ?? _getButtonText(statusColor)),
         style: ElevatedButton.styleFrom(
-          backgroundColor: _getButtonColor(),
+          backgroundColor: _getButtonColor(statusColor),
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
           disabledBackgroundColor: Colors.grey[400],
@@ -319,16 +366,17 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
 
   String _getDefaultPlanId() {
     // Alapértelmezett csomag kiválasztása - csak havi van
-    if (_availablePlans.isNotEmpty) {
-      return _availablePlans.first.id;
+    final availablePlans = HybridPaymentService.getAvailablePlans();
+    if (availablePlans.isNotEmpty) {
+      return availablePlans.first.id;
     }
 
     // Fallback
     return 'monthly_premium_prepaid';
   }
 
-  Color _getButtonColor() {
-    switch (_statusColor) {
+  Color _getButtonColor(SubscriptionStatusColor statusColor) {
+    switch (statusColor) {
       case SubscriptionStatusColor.free:
         return Colors.blue;
       case SubscriptionStatusColor.premium:
@@ -341,8 +389,8 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
     }
   }
 
-  IconData _getButtonIcon() {
-    switch (_statusColor) {
+  IconData _getButtonIcon(SubscriptionStatusColor statusColor) {
+    switch (statusColor) {
       case SubscriptionStatusColor.free:
         return Icons.upgrade;
       case SubscriptionStatusColor.premium:
@@ -354,8 +402,8 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
     }
   }
 
-  String _getButtonTitle() {
-    switch (_statusColor) {
+  String _getButtonTitle(SubscriptionStatusColor statusColor) {
+    switch (statusColor) {
       case SubscriptionStatusColor.free:
         return 'Premium előfizetés';
       case SubscriptionStatusColor.premium:
@@ -367,8 +415,8 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
     }
   }
 
-  String _getButtonDescription() {
-    switch (_statusColor) {
+  String _getButtonDescription(SubscriptionStatusColor statusColor) {
+    switch (statusColor) {
       case SubscriptionStatusColor.free:
         return 'Frissítsen premium előfizetésre a teljes hozzáférésért';
       case SubscriptionStatusColor.premium:
@@ -380,8 +428,8 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
     }
   }
 
-  String _getButtonText() {
-    switch (_statusColor) {
+  String _getButtonText(SubscriptionStatusColor statusColor) {
+    switch (statusColor) {
       case SubscriptionStatusColor.free:
         return 'Premium előfizetés';
       case SubscriptionStatusColor.premium:

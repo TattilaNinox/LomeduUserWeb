@@ -61,7 +61,8 @@ class NoteCardGrid extends StatelessWidget {
         final userData = userSnapshot.data?.data() ?? {};
         final bool hasPremiumAccess = _checkPremiumAccess(userData);
         // Felhasználó tudományága - KÖTELEZŐ szűrés
-        final userScience = userData['science'] as String? ?? 'Egészségügyi kártevőírtó';
+        final userScience =
+            userData['science'] as String? ?? 'Egészségügyi kártevőírtó';
 
         Query<Map<String, dynamic>> query =
             FirebaseConfig.firestore.collection('notes');

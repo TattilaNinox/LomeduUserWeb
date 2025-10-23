@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
 import 'core/firebase_config.dart';
 import 'screens/login_screen.dart';
@@ -35,6 +36,10 @@ void main() async {
   // mielőtt bármilyen Flutter-specifikus API hívás történne.
   WidgetsFlutterBinding.ensureInitialized();
 
+  // URL-alapú routing (hash nélküli) beállítása Flutter Web-hez
+  // Ez lehetővé teszi a SimplePay visszairányítást tiszta URL-ekkel
+  usePathUrlStrategy();
+
   // Inicializálja a Firebase szolgáltatásokat az alkalmazás indulásakor.
   // Ez egy aszinkron művelet, ezért a `main` függvény `async`-ként van megjelölve.
   await FirebaseConfig.initialize();
@@ -59,6 +64,14 @@ final _router = GoRouter(
     final loc = state.uri.path;
     final qp = state.uri.queryParameters;
     final baseQp = Uri.base.queryParameters; // query a hash előttről
+
+    // SimplePay visszairányítás kezelése - MINDIG engedjük át
+    final paymentParam = qp['payment'] ?? baseQp['payment'];
+    if (loc == '/account' && paymentParam != null) {
+      debugPrint('[Router] SimplePay payment callback: payment=$paymentParam');
+      // Nem ellenőrizzük az auth státuszt, engedjük az account oldalra
+      return null;
+    }
     final shouldUseBaseParams = {
       '/',
       '/reset-password',
@@ -102,6 +115,8 @@ final _router = GoRouter(
         '/forgot-password',
         '/reset-password',
       };
+
+      // A payment callback már fent kezelve van, itt csak a normál eseteket nézzük
       return publicRoutes.contains(loc) ? null : '/login';
     }
 

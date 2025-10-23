@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import '../services/web_payment_service.dart';
 
 /// Webes fizetési előzmények widget
@@ -375,8 +376,19 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
           ),
           Expanded(
             flex: 1,
-            child: payment.status == 'completed'
-                ? TextButton(
+            child: Row(
+              children: [
+                // Query státusz gomb
+                if (payment.status != 'completed')
+                  IconButton(
+                    onPressed: () => _queryPaymentStatus(payment.orderRef),
+                    icon: const Icon(Icons.refresh, size: 18),
+                    tooltip: 'Státusz ellenőrzése',
+                    padding: EdgeInsets.zero,
+                  ),
+                // Számla gomb
+                if (payment.status == 'completed')
+                  TextButton(
                     onPressed: () {
                       // Számla letöltés (jövőbeli fejlesztés)
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -386,8 +398,9 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
                       );
                     },
                     child: const Text('Számla'),
-                  )
-                : const Text('-'),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
@@ -444,23 +457,35 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
               ),
             ],
           ),
-          if (payment.status == 'completed') ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () {
-                  // Számla letöltés (jövőbeli fejlesztés)
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Számla letöltése hamarosan elérhető'),
-                    ),
-                  );
-                },
-                child: const Text('Számla letöltése'),
-              ),
-            ),
-          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              // Query státusz gomb
+              if (payment.status != 'completed')
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _queryPaymentStatus(payment.orderRef),
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Státusz ellenőrzése'),
+                  ),
+                ),
+              // Számla gomb
+              if (payment.status == 'completed')
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      // Számla letöltés (jövőbeli fejlesztés)
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Számla letöltése hamarosan elérhető'),
+                        ),
+                      );
+                    },
+                    child: const Text('Számla letöltése'),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );
@@ -530,5 +555,113 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
       default:
         return planId;
     }
+  }
+
+  /// Fizetési státusz lekérdezése SimplePay Query API-val
+  Future<void> _queryPaymentStatus(String orderRef) async {
+    // Loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Fizetési státusz lekérdezése...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final functions = FirebaseFunctions.instanceFor(region: 'europe-west1');
+      final callable = functions.httpsCallable('queryPaymentStatus');
+
+      final result = await callable.call({'orderRef': orderRef});
+      final data = result.data as Map<String, dynamic>;
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+
+      if (data['success'] == true) {
+        final status = data['status'] as String? ?? 'UNKNOWN';
+        final localStatus = data['localStatus'] as String? ?? 'unknown';
+        final transactionId = data['transactionId'] as String?;
+
+        // Eredmény dialog
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Fizetési státusz'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildStatusRow('SimplePay státusz', status),
+                const SizedBox(height: 8),
+                _buildStatusRow('Helyi státusz', localStatus),
+                if (transactionId != null) ...[
+                  const SizedBox(height: 8),
+                  _buildStatusRow('Tranzakció ID', transactionId),
+                ],
+                const SizedBox(height: 16),
+                Text(
+                  status == 'SUCCESS'
+                      ? 'A fizetés sikeresen megtörtént!'
+                      : 'A fizetés még nem fejeződött be vagy sikertelen volt.',
+                  style: TextStyle(
+                    color: status == 'SUCCESS'
+                        ? Colors.green[700]
+                        : Colors.orange[700],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _loadPaymentHistory(); // Frissítjük a listát
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        throw Exception('Sikertelen lekérdezés');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Hiba történt: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Widget _buildStatusRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          '$label:',
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        Text(value),
+      ],
+    );
   }
 }

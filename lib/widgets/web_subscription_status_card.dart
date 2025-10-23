@@ -162,7 +162,8 @@ class WebSubscriptionStatusCard extends StatelessWidget {
       text = 'Aktív Premium';
       icon = Icons.check_circle;
     } else if (status == 'expired' || (!isActive && status == 'premium')) {
-      backgroundColor = Colors.deepOrange[600]!; // Barátságosabb narancs árnyalat
+      backgroundColor =
+          Colors.deepOrange[600]!; // Barátságosabb narancs árnyalat
       textColor = Colors.white;
       text = 'Lejárt';
       icon = Icons.warning;

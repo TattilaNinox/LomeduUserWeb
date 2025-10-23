@@ -53,6 +53,46 @@ function getSimplePayConfig() {
 // Biztonság kedvéért definiálunk egy globális, hogy régi revíziók/async hivatkozások se dobjanak ReferenceError-t
 const SIMPLEPAY_CONFIG = getSimplePayConfig();
 
+// SimplePay hibakódok emberi nyelvű magyarázatai
+const SIMPLEPAY_ERROR_MESSAGES = {
+  '5321': 'Aláírási hiba: A SimplePay nem tudta ellenőrizni a kérés aláírását. Ellenőrizze a SECRET_KEY beállítását.',
+  '5001': 'Hiányzó merchant azonosító',
+  '5002': 'Érvénytelen merchant azonosító',
+  '5003': 'Merchant nincs aktiválva',
+  '5004': 'Merchant felfüggesztve',
+  '5101': 'Hiányzó vagy érvénytelen orderRef',
+  '5102': 'Duplikált orderRef - ez a megrendelés már létezik',
+  '5201': 'Érvénytelen összeg - negatív vagy nulla',
+  '5202': 'Érvénytelen pénznem',
+  '5301': 'Hiányzó vagy érvénytelen customer email',
+  '5302': 'Hiányzó customer név',
+  '5401': 'Érvénytelen timeout formátum',
+  '5402': 'Timeout túl rövid vagy túl hosszú',
+  '5501': 'Hiányzó vagy érvénytelen visszairányítási URL',
+  '5601': 'Érvénytelen fizetési módszer',
+  '5701': 'Hiányzó termék tétel',
+  '5702': 'Érvénytelen termék adatok',
+  '5801': 'Tranzakció nem található',
+  '5802': 'Tranzakció már feldolgozva',
+  '5803': 'Tranzakció lejárt',
+  '5804': 'Tranzakció visszavonva',
+  '9999': 'Általános szerverhiba - próbálja újra később',
+};
+
+// SimplePay hibakód feldolgozása
+function getSimplePayErrorMessage(errorCodes) {
+  if (!errorCodes || !Array.isArray(errorCodes) || errorCodes.length === 0) {
+    return 'Ismeretlen hiba történt a fizetés során';
+  }
+  
+  const messages = errorCodes.map(code => {
+    const msg = SIMPLEPAY_ERROR_MESSAGES[code.toString()];
+    return msg ? `${code}: ${msg}` : `${code}: Ismeretlen hibakód`;
+  });
+  
+  return messages.join('; ');
+}
+
 // Kisegítő késleltetés
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -240,7 +280,7 @@ exports.verifyAndChangeDevice = onCall(async (request) => {
  * Webes fizetés indítása SimplePay v2 API-val
  */
 exports.initiateWebPayment = onCall({ 
-  secrets: ['SIMPLEPAY_MERCHANT_ID', 'SIMPLEPAY_SECRET_KEY', 'NEXTAUTH_URL']
+  secrets: ['SIMPLEPAY_MERCHANT_ID', 'SIMPLEPAY_SECRET_KEY', 'NEXTAUTH_URL', 'SIMPLEPAY_ENV']
 }, async (request) => {
   try {
     const { planId, userId } = request.data || {};
@@ -383,8 +423,27 @@ exports.initiateWebPayment = onCall({
         console.error('=================================================================');
       }
       
+      // Audit log - sikertelen fizetés indítás
+      await db.collection('payment_audit_logs').add({
+        userId,
+        orderRef,
+        action: 'PAYMENT_INITIATION_FAILED',
+        planId: canonicalPlanId,
+        amount: plan.price,
+        environment: SIMPLEPAY_CONFIG.env,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        metadata: {
+          errorCodes: errorCodes || [],
+          simplePayResponse: paymentData,
+          errorMessage: getSimplePayErrorMessage(errorCodes),
+        },
+      });
+      
       console.error('[initiateWebPayment] SimplePay start returned logical error', { orderRef, errorCodes, rawResponse: paymentData, payload: simplePayRequest });
-      throw new HttpsError('failed-precondition', `SimplePay indítás elutasítva: ${Array.isArray(errorCodes) ? errorCodes.join(',') : 'ismeretlen hiba'}`);
+      
+      // Részletes hibaüzenet visszaadása
+      const detailedError = getSimplePayErrorMessage(errorCodes);
+      throw new HttpsError('failed-precondition', `SimplePay hiba: ${detailedError}`);
     }
 
     await db.collection('web_payments').doc(orderRef).set({
@@ -396,6 +455,22 @@ exports.initiateWebPayment = onCall({
       status: 'INITIATED',
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Audit log - fizetés indítása
+    await db.collection('payment_audit_logs').add({
+      userId,
+      orderRef,
+      action: 'PAYMENT_INITIATED',
+      planId: canonicalPlanId,
+      amount: plan.price,
+      environment: SIMPLEPAY_CONFIG.env,
+      paymentUrl: paymentData.paymentUrl,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      metadata: {
+        simplePayTransactionId: paymentData.transactionId || null,
+        userEmail: email,
+      },
     });
 
     return { success: true, paymentUrl: paymentData.paymentUrl, orderRef };
@@ -502,10 +577,168 @@ exports.confirmWebPayment = onCall({ secrets: ['SIMPLEPAY_MERCHANT_ID', 'SIMPLEP
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
+    // Audit log - fizetés megerősítése
+    await db.collection('payment_audit_logs').add({
+      userId,
+      orderRef,
+      action: 'PAYMENT_CONFIRMED',
+      planId: canonicalPlanId,
+      amount: plan.price,
+      environment: SIMPLEPAY_CONFIG.env,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      metadata: {
+        transactionId,
+        orderId,
+        queryStatus: queryData?.status || 'UNKNOWN',
+      },
+    });
+
     console.log('[confirmWebPayment] completed', { userId, orderRef });
     return { success: true, status: 'COMPLETED' };
   } catch (err) {
     console.error('[confirmWebPayment] error', { message: err?.message, stack: err?.stack });
+    if (err instanceof HttpsError) throw err;
+    throw new HttpsError('internal', err?.message || 'Ismeretlen hiba');
+  }
+});
+
+/**
+ * Fizetési státusz lekérdezése SimplePay Query API-val
+ * - Felhasználó manuálisan ellenőrizheti egy fizetés állapotát
+ * - Input: { orderRef }
+ * - Output: { success, status, transactionId, details }
+ */
+exports.queryPaymentStatus = onCall({ secrets: ['SIMPLEPAY_MERCHANT_ID', 'SIMPLEPAY_SECRET_KEY', 'SIMPLEPAY_ENV'] }, async (request) => {
+  try {
+    const SIMPLEPAY_CONFIG = getSimplePayConfig();
+    const { orderRef } = request.data || {};
+    
+    if (!orderRef || typeof orderRef !== 'string') {
+      throw new HttpsError('invalid-argument', 'orderRef szükséges');
+    }
+
+    // Ellenőrizzük, hogy a felhasználó saját fizetését kérdezi-e le
+    const paymentRef = db.collection('web_payments').doc(orderRef);
+    const paymentSnap = await paymentRef.get();
+    
+    if (!paymentSnap.exists) {
+      throw new HttpsError('not-found', 'Fizetési rekord nem található');
+    }
+
+    const paymentData = paymentSnap.data();
+    const userId = paymentData.userId;
+
+    // Biztonsági ellenőrzés - csak saját fizetéseit kérdezheti le
+    if (request.auth && request.auth.uid !== userId) {
+      throw new HttpsError('permission-denied', 'Nincs jogosultsága ehhez a fizetéshez');
+    }
+
+    if (!SIMPLEPAY_CONFIG.merchantId || !SIMPLEPAY_CONFIG.secretKey) {
+      throw new HttpsError('failed-precondition', 'SimplePay konfiguráció hiányzik');
+    }
+
+    // Query API hívás
+    const queryPayload = {
+      salt: crypto.randomBytes(16).toString('hex'),
+      merchant: SIMPLEPAY_CONFIG.merchantId.trim(),
+      orderRef,
+    };
+    
+    const queryBody = JSON.stringify(queryPayload);
+    const querySig = crypto.createHmac('sha384', SIMPLEPAY_CONFIG.secretKey.trim()).update(queryBody).digest('base64');
+    
+    const queryResp = await fetch(`${SIMPLEPAY_CONFIG.baseUrl.trim()}query`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json; charset=utf-8', 
+        'Signature': querySig 
+      },
+      body: queryBody,
+    });
+
+    if (!queryResp.ok) {
+      const errorText = await queryResp.text();
+      console.error('[queryPaymentStatus] query HTTP error', { status: queryResp.status, errorText });
+      throw new HttpsError('internal', 'SimplePay query hívás sikertelen');
+    }
+
+    const queryText = await queryResp.text();
+    let queryData;
+    try {
+      queryData = JSON.parse(queryText);
+    } catch (e) {
+      queryData = { raw: queryText };
+    }
+
+    // Audit log - státusz lekérdezés
+    await db.collection('payment_audit_logs').add({
+      userId,
+      orderRef,
+      action: 'PAYMENT_STATUS_QUERIED',
+      environment: SIMPLEPAY_CONFIG.env,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      metadata: {
+        queryStatus: queryData?.status || 'UNKNOWN',
+        transactionId: queryData?.transactionId || null,
+      },
+    });
+
+    const status = queryData?.status || 'UNKNOWN';
+    const transactionId = queryData?.transactionId || null;
+    const orderId = queryData?.orderId || null;
+
+    // Ha a fizetés sikeres volt, de még nem frissítettük a rekordot, akkor most frissítjük
+    if (status === 'SUCCESS' && paymentData.status !== 'COMPLETED') {
+      const canonicalPlanId = CANONICAL_PLAN_ID[paymentData.planId] || paymentData.planId;
+      const plan = PAYMENT_PLANS[canonicalPlanId];
+      
+      if (plan) {
+        const now = new Date();
+        const expiryDate = new Date(now.getTime() + (plan.subscriptionDays * 24 * 60 * 60 * 1000));
+        
+        const subscriptionData = {
+          isSubscriptionActive: true,
+          subscriptionStatus: 'premium',
+          subscriptionEndDate: admin.firestore.Timestamp.fromDate(expiryDate),
+          subscription: {
+            status: 'ACTIVE',
+            productId: canonicalPlanId,
+            purchaseToken: transactionId,
+            orderId: orderId,
+            endTime: expiryDate.toISOString(),
+            lastUpdateTime: now.toISOString(),
+            source: 'otp_simplepay',
+          },
+          lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+
+        await db.collection('users').doc(userId).set(subscriptionData, { merge: true });
+        await db.collection('users').doc(userId).update({ lastReminder: admin.firestore.FieldValue.delete() });
+
+        await paymentRef.update({
+          status: 'COMPLETED',
+          transactionId,
+          orderId,
+          completedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        console.log('[queryPaymentStatus] auto-completed payment', { userId, orderRef });
+      }
+    }
+
+    return {
+      success: true,
+      status: status,
+      transactionId: transactionId,
+      orderId: orderId,
+      localStatus: paymentData.status,
+      details: queryData,
+    };
+
+  } catch (err) {
+    console.error('[queryPaymentStatus] error', { message: err?.message, stack: err?.stack });
     if (err instanceof HttpsError) throw err;
     throw new HttpsError('internal', err?.message || 'Ismeretlen hiba');
   }
@@ -772,9 +1005,39 @@ exports.simplepayWebhook = onRequest({ secrets: ['SIMPLEPAY_SECRET_KEY','NEXTAUT
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     
+    // Audit log - webhook feldolgozás
+    await db.collection('payment_audit_logs').add({
+      userId,
+      orderRef,
+      action: 'WEBHOOK_RECEIVED',
+      planId: canonicalPlanId,
+      amount: plan.price,
+      environment: SIMPLEPAY_CONFIG.env,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      metadata: {
+        transactionId: transactionId || null,
+        orderId: orderId || null,
+        webhookStatus: incomingStatus,
+        signatureValid: true,
+      },
+    });
+    
     console.log('[simplepayWebhook] updated payment to COMPLETED', { userId, orderRef });
     
-    res.status(200).send('OK');
+    // IPN CONFIRM - SimplePay v2.1 követelmény (9.6.2)
+    // A válasznak tartalmaznia kell egy aláírt JSON objektumot receiveDate mezővel
+    const confirmResponse = {
+      receiveDate: new Date().toISOString(),
+    };
+    const confirmBody = JSON.stringify(confirmResponse);
+    const confirmSignature = crypto
+      .createHmac('sha384', SIMPLEPAY_CONFIG.secretKey.trim())
+      .update(confirmBody)
+      .digest('base64');
+    
+    res.set('Content-Type', 'application/json; charset=utf-8');
+    res.set('Signature', confirmSignature);
+    res.status(200).send(confirmBody);
     
   } catch (error) {
     console.error('[simplepayWebhook] error', { message: error?.message, stack: error?.stack });

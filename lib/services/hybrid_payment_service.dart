@@ -177,7 +177,7 @@ class HybridPaymentService {
       );
     }
 
-      // Google Play Billing integráció (mobil alkalmazásban)
+    // Google Play Billing integráció (mobil alkalmazásban)
     // Ez a meglévő subscription service része lesz
     return const PaymentInitiationResult(
       success: false,
@@ -188,7 +188,7 @@ class HybridPaymentService {
   /// Mobil fizetési előzmények lekérése
   static Future<List<PaymentHistoryItem>> _getMobilePaymentHistory(
       String userId) async {
-      // Google Play Billing előzmények (mobil alkalmazásban)
+    // Google Play Billing előzmények (mobil alkalmazásban)
     return [];
   }
 

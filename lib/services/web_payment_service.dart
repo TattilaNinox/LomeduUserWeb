@@ -168,6 +168,16 @@ class WebPaymentService {
     if (_secretKey.isEmpty) return 'SIMPLEPAY_SECRET_KEY hiányzik';
     return 'Konfigurálva (${_isProduction ? 'Production' : 'Sandbox'})';
   }
+
+  /// Környezet lekérdezése
+  static String get environment => _isProduction ? 'production' : 'sandbox';
+
+  /// Környezet szöveges megjelenítése
+  static String get environmentDisplayName =>
+      _isProduction ? 'Éles' : 'Teszt (Sandbox)';
+
+  /// Színkód a környezethez
+  static bool get isProductionEnvironment => _isProduction;
 }
 
 /// Fizetési csomag modell
