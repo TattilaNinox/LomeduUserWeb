@@ -199,9 +199,9 @@ class LoginScreenState extends State<LoginScreen> {
                           hoverColor: Colors.transparent,
                           highlightColor: Colors.transparent,
                           splashColor: Colors.transparent,
-                          child: Row(
+                          child: const Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
+                            children: [
                               Text(
                                 'Adatvédelmi irányelvek és felhasználási feltételek',
                                 style: TextStyle(
@@ -335,9 +335,10 @@ class LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 8),
                     TextButton.icon(
                       onPressed: () async {
+                        final navigator = context;
                         await FirebaseAuth.instance.signOut();
                         if (!mounted) return;
-                        context.go('/device-change');
+                        navigator.go('/device-change');
                       },
                       icon: const Icon(
                         Icons.devices,

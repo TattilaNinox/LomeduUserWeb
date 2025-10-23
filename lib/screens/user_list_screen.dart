@@ -70,13 +70,14 @@ class _UserListScreenState extends State<UserListScreen> {
         userId: user.uid,
       );
 
+      final messenger = ScaffoldMessenger.of(context);
       if (result.success && result.paymentUrl != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(content: Text('Sikeres! Payment URL: ${result.paymentUrl}')),
         );
         // Itt megnyithatnád a payment URL-t egy új ablakban
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(content: Text('Hiba: ${result.error ?? 'Ismeretlen hiba'}')),
         );
       }
