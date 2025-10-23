@@ -141,30 +141,16 @@ class _FiltersState extends State<Filters> {
       isExpanded: widget.vertical,
     ));
 
-    // Tudomány szűrő - fix értékkel, de automatikusan a felhasználó tudományára beállítva
-    add(Opacity(
-      opacity: 0.6,
-      child: Theme(
-        data: Theme.of(context).copyWith(
-          canvasColor: Colors.white,
-          highlightColor: Colors.transparent,
-          splashColor: Colors.transparent,
-        ),
-        child: DropdownButton<String>(
-          hint: const Text('Tudomány',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-          value: _science,
-          isExpanded: widget.vertical,
-          items: widget.sciences.map((science) {
-            return DropdownMenuItem<String>(
-              value: science,
-              child: Text(science, style: const TextStyle(fontSize: 12)),
-            );
-          }).toList(),
-          onChanged:
-              null, // inaktív, mert automatikusan a felhasználó tudományára van állítva
-        ),
-      ),
+    // Tudomány szűrő - jelenleg csak "Egészségügyi kártevőírtó" elérhető
+    add(_buildDropdown<String>(
+      hint: 'Tudomány',
+      value: _science,
+      items: widget.sciences,
+      onChanged: (v) {
+        setState(() => _science = v);
+        widget.onScienceChanged(v);
+      },
+      isExpanded: widget.vertical,
     ));
 
     add(_buildDropdown<String>(

@@ -65,14 +65,14 @@ class _NoteCardGridState extends State<NoteCardGrid> {
 
         final userData = userSnapshot.data?.data() ?? {};
         final bool hasPremiumAccess = _checkPremiumAccess(userData);
-        // Felhasználó tudományága - KÖTELEZŐ szűrés
-        final userScience =
-            userData['science'] as String? ?? 'Egészségügyi kártevőírtó';
+        
+        // FIX: Webalkalmazásban MINDIG csak "Egészségügyi kártevőírtó" tudományág
+        const userScience = 'Egészségügyi kártevőírtó';
 
         Query<Map<String, dynamic>> query =
             FirebaseConfig.firestore.collection('notes');
 
-        // KÖTELEZŐ: Csak a felhasználó tudományágához tartozó jegyzetek
+        // KÖTELEZŐ: Csak "Egészségügyi kártevőírtó" tudományágú jegyzetek
         query = query.where('science', isEqualTo: userScience);
 
         // Alap szűrés a publikus jegyzetekre (Published VAGY Public)
@@ -82,10 +82,12 @@ class _NoteCardGridState extends State<NoteCardGrid> {
         // Nem szűrünk isFree alapján, hogy a prémium jegyzetek is látszódjanak
 
         // További felhasználói szűrők alkalmazása
-        if (widget.selectedStatus != null && widget.selectedStatus!.isNotEmpty) {
+        if (widget.selectedStatus != null &&
+            widget.selectedStatus!.isNotEmpty) {
           query = query.where('status', isEqualTo: widget.selectedStatus);
         }
-        if (widget.selectedCategory != null && widget.selectedCategory!.isNotEmpty) {
+        if (widget.selectedCategory != null &&
+            widget.selectedCategory!.isNotEmpty) {
           query = query.where('category', isEqualTo: widget.selectedCategory);
         }
         // selectedScience szűrő NEM kell, mert már a userScience alapján szűrünk

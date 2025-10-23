@@ -164,39 +164,11 @@ class _NoteListScreenState extends State<NoteListScreen> {
   /// Betölti a tudományágakat és automatikusan beállítja a felhasználó tudományágát.
   /// A rendszer jelenleg fix tudományágra van korlátozva: 'Egészségügyi kártevőírtó'.
   Future<void> _loadSciences() async {
-    try {
-      // Lekérjük a bejelentkezett felhasználó tudományágát
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        setState(() {
-          _sciences = const ['Egészségügyi kártevőírtó'];
-          _selectedScience = 'Egészségügyi kártevőírtó';
-        });
-        return;
-      }
-
-      final userDoc = await FirebaseConfig.firestore
-          .collection('users')
-          .doc(user.uid)
-          .get();
-
-      final userScience =
-          userDoc.data()?['science'] as String? ?? 'Egészségügyi kártevőírtó';
-
-      setState(() {
-        _sciences = [userScience];
-        // Automatikusan beállítjuk a felhasználó tudományágát a szűrőben
-        _selectedScience = userScience;
-      });
-    } catch (e) {
-      // Hiba esetén default értékkel
-      if (mounted) {
-        setState(() {
-          _sciences = const ['Egészségügyi kártevőírtó'];
-          _selectedScience = 'Egészségügyi kártevőírtó';
-        });
-      }
-    }
+    // FIX: Webalkalmazásban MINDIG csak "Egészségügyi kártevőírtó" tudományág
+    setState(() {
+      _sciences = const ['Egészségügyi kártevőírtó'];
+      _selectedScience = 'Egészségügyi kártevőírtó';
+    });
   }
 
   Future<void> _loadTags() async {
