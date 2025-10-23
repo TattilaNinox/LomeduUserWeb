@@ -195,7 +195,7 @@ class _SubscriptionReminderBannerState
         return Colors
             .lightBlue[600]!; // Világos kék a hamarosan lejáró előfizetéshez
       case SubscriptionStatusColor.expired:
-        return Colors.amber[700]!; // Barátságosabb sárga árnyalat
+        return Colors.deepOrange[600]!; // Barátságosabb narancs árnyalat
     }
   }
 

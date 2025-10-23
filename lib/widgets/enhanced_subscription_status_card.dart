@@ -319,7 +319,7 @@ class _EnhancedSubscriptionStatusCardState
       counterColor = Colors.lightBlue[600]!;
       counterText = 'Hátralévő napok: $_daysUntilExpiry nap';
     } else {
-      counterColor = Colors.amber[700]!;
+      counterColor = Colors.deepOrange[600]!;
       counterText = 'Hátralévő napok: $_daysUntilExpiry nap';
     }
 
@@ -365,7 +365,7 @@ class _EnhancedSubscriptionStatusCardState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Havi előfizetés',
+                  '30 napos előfizetés',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: Colors.grey[700],
@@ -414,7 +414,7 @@ class _EnhancedSubscriptionStatusCardState
         return Colors
             .lightBlue[600]!; // Világos kék a hamarosan lejáró előfizetéshez
       case SubscriptionStatusColor.expired:
-        return Colors.amber[700]!; // Barátságosabb sárga árnyalat
+        return Colors.deepOrange[600]!; // Barátságosabb narancs árnyalat
     }
   }
 

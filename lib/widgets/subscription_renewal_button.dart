@@ -300,7 +300,7 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message),
-          backgroundColor: Colors.amber[600],
+          backgroundColor: Colors.red[600],
         ),
       );
     }
@@ -337,7 +337,7 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
         return Colors
             .lightBlue[600]!; // Világos kék a hamarosan lejáró előfizetéshez
       case SubscriptionStatusColor.expired:
-        return Colors.amber[700]!; // Barátságosabb sárga árnyalat
+        return Colors.deepOrange[600]!; // Barátságosabb narancs árnyalat
     }
   }
 

@@ -197,9 +197,9 @@ class HybridPaymentService {
     return [
       const PaymentPlan(
         id: 'monthly_premium_prepaid',
-        name: 'Havi előfizetés',
+        name: '30 napos előfizetés',
         price: 2990,
-        period: 'hó',
+        period: '30 nap',
         description: 'Teljes hozzáférés minden funkcióhoz',
         features: [
           'Korlátlan jegyzet hozzáférés',

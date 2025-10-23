@@ -21,9 +21,9 @@ class WebPaymentService {
     // Kanonikus azonosító
     'monthly_premium_prepaid': PaymentPlan(
       id: 'monthly_premium_prepaid',
-      name: 'Havi előfizetés',
+      name: '30 napos előfizetés',
       price: 4350,
-      period: 'hó',
+      period: '30 nap',
       description: 'Teljes hozzáférés minden funkcióhoz',
       features: [
         'Korlátlan jegyzet hozzáférés',
@@ -39,9 +39,9 @@ class WebPaymentService {
     // Visszafelé kompatibilitás
     'monthly_web': PaymentPlan(
       id: 'monthly_web',
-      name: 'Havi előfizetés',
+      name: '30 napos előfizetés',
       price: 4350,
-      period: 'hó',
+      period: '30 nap',
       description: 'Teljes hozzáférés minden funkcióhoz',
       features: [
         'Korlátlan jegyzet hozzáférés',
