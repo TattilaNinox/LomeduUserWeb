@@ -358,7 +358,15 @@ class _EnhancedSubscriptionStatusCardState
       ),
       child: Row(
         children: [
-          Icon(Icons.info_outline, color: Colors.grey[700], size: 20),
+          // Kattintható info ikon
+          InkWell(
+            onTap: () => _showSubscriptionInfoDialog(context),
+            borderRadius: BorderRadius.circular(20),
+            child: Padding(
+              padding: const EdgeInsets.all(4.0),
+              child: Icon(Icons.info_outline, color: Colors.blue[700], size: 24),
+            ),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -374,7 +382,7 @@ class _EnhancedSubscriptionStatusCardState
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '4,350 Ft / hó',
+                  '4,350 Ft / 30 nap',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -386,6 +394,148 @@ class _EnhancedSubscriptionStatusCardState
           ),
         ],
       ),
+    );
+  }
+
+  /// Előfizetési folyamat tájékoztató dialog
+  void _showSubscriptionInfoDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.credit_card, color: Colors.blue),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Előfizetési folyamat',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildInfoStep(
+                '1',
+                'Válasszon csomagot',
+                'Válassza ki az Önnek megfelelő előfizetési csomagot.',
+              ),
+              const SizedBox(height: 16),
+              _buildInfoStep(
+                '2',
+                'Biztonságos fizetés',
+                'A fizetés az OTP SimplePay biztonságos rendszerén keresztül történik. Bankkártya adatai titkosítva kerülnek továbbításra.',
+              ),
+              const SizedBox(height: 16),
+              _buildInfoStep(
+                '3',
+                'Azonnali aktiválás',
+                'Sikeres fizetés után előfizetése azonnal aktiválódik és hozzáfér minden prémium funkcióhoz.',
+              ),
+              const SizedBox(height: 16),
+              _buildInfoStep(
+                '4',
+                '30 napos érvényesség',
+                'Előfizetése 30 napig érvényes a fizetés dátumától számítva.',
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.security, color: Colors.blue[700], size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Biztonság',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '• Bankkártya adatok nem tárolódnak nálunk\n'
+                      '• 30 napos pénzvisszafizetési garancia\n'
+                      '• Bármikor lemondható',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Bezárás'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoStep(String number, String title, String description) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: Colors.blue,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              number,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey[700],
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

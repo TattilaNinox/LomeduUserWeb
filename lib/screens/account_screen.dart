@@ -237,15 +237,15 @@ class AccountScreen extends StatelessWidget {
                     builder: (context, constraints) {
                       double logoWidth;
                       if (constraints.maxWidth < 600) {
-                        // Mobile
+                        // Mobile - nagyobb logó a részletek jobb láthatóságához
                         logoWidth = constraints.maxWidth *
-                            0.8; // 80% a képernyő szélességének
+                            0.9; // 90% a képernyő szélességének
                       } else if (constraints.maxWidth < 900) {
-                        // Tablet
-                        logoWidth = 360;
+                        // Tablet - nagyobb logó
+                        logoWidth = 450;
                       } else {
-                        // Desktop
-                        logoWidth = 360;
+                        // Desktop - nagy logó a részletek jobb láthatóságához
+                        logoWidth = 482; // teljes méret
                       }
                       return SimplePayLogo(
                         centered: true,
