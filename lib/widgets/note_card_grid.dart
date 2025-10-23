@@ -82,18 +82,18 @@ class _NoteCardGridState extends State<NoteCardGrid> {
         // Nem szűrünk isFree alapján, hogy a prémium jegyzetek is látszódjanak
 
         // További felhasználói szűrők alkalmazása
-        if (selectedStatus != null && selectedStatus!.isNotEmpty) {
-          query = query.where('status', isEqualTo: selectedStatus);
+        if (widget.selectedStatus != null && widget.selectedStatus!.isNotEmpty) {
+          query = query.where('status', isEqualTo: widget.selectedStatus);
         }
-        if (selectedCategory != null && selectedCategory!.isNotEmpty) {
-          query = query.where('category', isEqualTo: selectedCategory);
+        if (widget.selectedCategory != null && widget.selectedCategory!.isNotEmpty) {
+          query = query.where('category', isEqualTo: widget.selectedCategory);
         }
         // selectedScience szűrő NEM kell, mert már a userScience alapján szűrünk
-        if (selectedTag != null && selectedTag!.isNotEmpty) {
-          query = query.where('tags', arrayContains: selectedTag);
+        if (widget.selectedTag != null && widget.selectedTag!.isNotEmpty) {
+          query = query.where('tags', arrayContains: widget.selectedTag);
         }
-        if (selectedType != null && selectedType!.isNotEmpty) {
-          query = query.where('type', isEqualTo: selectedType);
+        if (widget.selectedType != null && widget.selectedType!.isNotEmpty) {
+          query = query.where('type', isEqualTo: widget.selectedType);
         }
 
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -110,7 +110,7 @@ class _NoteCardGridState extends State<NoteCardGrid> {
                 .where((d) => (d.data()['title'] ?? '')
                     .toString()
                     .toLowerCase()
-                    .contains(searchText.toLowerCase()))
+                    .contains(widget.searchText.toLowerCase()))
                 .toList();
 
             if (!snapshot.hasData &&
@@ -159,7 +159,7 @@ class _NoteCardGridState extends State<NoteCardGrid> {
                 return _CategorySection(
                   category: entry.key,
                   docs: items,
-                  selectedCategory: selectedCategory,
+                  selectedCategory: widget.selectedCategory,
                   hasPremiumAccess: hasPremiumAccess,
                 );
               }).toList(),
