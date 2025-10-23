@@ -404,21 +404,18 @@ class _EnhancedSubscriptionStatusCardState
     final screenWidth = MediaQuery.of(context).size.width;
     final dialogWidth = screenWidth > 600 ? 500.0 : screenWidth * 0.9;
     final isMobile = screenWidth < 600;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Row(
-          mainAxisAlignment: isMobile ? MainAxisAlignment.center : MainAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.credit_card, color: Colors.blue),
             const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Előfizetési folyamat',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                textAlign: isMobile ? TextAlign.center : TextAlign.left,
-              ),
+            const Text(
+              'Előfizetési folyamat',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -426,7 +423,7 @@ class _EnhancedSubscriptionStatusCardState
           width: dialogWidth,
           child: SingleChildScrollView(
             child: Column(
-              crossAxisAlignment: isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildInfoStep(
@@ -470,7 +467,8 @@ class _EnhancedSubscriptionStatusCardState
     );
   }
 
-  Widget _buildInfoStep(String number, String title, String description, bool isMobile) {
+  Widget _buildInfoStep(
+      String number, String title, String description, bool isMobile) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
