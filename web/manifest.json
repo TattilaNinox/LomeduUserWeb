@@ -1,11 +1,11 @@
 {
-    "name": "orlomed_admin_web",
-    "short_name": "orlomed_admin_web",
+    "name": "Lomedu - Egészségügyi Tananyagok",
+    "short_name": "Lomedu",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#1E3A8A",
+    "theme_color": "#1E3A8A",
+    "description": "Lomedu - Online tanulási platform egészségügyi szakemberek számára",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
