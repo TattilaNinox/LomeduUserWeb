@@ -408,12 +408,12 @@ class _EnhancedSubscriptionStatusCardState
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Row(
+        title: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.credit_card, color: Colors.blue),
-            const SizedBox(width: 12),
-            const Text(
+            Icon(Icons.credit_card, color: Colors.blue),
+            SizedBox(width: 12),
+            Text(
               'Előfizetési folyamat',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
@@ -476,7 +476,7 @@ class _EnhancedSubscriptionStatusCardState
         Container(
           width: 32,
           height: 32,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: Colors.blue,
             shape: BoxShape.circle,
           ),

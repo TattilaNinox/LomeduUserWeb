@@ -209,7 +209,7 @@ class AccountScreen extends StatelessWidget {
                 const SizedBox(height: 20),
 
                 // Megújítási gomb (csak havi) - teljes szélességű, kiemelt
-                SizedBox(
+                const SizedBox(
                   width: double.infinity,
                   child: SubscriptionRenewalButton(
                     showAsCard: false,
