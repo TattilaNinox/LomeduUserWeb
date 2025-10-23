@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../core/firebase_config.dart';
 import 'note_list_tile.dart';
 
-class NoteCardGrid extends StatelessWidget {
+class NoteCardGrid extends StatefulWidget {
   final String searchText;
   final String? selectedStatus;
   final String? selectedCategory;
@@ -22,6 +22,11 @@ class NoteCardGrid extends StatelessWidget {
     this.selectedType,
   });
 
+  @override
+  State<NoteCardGrid> createState() => _NoteCardGridState();
+}
+
+class _NoteCardGridState extends State<NoteCardGrid> {
   bool _checkPremiumAccess(Map<String, dynamic> userData) {
     final bool isActive = userData['isSubscriptionActive'] ?? false;
     final trialEndDate = userData['freeTrialEndDate'] as Timestamp?;
