@@ -31,26 +31,35 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
 
   @override
   Widget build(BuildContext context) {
-    // Reszponzív magasság: képernyő méret 60%-a, de max 500px, min 300px
-    final screenHeight = MediaQuery.of(context).size.height;
-    final dialogHeight = (screenHeight * 0.6).clamp(300.0, 500.0);
+    // Reszponzív méretek
+    final screenSize = MediaQuery.of(context).size;
+    final isMobile = screenSize.width < 600;
+    final dialogHeight = isMobile 
+        ? screenSize.height * 0.5  // Mobil: 50%
+        : (screenSize.height * 0.6).clamp(300.0, 500.0);
+    final fontSize = isMobile ? 11.0 : 13.0;
+    final titleSize = isMobile ? 13.0 : 15.0;
 
     return AlertDialog(
-      title: const Text(
+      title: Text(
         'Adattovábbítási nyilatkozat',
-        style: TextStyle(fontWeight: FontWeight.bold),
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: isMobile ? 16 : 18,
+        ),
       ),
+      contentPadding: EdgeInsets.all(isMobile ? 12 : 24),
       content: SizedBox(
-        width: double.maxFinite,
+        width: isMobile ? screenSize.width * 0.9 : double.maxFinite,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'A fizetés folytatásához el kell fogadnia az adattovábbítási nyilatkozatot:',
-              style: TextStyle(fontSize: 14, color: Colors.black87),
+              style: TextStyle(fontSize: fontSize, color: Colors.black87),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: isMobile ? 8 : 12),
             // Scrollozható tartalom - RESZPONZÍV magasság
             Container(
               height: dialogHeight,
@@ -59,20 +68,20 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(isMobile ? 8 : 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildHungarianConsent(),
-                    const SizedBox(height: 32),
+                    _buildHungarianConsent(isMobile, fontSize, titleSize),
+                    SizedBox(height: isMobile ? 16 : 32),
                     const Divider(),
-                    const SizedBox(height: 32),
-                    _buildEnglishConsent(),
+                    SizedBox(height: isMobile ? 16 : 32),
+                    _buildEnglishConsent(isMobile, fontSize, titleSize),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isMobile ? 8 : 16),
             // Checkbox
             CheckboxListTile(
               value: _accepted,
@@ -81,9 +90,12 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
                   _accepted = value ?? false;
                 });
               },
-              title: const Text(
+              title: Text(
                 'Elfogadom az adattovábbítási nyilatkozatot',
-                style: TextStyle(fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: isMobile ? 12 : 14,
+                ),
               ),
               controlAffinity: ListTileControlAffinity.leading,
               contentPadding: EdgeInsets.zero,
@@ -95,150 +107,155 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Mégse'),
+          child: Text('Mégse', style: TextStyle(fontSize: isMobile ? 13 : 14)),
         ),
         ElevatedButton(
           onPressed: _accepted ? () => Navigator.of(context).pop(true) : null,
-          child: const Text('Elfogadom és tovább'),
+          child: Text('Elfogadom', style: TextStyle(fontSize: isMobile ? 13 : 14)),
         ),
       ],
     );
   }
 
-  Widget _buildHungarianConsent() {
+  Widget _buildHungarianConsent(bool isMobile, double fontSize, double titleSize) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Magyar nyelvű nyilatkozat',
           style: TextStyle(
-            fontSize: 16,
+            fontSize: titleSize + 1,
             fontWeight: FontWeight.bold,
             color: Colors.blue,
           ),
         ),
-        const SizedBox(height: 16),
-        const Text(
+        SizedBox(height: isMobile ? 8 : 16),
+        Text(
           'Adattovábbítási nyilatkozat',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: titleSize, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 12),
-        const Text(
-          'Mivel a kereskedő harmadik fél adatai a megrendelési/vásárlási adatok kezelésébe kerülnek, a vásárló nem található alább felsorolt adatok átadásával kapcsolatban megadja:',
-          style: TextStyle(fontSize: 13),
+        SizedBox(height: isMobile ? 6 : 12),
+        Text(
+          'A megrendelési/vásárlási adatok kezelése során az alábbi adatok átadásra kerülnek a SimplePay Zrt. részére (adatfeldolgozó):',
+          style: TextStyle(fontSize: fontSize),
         ),
-        const SizedBox(height: 8),
-        const Text(
-          '- az oldal saját Általános Szerződési Feltételeiben és ezen belül az adatkezelés részben ismertetett szabályok szerint',
-          style: TextStyle(fontSize: 13),
+        SizedBox(height: isMobile ? 4 : 8),
+        Text(
+          '• Általános Szerződési Feltételek szerint',
+          style: TextStyle(fontSize: fontSize),
         ),
-        const Text(
-          '- a fizetést ellátó kártyatársaságok és pénzintézetek által megrendelt részletes és érvényes szerződési feltételek',
-          style: TextStyle(fontSize: 13),
+        Text(
+          '• Kártyatársaságok szerződési feltételei szerint',
+          style: TextStyle(fontSize: fontSize),
         ),
-        const SizedBox(height: 12),
-        const Text(
-          'FONTOS: nyilatkozat elfogadéséve a weboldal önmagadában nem elegánge, ha azért a vásárlót nem találkozik el nem fogadja el.',
-          style: TextStyle(fontSize: 13),
-        ),
-        const SizedBox(height: 16),
-        const Text(
+        SizedBox(height: isMobile ? 8 : 16),
+        Text(
           'A Szolgáltató azonosító adatai',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: titleSize, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 8),
-        _buildDataRow(
-            'Név:', 'Oak Quality Kft. (a továbbiakban: „Szolgáltató")'),
-        _buildDataRow('Székhely:', '2113 Erdőkertes, Bocskai utca 13.'),
-        _buildDataRow('Cégjegyzékszám:', '13 09 084075'),
-        _buildDataRow('Adószám:', '11803010-2-13'),
-        _buildDataRow('E-mail cím (ügyfélszolgálat):', 'support@lomedu.hu'),
-        const SizedBox(height: 16),
-        const Text(
-          'Kereskedő cégneve: [Iszkékhely] [székhelye]',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        SizedBox(height: isMobile ? 4 : 8),
+        _buildDataRow('Név:', 'Oak Quality Kft.', isMobile, fontSize),
+        _buildDataRow('Székhely:', '2113 Erdőkertes, Bocskai utca 13.', isMobile, fontSize),
+        _buildDataRow('Cégjegyzékszám:', '13 09 084075', isMobile, fontSize),
+        _buildDataRow('Adószám:', '11803010-2-13', isMobile, fontSize),
+        _buildDataRow('E-mail:', 'support@lomedu.hu', isMobile, fontSize),
+        SizedBox(height: isMobile ? 8 : 12),
+        Text(
+          'További információk:',
+          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
         ),
-        const SizedBox(height: 8),
-        const Text(
-          'Kereskedő által továbbított adatok megnevezése: [Fizetési Elfogadóhely webcímé] [albbi adatbázisba tartott élni személyes adatok]',
-          style: TextStyle(fontSize: 13),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Munkáték részében szolgáltatott további részletesebben használt adatok körét és szlológózó (részére)',
-          style: TextStyle(fontSize: 13),
-        ),
-        const Text(
-          'https://simplepay.hu/adatkoz lelesi-tájékozatatók/',
-          style: TextStyle(fontSize: 13, color: Colors.blue),
+        Text(
+          'https://simplepay.hu/adatkezelesi-tajekoztatok/',
+          style: TextStyle(fontSize: fontSize - 1, color: Colors.blue),
         ),
       ],
     );
   }
 
-  Widget _buildEnglishConsent() {
+  Widget _buildEnglishConsent(bool isMobile, double fontSize, double titleSize) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'English declaration',
+        Text(
+          'English Declaration',
           style: TextStyle(
-            fontSize: 16,
+            fontSize: titleSize + 1,
             fontWeight: FontWeight.bold,
             color: Colors.blue,
           ),
         ),
-        const SizedBox(height: 16),
-        const Text(
-          'I acknowledge the following personal data stored in the user account of the data controller',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+        SizedBox(height: isMobile ? 8 : 16),
+        Text(
+          'Data Transfer Declaration',
+          style: TextStyle(fontSize: titleSize, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 8),
-        const Text(
-          '[Kereskedő cégneve] [székhelye] in the user database of [Fizetési Elfogadóhely webcíme] '
-          'will be handed over to SimplePay Plc. and is trusted as data processor. The data transferred '
-          'by the data controller are the following: [Kereskedő által továbbított adatok megnevezése]',
-          style: TextStyle(fontSize: 13),
+        SizedBox(height: isMobile ? 6 : 8),
+        Text(
+          'Personal data stored in the user account will be handed over to SimplePay Plc. as data processor.',
+          style: TextStyle(fontSize: fontSize),
         ),
-        const SizedBox(height: 12),
-        const Text(
-          'The nature and purpose of the data processing activity performed by the data processor '
-          'in the SimplePay Privacy Policy can be found at the following link:',
-          style: TextStyle(fontSize: 13),
-        ),
-        const Text(
-          'https://simplepay.hu/adatkezelesi-tajekoztatok/',
-          style: TextStyle(fontSize: 13, color: Colors.blue),
-        ),
-        const SizedBox(height: 16),
-        const Text(
+        SizedBox(height: isMobile ? 8 : 16),
+        Text(
           'Service Provider Information',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: titleSize, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 8),
-        _buildDataRow(
-            'Name:', 'Oak Quality Kft. (hereinafter: "Service Provider")'),
-        _buildDataRow(
-            'Headquarters:', '2113 Erdőkertes, Bocskai utca 13., Hungary'),
-        _buildDataRow('Company registration number:', '13 09 084075'),
-        _buildDataRow('Tax number:', '11803010-2-13'),
-        _buildDataRow('Email (customer service):', 'support@lomedu.hu'),
+        SizedBox(height: isMobile ? 4 : 8),
+        _buildDataRow('Name:', 'Oak Quality Kft.', isMobile, fontSize),
+        _buildDataRow('Headquarters:', '2113 Erdőkertes, Bocskai u. 13.', isMobile, fontSize),
+        _buildDataRow('Registration:', '13 09 084075', isMobile, fontSize),
+        _buildDataRow('Tax number:', '11803010-2-13', isMobile, fontSize),
+        _buildDataRow('Email:', 'support@lomedu.hu', isMobile, fontSize),
+        SizedBox(height: isMobile ? 8 : 12),
+        Text(
+          'More info:',
+          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
+        ),
+        Text(
+          'https://simplepay.hu/adatkezelesi-tajekoztatok/',
+          style: TextStyle(fontSize: fontSize - 1, color: Colors.blue),
+        ),
       ],
     );
   }
 
-  Widget _buildDataRow(String label, String value) {
+  Widget _buildDataRow(String label, String value, bool isMobile, double fontSize) {
+    // Mobilon column layout, asztali nézetben row
+    if (isMobile) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: fontSize,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: TextStyle(fontSize: fontSize),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    // Asztali nézet - row layout
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 180,
+            width: 140,
             child: Text(
               label,
-              style: const TextStyle(
-                fontSize: 13,
+              style: TextStyle(
+                fontSize: fontSize,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -246,7 +263,7 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontSize: 13),
+              style: TextStyle(fontSize: fontSize),
             ),
           ),
         ],
