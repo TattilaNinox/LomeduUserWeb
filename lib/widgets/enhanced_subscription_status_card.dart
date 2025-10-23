@@ -400,108 +400,64 @@ class _EnhancedSubscriptionStatusCardState
 
   /// Előfizetési folyamat tájékoztató dialog
   void _showSubscriptionInfoDialog(BuildContext context) {
+    // Reszponzív szélesség számítása
+    final screenWidth = MediaQuery.of(context).size.width;
+    final dialogWidth = screenWidth > 600 ? 500.0 : screenWidth * 0.9;
+    final isMobile = screenWidth < 600;
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
+          mainAxisAlignment: isMobile ? MainAxisAlignment.center : MainAxisAlignment.start,
           children: [
-            Icon(Icons.credit_card, color: Colors.blue),
-            SizedBox(width: 12),
+            const Icon(Icons.credit_card, color: Colors.blue),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 'Előfizetési folyamat',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                textAlign: isMobile ? TextAlign.center : TextAlign.left,
               ),
             ),
           ],
         ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildInfoStep(
-                '1',
-                '30 napos előfizetés',
-                'Egy csomag érhető el: 30 napos teljes hozzáférés minden prémium funkcióhoz 4,350 Ft-ért.',
-              ),
-              const SizedBox(height: 16),
-              _buildInfoStep(
-                '2',
-                'Biztonságos fizetés',
-                'A fizetés az OTP SimplePay biztonságos rendszerén keresztül történik. Bankkártya adatai titkosítva kerülnek továbbításra.',
-              ),
-              const SizedBox(height: 16),
-              _buildInfoStep(
-                '3',
-                'Azonnali aktiválás',
-                'Sikeres fizetés után előfizetése azonnal aktiválódik és 30 napig érvényes.',
-              ),
-              const SizedBox(height: 16),
-              _buildInfoStep(
-                '4',
-                'Manuális megújítás',
-                'Az előfizetés NEM újul meg automatikusan. A megújítási gombot 3 nappal a lejárat előtt aktiváljuk, hogy Ön dönthessen a folytatásról.',
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue[200]!),
+        content: SizedBox(
+          width: dialogWidth,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildInfoStep(
+                  '1',
+                  '30 napos előfizetés',
+                  'Egy csomag érhető el: 30 napos teljes hozzáférés minden prémium funkcióhoz 4,350 Ft-ért.',
+                  isMobile,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.security, color: Colors.blue[700], size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Biztonság és adatvédelem',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue[700],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '• Bankkártya adatok nem tárolódnak nálunk\n'
-                      '• Biztonságos SSL titkosítás\n'
-                      '• Csak akkor fizet, ha Ön megújítja',
-                      style: TextStyle(fontSize: 13),
-                    ),
-                  ],
+                const SizedBox(height: 16),
+                _buildInfoStep(
+                  '2',
+                  'Biztonságos fizetés',
+                  'A fizetés az OTP SimplePay biztonságos rendszerén keresztül történik. Bankkártya adatai titkosítva kerülnek továbbításra.',
+                  isMobile,
                 ),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.amber[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.amber[200]!),
+                const SizedBox(height: 16),
+                _buildInfoStep(
+                  '3',
+                  'Azonnali aktiválás',
+                  'Sikeres fizetés után előfizetése azonnal aktiválódik és 30 napig érvényes.',
+                  isMobile,
                 ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info, color: Colors.amber[700], size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Fontos: Az előfizetés lejárta után azonnal megszűnik a prémium hozzáférés. Megújításhoz újra fizetnie kell.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 16),
+                _buildInfoStep(
+                  '4',
+                  'Manuális megújítás',
+                  'Az előfizetés NEM újul meg automatikusan. A megújítási gombot 3 nappal a lejárat előtt aktiváljuk, hogy Ön dönthessen a folytatásról.',
+                  isMobile,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         actions: [
@@ -514,10 +470,11 @@ class _EnhancedSubscriptionStatusCardState
     );
   }
 
-  Widget _buildInfoStep(String number, String title, String description) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildInfoStep(String number, String title, String description, bool isMobile) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        // Kék kör a bekezdés felett - középre
         Container(
           width: 32,
           height: 32,
@@ -536,29 +493,25 @@ class _EnhancedSubscriptionStatusCardState
             ),
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                description,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey[700],
-                  height: 1.4,
-                ),
-              ),
-            ],
+        const SizedBox(height: 8),
+        // Cím és leírás - középre igazítva
+        Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
           ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          description,
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.grey[700],
+            height: 1.4,
+          ),
+          textAlign: TextAlign.center,
         ),
       ],
     );
