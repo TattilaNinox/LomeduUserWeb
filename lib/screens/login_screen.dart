@@ -202,18 +202,22 @@ class LoginScreenState extends State<LoginScreen> {
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                'Adatvédelmi irányelvek és felhasználási feltételek',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.black54,
+                              Flexible(
+                                child: Text(
+                                  'Adatvédelmi irányelvek és felhasználási feltételek',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.black54,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                textAlign: TextAlign.center,
                               ),
-                              SizedBox(width: 6),
+                              SizedBox(width: 4),
                               Icon(
                                 Icons.open_in_new,
-                                size: 14,
+                                size: 12,
                                 color: Colors.black38,
                               ),
                             ],
