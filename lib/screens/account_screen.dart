@@ -67,11 +67,10 @@ class AccountScreen extends StatelessWidget {
                 'cancelled' => 'Fizetés megszakítva.',
                 _ => 'Fizetés státusz: $paymentStatus',
               };
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(SnackBar(content: Text(msg)));
-
-              // URL tisztítás
               if (context.mounted) {
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text(msg)));
+                // URL tisztítás
                 context.go('/account');
               }
             });
