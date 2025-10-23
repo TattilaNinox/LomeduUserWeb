@@ -6,6 +6,7 @@ import '../services/hybrid_payment_service.dart';
 import '../services/subscription_reminder_service.dart';
 import '../services/web_payment_service.dart';
 import 'data_transfer_consent_dialog.dart';
+import 'simplepay_logo.dart';
 
 /// Előfizetés megújítási gomb widget
 ///
@@ -155,6 +156,14 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
             width: double.infinity,
             child: _buildActionButton(),
           ),
+
+          // SimplePay logó csak webes platformon
+          if (HybridPaymentService.isWeb) ...[
+            const SizedBox(height: 16),
+            const SimplePayLogoCompact(
+              width: 120,
+            ),
+          ],
         ],
       ),
     );
@@ -192,7 +201,8 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
     }
 
     // Premium előfizetés esetén gomb disabled, ha nem lehet még megújítani
-    final isDisabled = _statusColor == SubscriptionStatusColor.premium && !_canRenew;
+    final isDisabled =
+        _statusColor == SubscriptionStatusColor.premium && !_canRenew;
 
     return Tooltip(
       message: isDisabled ? (_renewalBlockReason ?? '') : '',
@@ -236,7 +246,10 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
         }
 
         // Firestore frissítése: consent elfogadás dátumának rögzítése
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({
           'dataTransferConsentLastAcceptedDate': FieldValue.serverTimestamp(),
         });
       }

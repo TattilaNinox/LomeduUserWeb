@@ -9,6 +9,7 @@ import '../widgets/enhanced_subscription_status_card.dart';
 import '../widgets/subscription_renewal_button.dart';
 import '../services/account_deletion_service.dart';
 import '../widgets/trial_period_banner.dart';
+import '../widgets/simplepay_logo.dart';
 
 /// Egyszerű fiókadatok képernyő, előfizetési státusszal.
 class AccountScreen extends StatelessWidget {
@@ -104,13 +105,16 @@ class AccountScreen extends StatelessWidget {
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(12.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Column(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        // Kis képernyőn (< 700px) oszlopos elrendezés
+                        final isSmallScreen = constraints.maxWidth < 700;
+
+                        if (isSmallScreen) {
+                          return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Felhasználói adatok
                               Text(
                                 '${data['lastName'] ?? ''} ${data['firstName'] ?? ''}'
                                     .trim(),
@@ -124,30 +128,83 @@ class AccountScreen extends StatelessWidget {
                                 user.email ?? '',
                                 style: const TextStyle(color: Colors.black54),
                               ),
+                              const SizedBox(height: 12),
+                              // Gombok egymás alatt
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  onPressed: () =>
+                                      context.go('/change-password'),
+                                  icon: const Icon(Icons.password),
+                                  label: const Text('Jelszó megváltoztatása'),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _confirmAndDelete(context),
+                                  icon: const Icon(Icons.delete_forever),
+                                  label: const Text('Fiók végleges törlése'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red[700],
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                              ),
                             ],
-                          ),
-                        ),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
+                          );
+                        }
+
+                        // Nagy képernyőn vízszintes elrendezés
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            OutlinedButton.icon(
-                              onPressed: () => context.go('/change-password'),
-                              icon: const Icon(Icons.password),
-                              label: const Text('Jelszó megváltoztatása'),
-                            ),
-                            ElevatedButton.icon(
-                              onPressed: () => _confirmAndDelete(context),
-                              icon: const Icon(Icons.delete_forever),
-                              label: const Text('Fiók végleges törlése'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red[700],
-                                foregroundColor: Colors.white,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${data['lastName'] ?? ''} ${data['firstName'] ?? ''}'
+                                        .trim(),
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    user.email ?? '',
+                                    style:
+                                        const TextStyle(color: Colors.black54),
+                                  ),
+                                ],
                               ),
                             ),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: () =>
+                                      context.go('/change-password'),
+                                  icon: const Icon(Icons.password),
+                                  label: const Text('Jelszó megváltoztatása'),
+                                ),
+                                ElevatedButton.icon(
+                                  onPressed: () => _confirmAndDelete(context),
+                                  icon: const Icon(Icons.delete_forever),
+                                  label: const Text('Fiók végleges törlése'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red[700],
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
-                        ),
-                      ],
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -172,6 +229,32 @@ class AccountScreen extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 20),
+
+                // SimplePay logó (csak webes platformon - SimplePay követelmény)
+                if (kIsWeb) ...[
+                  // Reszponzív méret mobil/tablet/desktop nézethez
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      double logoWidth;
+                      if (constraints.maxWidth < 600) {
+                        // Mobile
+                        logoWidth = constraints.maxWidth *
+                            0.8; // 80% a képernyő szélességének
+                      } else if (constraints.maxWidth < 900) {
+                        // Tablet
+                        logoWidth = 360;
+                      } else {
+                        // Desktop
+                        logoWidth = 360;
+                      }
+                      return SimplePayLogo(
+                        centered: true,
+                        width: logoWidth,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                ],
 
                 // Teszt fizetés gomb (fejlesztéshez)
                 if (kDebugMode) ...[

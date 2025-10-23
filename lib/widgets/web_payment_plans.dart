@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/web_payment_service.dart';
 import 'data_transfer_consent_dialog.dart';
+import 'simplepay_logo.dart';
 
 /// Webes fizetési csomagok widget
 ///
@@ -123,6 +124,14 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
                 ),
               ],
             ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // SimplePay logó (kötelező a SimplePay szabályok szerint)
+          const SimplePayLogo(
+            centered: true,
+            margin: EdgeInsets.symmetric(vertical: 8),
           ),
         ],
       ),
@@ -375,7 +384,8 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
       final consentAccepted = await DataTransferConsentDialog.show(context);
       if (!consentAccepted) {
         // Felhasználó nem fogadta el a nyilatkozatot
-        _showError('A fizetés folytatásához el kell fogadnia az adattovábbítási nyilatkozatot.');
+        _showError(
+            'A fizetés folytatásához el kell fogadnia az adattovábbítási nyilatkozatot.');
         return;
       }
 
