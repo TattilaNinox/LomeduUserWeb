@@ -54,20 +54,21 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
         // Esedékes kártyák lekérése
         final dueIndices =
             await LearningService.getDueFlashcardIndicesForDeck(widget.deckId);
-        // Valós időben számolt statisztikák a kártyák aktuális értékelései alapján
+        // Valós időben számolt statisztikák a kártyák aktuális értékelései alapján - OPTIMALIZÁLT
         final user = FirebaseAuth.instance.currentUser;
         int again = 0, hard = 0, good = 0, easy = 0;
         if (user != null && flashcards.isNotEmpty) {
-          // Batch lekérdezés a tanulási adatokhoz
+          // Batch lekérdezés a tanulási adatokhoz (30-as blokkokban, PÁRHUZAMOSAN)
           final allCardIds =
               List.generate(flashcards.length, (i) => '${widget.deckId}#$i');
-          const chunkSize = 10;
-          final learningDocs = <QueryDocumentSnapshot>[];
-
+          const chunkSize = 30; // Firestore whereIn limit
+          
+          // Párhuzamos query-k Future.wait()-tel
+          final futures = <Future<QuerySnapshot<Map<String, dynamic>>>>[];
           for (var i = 0; i < allCardIds.length; i += chunkSize) {
             final chunk = allCardIds.sublist(
                 i, (i + chunkSize).clamp(0, allCardIds.length));
-            final query = await FirebaseFirestore.instance
+            final queryFuture = FirebaseFirestore.instance
                 .collection('users')
                 .doc(user.uid)
                 .collection('categories')
@@ -75,8 +76,12 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
                 .collection('learning')
                 .where(FieldPath.documentId, whereIn: chunk)
                 .get();
-            learningDocs.addAll(query.docs);
+            futures.add(queryFuture);
           }
+          
+          // PÁRHUZAMOS végrehajtás
+          final results = await Future.wait(futures);
+          final learningDocs = results.expand((snapshot) => snapshot.docs).toList();
 
           // Számlálók számítása az utolsó értékelések alapján
           for (final doc in learningDocs) {

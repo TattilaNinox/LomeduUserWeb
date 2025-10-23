@@ -47,22 +47,23 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
         final flashcards =
             List<Map<String, dynamic>>.from(data?['flashcards'] ?? []);
 
-        // Tanulási adatok betöltése
+        // Tanulási adatok betöltése - OPTIMALIZÁLT párhuzamos query-kkel
         Map<int, Map<String, dynamic>> learningData = {};
         if (flashcards.isNotEmpty) {
           try {
             final user = FirebaseAuth.instance.currentUser;
             if (user != null) {
-              // Batch lekérdezés a tanulási adatokhoz (10-es blokkokban)
+              // Batch lekérdezés a tanulási adatokhoz (30-as blokkokban, PÁRHUZAMOSAN)
               final allCardIds = List.generate(
                   flashcards.length, (i) => '${widget.deckId}#$i');
-              const chunkSize = 10;
-              final learningDocs = <QueryDocumentSnapshot>[];
-
+              const chunkSize = 30; // Firestore whereIn limit
+              
+              // Párhuzamos query-k Future.wait()-tel
+              final futures = <Future<QuerySnapshot<Map<String, dynamic>>>>[];
               for (var i = 0; i < allCardIds.length; i += chunkSize) {
                 final chunk = allCardIds.sublist(
                     i, (i + chunkSize).clamp(0, allCardIds.length));
-                final query = await FirebaseFirestore.instance
+                final queryFuture = FirebaseFirestore.instance
                     .collection('users')
                     .doc(user.uid)
                     .collection('categories')
@@ -70,8 +71,12 @@ class _FlashcardDeckViewScreenState extends State<FlashcardDeckViewScreen> {
                     .collection('learning')
                     .where(FieldPath.documentId, whereIn: chunk)
                     .get();
-                learningDocs.addAll(query.docs);
+                futures.add(queryFuture);
               }
+              
+              // PÁRHUZAMOS végrehajtás - akár 10x gyorsabb!
+              final results = await Future.wait(futures);
+              final learningDocs = results.expand((snapshot) => snapshot.docs).toList();
 
               final now = Timestamp.now();
               for (final doc in learningDocs) {
