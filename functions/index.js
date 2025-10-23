@@ -564,6 +564,8 @@ exports.confirmWebPayment = onCall({ secrets: ['SIMPLEPAY_MERCHANT_ID', 'SIMPLEP
       },
       lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      // Próbaidőszak lezárása az első fizetéskor
+      freeTrialEndDate: admin.firestore.Timestamp.fromDate(now),
     };
 
     await db.collection('users').doc(userId).set(subscriptionData, { merge: true });
@@ -711,6 +713,8 @@ exports.queryPaymentStatus = onCall({ secrets: ['SIMPLEPAY_MERCHANT_ID', 'SIMPLE
           },
           lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          // Próbaidőszak lezárása az első fizetéskor
+          freeTrialEndDate: admin.firestore.Timestamp.fromDate(now),
         };
 
         await db.collection('users').doc(userId).set(subscriptionData, { merge: true });
@@ -816,6 +820,9 @@ exports.processWebPaymentWebhook = onCall({ secrets: ['SIMPLEPAY_SECRET_KEY','NE
       // Meta adatok
       lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      
+      // Próbaidőszak lezárása az első fizetéskor
+      freeTrialEndDate: admin.firestore.Timestamp.fromDate(now),
     };
     
     // Felhasználói dokumentum frissítése
@@ -986,6 +993,8 @@ exports.simplepayWebhook = onRequest({ secrets: ['SIMPLEPAY_SECRET_KEY','NEXTAUT
       },
       lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      // Próbaidőszak lezárása az első fizetéskor
+      freeTrialEndDate: admin.firestore.Timestamp.fromDate(now),
     };
     
     // Felhasználói dokumentum frissítése
@@ -1141,6 +1150,8 @@ exports.onWebPaymentWrite = onDocumentWritten({
               },
               lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
               updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+              // Próbaidőszak lezárása az első fizetéskor
+              freeTrialEndDate: admin.firestore.Timestamp.fromDate(now),
             };
 
             await db.collection('users').doc(userId).set(subscriptionData, { merge: true });
@@ -1192,6 +1203,8 @@ exports.onWebPaymentWrite = onDocumentWritten({
       },
       lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      // Próbaidőszak lezárása az első fizetéskor
+      freeTrialEndDate: admin.firestore.Timestamp.fromDate(now),
     };
 
     await db.collection('users').doc(userId).set(subscriptionData, { merge: true });
@@ -1257,6 +1270,8 @@ exports.reconcileWebPaymentsScheduled = onSchedule({
         },
         lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        // Próbaidőszak lezárása az első fizetéskor
+        freeTrialEndDate: admin.firestore.Timestamp.fromDate(now),
       }, { merge: true });
       await d.ref.update({ status: 'COMPLETED', transactionId, orderId, completedAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() });
       reconciled++;
