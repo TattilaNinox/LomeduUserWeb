@@ -135,6 +135,7 @@ class _NoteEditScreenState extends State<NoteEditScreen>
       await Printing.layoutPdf(
         name: title.isEmpty ? 'jegyzet' : title,
         onLayout: (format) async {
+          // ignore: deprecated_member_use
           return await Printing.convertHtml(format: format, html: htmlDoc);
         },
       );

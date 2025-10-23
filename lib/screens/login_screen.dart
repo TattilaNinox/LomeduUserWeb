@@ -335,10 +335,10 @@ class LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 8),
                     TextButton.icon(
                       onPressed: () async {
-                        final navigator = context;
                         await FirebaseAuth.instance.signOut();
-                        if (!mounted) return;
-                        navigator.go('/device-change');
+                        if (mounted) {
+                          context.go('/device-change');
+                        }
                       },
                       icon: const Icon(
                         Icons.devices,

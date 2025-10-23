@@ -137,10 +137,10 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () async {
-            final navigator = context;
             await FirebaseAuth.instance.signOut();
-            if (!mounted) return;
-            navigator.go('/login');
+            if (mounted) {
+              context.go('/login');
+            }
           },
         ),
       ),
@@ -339,10 +339,10 @@ class _DeviceChangeScreenState extends State<DeviceChangeScreen> {
                     // Vissza a bejelentkezéshez link
                     TextButton(
                       onPressed: () async {
-                        final navigator = context;
                         await FirebaseAuth.instance.signOut();
-                        if (!mounted) return;
-                        navigator.go('/login');
+                        if (mounted) {
+                          context.go('/login');
+                        }
                       },
                       child: Text(
                         'Vissza a bejelentkezéshez',

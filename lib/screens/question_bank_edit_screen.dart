@@ -469,9 +469,13 @@ class _QuestionBankEditScreenState extends State<QuestionBankEditScreen> {
                 child: Row(
                   children: [
                     _selectedMode == 'single'
+                        // ignore: deprecated_member_use
                         ? Radio<bool>(
+                            // ignore: deprecated_member_use
                             value: true,
+                            // ignore: deprecated_member_use
                             groupValue: option['isCorrect'] as bool? ?? false,
+                            // ignore: deprecated_member_use
                             onChanged: (value) => setState(() {
                               for (var opt in options) {
                                 opt['isCorrect'] = false;

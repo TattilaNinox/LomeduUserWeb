@@ -70,6 +70,7 @@ class _UserListScreenState extends State<UserListScreen> {
         userId: user.uid,
       );
 
+      if (!mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       if (result.success && result.paymentUrl != null) {
         messenger.showSnackBar(
@@ -82,6 +83,7 @@ class _UserListScreenState extends State<UserListScreen> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Hiba: $e')),
       );
