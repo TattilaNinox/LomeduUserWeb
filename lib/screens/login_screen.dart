@@ -357,7 +357,8 @@ class LoginScreenState extends State<LoginScreen> {
                           Icon(
                             Icons.info_outline,
                             size: 13,
-                            color: const Color(0xFF1E3A8A).withValues(alpha: 0.5),
+                            color:
+                                const Color(0xFF1E3A8A).withValues(alpha: 0.5),
                           ),
                           const SizedBox(width: 6),
                           Text(

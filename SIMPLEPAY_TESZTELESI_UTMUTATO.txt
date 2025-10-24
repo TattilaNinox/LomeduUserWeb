@@ -1,0 +1,785 @@
+================================================================================
+  LOMEDU USER WEB - SIMPLEPAY INTEGRÁCIÓS TESZTELÉSI ÚTMUTATÓ
+  SimplePay IT Support Teszteléshez
+  2025.10.24
+================================================================================
+
+TARTALOMJEGYZÉK
+---------------
+1. Bevezetés és Elérhetőségek
+2. Teszt Felhasználó Adatok
+3. SimplePay 9.6 Követelmények Teljesítése
+4. Tesztelési Lépések (9.6.1 - 9.6.6)
+5. Speciális Teszt Eszközök
+6. Backend Implementáció Részletek
+7. IPN/Webhook Konfiguráció
+8. Audit és Monitoring
+9. Várható Eredmények
+10. Hibaelhárítás
+
+
+================================================================================
+1. BEVEZETÉS ÉS ELÉRHETŐSÉGEK
+================================================================================
+
+PROJEKT NEVE: Lomedu User Web
+DOMAIN: https://lomedu-user-web.web.app
+SIMPLEPAY KÖRNYEZET: Sandbox (tesztelés) → Production (élesítés)
+
+ALKALMAZÁS TÍPUSA: Flutter Web (Progressive Web App)
+FIZETÉSI MÓDSZER: OTP SimplePay v2.1 API
+MERCHANT ID: [Sandbox és Production külön]
+
+FEJLESZTŐ ELÉRHETŐSÉG:
+  Email: info@lomedu.hu
+  Technikai kapcsolattartó: [Név]
+
+DOKUMENTÁCIÓ:
+  - SimplePay Spec: PaymentService_SimplePay_2.x_Payment_HU_251006.pdf
+  - Implementációs útmutató: OTP_SIMPLEPAY_INTEGRATION_GUIDE.md
+  - Audit eredmények: docs/SIMPLEPAY_ELES_AUDIT_EREDMENYEK.md
+
+
+================================================================================
+2. TESZT FELHASZNÁLÓ ADATOK
+================================================================================
+
+TESZT ACCOUNT (SimplePay IT Teszteléshez):
+──────────────────────────────────────────────────────────────────
+  Email:    lomeduteszt@gmail.com
+  Jelszó:   Lomeduteszt55!
+  Típus:    Teszt felhasználó (speciális jogosultságokkal)
+──────────────────────────────────────────────────────────────────
+
+BEJELENTKEZÉSI URL:
+  https://lomedu-user-web.web.app/login
+
+BEJELENTKEZÉS LÉPÉSEI:
+  1. Nyissa meg a fenti URL-t
+  2. Email mező: lomeduteszt@gmail.com
+  3. Jelszó mező: Lomeduteszt55!
+  4. "Bejelentkezés" gomb
+
+FONTOS:
+  - Ez a teszt felhasználó SPECIÁLIS jogosultságokkal rendelkezik
+  - Release build-ben is látja a "Teszt eszközök" szekciót
+  - Ezzel lehet tesztelni az email értesítéseket és előfizetési állapotokat
+
+
+================================================================================
+3. SIMPLEPAY 9.6 KÖVETELMÉNYEK TELJESÍTÉSE
+================================================================================
+
+A Lomedu User Web alkalmazás 100%-ban megfelel a SimplePay v2.1 
+specifikációnak és a 9.6 tesztelési protokollnak.
+
+┌──────────────────────────────────────────────────────────────────┐
+│ KÖVETELMÉNY              │ STÁTUSZ  │ IMPLEMENTÁCIÓ HELYE         │
+├──────────────────────────────────────────────────────────────────┤
+│ 9.6.1 Sikeres tranzakció │ ✅ KÉSZ  │ Backend + Frontend Dialog   │
+│ 9.6.2 Sikertelen         │ ✅ KÉSZ  │ Backend + Frontend Dialog   │
+│ 9.6.3 Időtúllépés        │ ✅ KÉSZ  │ Backend + Frontend Dialog   │
+│ 9.6.4 Megszakított       │ ✅ KÉSZ  │ Backend + Frontend Dialog   │
+│ 9.6.5 SimplePay Logo     │ ✅ KÉSZ  │ Account oldal (látható)     │
+│ 9.6.6 Adattovábbítás     │ ✅ KÉSZ  │ Dialog + Backend validáció  │
+└──────────────────────────────────────────────────────────────────┘
+
+ÖSSZESÍTETT MEGFELELŐSÉG: ✅ 100%
+
+
+================================================================================
+4. TESZTELÉSI LÉPÉSEK (SimplePay 9.6 Protokoll Szerint)
+================================================================================
+
+ELŐKÉSZÍTÉS:
+────────────
+1. Bejelentkezés: lomeduteszt@gmail.com / Lomeduteszt55!
+2. Navigálás: Fiók adatok menüpont
+3. Görgetés: SimplePay logo látható a lap alján
+
+
+4.1 TESZT: 9.6.1 SIKERES TRANZAKCIÓ
+═══════════════════════════════════════════════════════════════════
+
+LÉPÉSEK:
+────────
+1. Fiók adatok oldalon: "Előfizetés megújítása" gomb (nagy, kék)
+2. Kattintás a gombra
+3. Megjelenik: "Adattovábbítási nyilatkozat" dialog
+   ✅ ELLENŐRIZENDŐ:
+      - Megjelenik a nyilatkozat szövege
+      - "Elfogadom" checkbox van
+      - "Nem fogadom el" és "Elfogadom és fizetek" gombok
+4. "Elfogadom" checkbox bejelölése
+5. "Elfogadom és fizetek" gomb
+6. SimplePay fizetőoldalra redirect
+7. Teszt kártya adatok megadása:
+   ┌─────────────────────────────────────────┐
+   │ Kártyaszám: 4000 0000 0000 0002         │
+   │ Lejárat: 12/25 (bármely jövőbeli)       │
+   │ CVV: 123                                 │
+   │ Név: Test User                           │
+   └─────────────────────────────────────────┘
+8. "Fizetés" gomb megnyomása
+9. Várakozás az authorizációra (1-2 mp)
+10. Automatikus visszairányítás a Lomedu oldalra
+
+ELVÁRT EREDMÉNY (9.6.1 Követelmény):
+────────────────────────────────────
+✅ Visszairányítás URL: /account?payment=success&orderRef=WEB_...
+✅ Megjelenik egy Dialog:
+   ┌────────────────────────────────────────┐
+   │ [🟢] Sikeres tranzakció                │
+   │                                        │
+   │ A fizetés sikeresen megtörtént!        │
+   │ Előfizetése aktiválva lett...          │
+   │                                        │
+   │ SimplePay tranzakcióazonosító:         │
+   │ WEB_xxxxx_xxxxxxxxxx                   │
+   │                                        │
+   │ [ Rendben ]                            │
+   └────────────────────────────────────────┘
+
+✅ IPN üzenet fogadása (backend):
+   - Firebase Functions log-ban látszik:
+     "[simplepayWebhook] updated payment to COMPLETED"
+
+✅ Előfizetés aktiválva:
+   - Fiók adatok oldalon: "Aktív előfizetés" státusz
+   - Lejárati dátum: 30 nappal későbbi dátum
+
+
+4.2 TESZT: 9.6.2 SIKERTELEN TRANZAKCIÓ
+═══════════════════════════════════════════════════════════════════
+
+LÉPÉSEK:
+────────
+1-6. Ugyanaz mint sikeres tesztnél
+7. Sikertelen teszt kártya megadása:
+   ┌─────────────────────────────────────────┐
+   │ Kártyaszám: 4000 0000 0000 0119         │
+   │ Lejárat: 12/25                           │
+   │ CVV: 123                                 │
+   └─────────────────────────────────────────┘
+8. "Fizetés" gomb
+9. Bank elutasítja a tranzakciót
+10. Visszairányítás
+
+ELVÁRT EREDMÉNY (9.6.2 Követelmény - 3.13.3 Spec):
+──────────────────────────────────────────────────
+✅ Visszairányítás URL: /account?payment=fail&orderRef=WEB_...
+✅ Megjelenik részletes Dialog:
+   ┌────────────────────────────────────────┐
+   │ [🔴] Sikertelen tranzakció             │
+   │                                        │
+   │ SimplePay tranzakcióazonosító:         │
+   │ WEB_xxxxx_xxxxxxxxxx                   │
+   │                                        │
+   │ Kérjük, ellenőrizze a tranzakció       │
+   │ során megadott adatok helyességét.     │
+   │                                        │
+   │ Amennyiben minden adatot helyesen      │
+   │ adott meg, a visszautasítás okának     │
+   │ kivizsgálása érdekében kérjük,         │
+   │ szíveskedjen kapcsolatba lépni         │
+   │ kártyakibocsátó bankjával.             │
+   │                                        │
+   │ [ℹ️] Lehetséges okok:                  │
+   │     Fedezethiány, hibás adatok,        │
+   │     vagy napi limit túllépése          │
+   │                                        │
+   │ [ Bezárás ]  [ Újrapróbálás ]          │
+   └────────────────────────────────────────┘
+
+FONTOS ELLENŐRZENDŐ ELEMEK (SimplePay 3.13.3 Spec):
+───────────────────────────────────────────────────
+✅ SimplePay tranzakcióazonosító LÁTHATÓ (KÖTELEZŐ!)
+✅ Részletes tájékoztatás (adatok ellenőrzése)
+✅ Banki kapcsolatfelvételi javaslat
+✅ Lehetséges okok felsorolása (általános, NEM konkrét!)
+✅ "Újrapróbálás" gomb működik (→ /account)
+
+TILOS ELEMEK (SimplePay spec szerint):
+───────────────────────────────────────
+❌ NEM jelenik meg a pontos ok (pl. "limittúllépés")
+   → Csak általános lehetséges okok
+
+
+4.3 TESZT: 9.6.3 IDŐTÚLLÉPÉS
+═══════════════════════════════════════════════════════════════════
+
+LÉPÉSEK:
+────────
+1-6. Fizetés indítás, SimplePay oldalra redirect
+7. Fizetőoldalon: NE adjon meg kártyaadatokat!
+8. Várjon 30 percet (timeout beállítás)
+9. Automatikus visszairányítás időtúllépés után
+
+ELVÁRT EREDMÉNY (9.6.3 Követelmény - 3.13.2 Spec):
+──────────────────────────────────────────────────
+✅ Visszairányítás URL: /account?payment=timeout&orderRef=WEB_...
+✅ Megjelenik reszponzív Dialog:
+   ┌────────────────────────────────────────┐
+   │ [🟠] Időtúllépés                       │
+   │                                        │
+   │ Ön túllépte a tranzakció elindításának │
+   │ lehetséges maximális idejét.           │
+   │                                        │
+   │ A fizetési időkeret (30 perc) lejárt,  │
+   │ mielőtt elindította volna a fizetést.  │
+   │ A tranzakció nem jött létre, így       │
+   │ bankkártyája nem lett terhelve.        │
+   │                                        │
+   │ [✅] Biztosítjuk: Nem történt          │
+   │      pénzügyi terhelés.                │
+   │                                        │
+   │ [ Bezárás ]  [ Új fizetés indítása ]   │
+   └────────────────────────────────────────┘
+
+FONTOS ELLENŐRZENDŐ (SimplePay 3.13.2 Spec):
+────────────────────────────────────────────
+✅ "Ön túllépte..." vagy "Időtúllépés" szöveg
+✅ Magyarázat: 30 perces időkeret
+✅ Biztosítás: "Nem történt pénzügyi terhelés"
+❌ NINCS SimplePay tranzakcióazonosító (HELYES! Nem volt fizetés!)
+❌ NINCS "sikertelen fizetés" szöveg (HELYES!)
+✅ Dialog reszponzív (max 500px széles, scrollozható)
+
+
+4.4 TESZT: 9.6.4 MEGSZAKÍTOTT TRANZAKCIÓ
+═══════════════════════════════════════════════════════════════════
+
+LÉPÉSEK:
+────────
+1-6. Fizetés indítás, SimplePay oldalra redirect
+7. Fizetőoldalon: "Vissza" gomb megnyomása
+8. Automatikus visszairányítás
+
+ELVÁRT EREDMÉNY (9.6.4 Követelmény - 3.13.1 Spec):
+──────────────────────────────────────────────────
+✅ Visszairányítás URL: /account?payment=cancelled&orderRef=WEB_...
+✅ Megjelenik reszponzív Dialog:
+   ┌────────────────────────────────────────┐
+   │ [⚪] Megszakított fizetés              │
+   │                                        │
+   │ Ön megszakította a fizetést.           │
+   │                                        │
+   │ A fizetési folyamat megszakításra      │
+   │ került (a "Vissza" gomb megnyomásával  │
+   │ vagy a böngésző bezárásával).          │
+   │ A tranzakció nem jött létre.           │
+   │                                        │
+   │ [✅] Biztosítjuk: Nem történt          │
+   │      pénzügyi terhelés.                │
+   │                                        │
+   │ [ Bezárás ]  [ Új fizetés indítása ]   │
+   └────────────────────────────────────────┘
+
+FONTOS ELLENŐRZENDŐ (SimplePay 3.13.1 Spec):
+────────────────────────────────────────────
+✅ "Ön megszakította..." vagy "Megszakított fizetés" szöveg
+✅ Magyarázat: Vissza gomb / böngésző bezárás
+✅ Biztosítás: "Nem történt pénzügyi terhelés"
+❌ NINCS SimplePay tranzakcióazonosító (HELYES! Nem volt fizetés!)
+❌ NINCS "sikertelen fizetés" szöveg (HELYES!)
+✅ Dialog reszponzív (max 500px széles, scrollozható)
+
+
+4.5 TESZT: 9.6.5 SIMPLEPAY LOGO MEGJELENÍTÉSE
+═══════════════════════════════════════════════════════════════════
+
+LÉPÉSEK:
+────────
+1. Bejelentkezés
+2. Navigálás: Fiók adatok
+3. Görgetés a lap aljára
+
+ELVÁRT EREDMÉNY (9.6.5 Követelmény - 7. Fejezet Spec):
+───────────────────────────────────────────────────────
+✅ SimplePay logo látható:
+   - Helye: Fiók adatok oldal, "Előfizetés megújítása" gomb után
+   - Méret: Reszponzív (mobil: 90%, tablet: 450px, desktop: 482px)
+   - Kép: simplepay_bankcard_logos_left_482x40_new.jpg
+
+✅ Logo link működik:
+   - Kattintható (nem kötelező tesztelni)
+   - Célja: Fizetési tájékoztató (SimplePay követelmény)
+
+
+4.6 TESZT: 9.6.6 ADATTOVÁBBÍTÁSI NYILATKOZAT
+═══════════════════════════════════════════════════════════════════
+
+LÉPÉSEK:
+────────
+1. Bejelentkezés
+2. Fiók adatok → "Előfizetés megújítása" gomb
+3. Megjelenik a nyilatkozat dialog
+
+ELVÁRT EREDMÉNY (9.6.6 Követelmény - 8. Fejezet Spec):
+───────────────────────────────────────────────────────
+✅ Adattovábbítási nyilatkozat Dialog megjelenik:
+   ┌────────────────────────────────────────┐
+   │ Adattovábbítási nyilatkozat            │
+   │                                        │
+   │ [Teljes szöveg a SimplePay spec        │
+   │  8. fejezet szerint, magyar nyelven]   │
+   │                                        │
+   │ Tudomásul veszem, hogy a(z)...         │
+   │ SimplePay Zrt., mint adatfeldolgozó... │
+   │                                        │
+   │ ☐ Elfogadom                            │
+   │                                        │
+   │ [ Nem fogadom el ] [ Elfogadom és...] │
+   └────────────────────────────────────────┘
+
+✅ Backend validáció:
+   - Ha nincs elfogadva → Hiba: "Adattovábbítási nyilatkozat szükséges"
+   - Firestore mező: dataTransferConsentLastAcceptedDate
+   - Egyszer elfogadva → később nem kérdezi újra
+
+
+================================================================================
+5. SPECIÁLIS TESZT ESZKÖZÖK (lomeduteszt@gmail.com felhasználónak)
+================================================================================
+
+HOZZÁFÉRÉS:
+───────────
+Bejelentkezés után: Fiók adatok oldal
+Görgetés: A lap aljára
+Szekció: "Teszt eszközök" (csak lomeduteszt@gmail.com látja!)
+
+ELÉRHETŐ GOMBOK:
+────────────────
+
+┌──────────────────────────────────────────────────────────────────┐
+│ 1. "3 napos lejárat" gomb (NARANCS)                              │
+├──────────────────────────────────────────────────────────────────┤
+│ FUNKCIÓ:                                                         │
+│   - Beállítja az előfizetést 3 napos lejáratra                   │
+│   - Automatikusan elküldi az "expiry_warning" emailt             │
+│   - Teszteli az automatikus email értesítési rendszert           │
+│                                                                  │
+│ HASZNÁLAT:                                                       │
+│   1. Kattintás a "3 napos lejárat" gombra                        │
+│   2. Megerősítés: "Beállítás" gomb                               │
+│   3. Email kiküldése: lomeduteszt@gmail.com-ra                   │
+│   4. Ellenőrzés: Email beérkezett?                               │
+│      Tárgy: "Előfizetésed hamarosan lejár - 3 nap hátra"         │
+│                                                                  │
+│ VÁRHATÓ EMAIL TARTALOM:                                          │
+│   Kedves Felhasználó!                                            │
+│   Előfizetésed 3 nap múlva lejár. Ne maradj le...                │
+│   Link: https://lomedu-user-web.web.app/subscription            │
+│                                                                  │
+│ FIRESTORE VÁLTOZÁSOK:                                            │
+│   - subscriptionEndDate: [MA + 3 NAP]                            │
+│   - lastReminder.expiry_warning: [TIMESTAMP]                     │
+└──────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────┐
+│ 2. "Lejárt állapot" gomb (PIROS)                                │
+├──────────────────────────────────────────────────────────────────┤
+│ FUNKCIÓ:                                                         │
+│   - Beállítja az előfizetést lejárt állapotra                    │
+│   - Automatikusan elküldi az "expired" emailt                    │
+│   - Teszteli a lejárat utáni értesítési rendszert                │
+│                                                                  │
+│ HASZNÁLAT:                                                       │
+│   1. Kattintás a "Lejárt állapot" gombra                         │
+│   2. Megerősítés: "Beállítás" gomb                               │
+│   3. Email kiküldése                                             │
+│   4. Ellenőrzés: Email beérkezett?                               │
+│      Tárgy: "Előfizetésed lejárt - Újítsd meg most!"             │
+│                                                                  │
+│ VÁRHATÓ EMAIL TARTALOM:                                          │
+│   Kedves Felhasználó!                                            │
+│   Előfizetésed lejárt. Újítsd meg most...                        │
+│                                                                  │
+│ FIRESTORE VÁLTOZÁSOK:                                            │
+│   - subscriptionEndDate: [MA - 1 NAP]                            │
+│   - isSubscriptionActive: false                                  │
+│   - subscriptionStatus: 'expired'                                │
+│   - lastReminder.expired: [TIMESTAMP]                            │
+└──────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────┐
+│ 3. "Reset (ingyenes állapot)" gomb (KÉK)                        │
+├──────────────────────────────────────────────────────────────────┤
+│ FUNKCIÓ:                                                         │
+│   - Visszaállítja az előfizetést ingyenes (free) állapotra       │
+│   - Törli az email emlékeztetőket (újra lehet tesztelni)         │
+│   - Tiszta állapot létrehozása újabb tesztekhez                  │
+│                                                                  │
+│ HASZNÁLAT:                                                       │
+│   1. Kattintás a "Reset (ingyenes állapot)" gombra               │
+│   2. Megerősítés: "Visszaállítás" gomb                           │
+│   3. Előfizetés törlése                                          │
+│                                                                  │
+│ FIRESTORE VÁLTOZÁSOK:                                            │
+│   - isSubscriptionActive: false                                  │
+│   - subscriptionStatus: 'free'                                   │
+│   - subscriptionEndDate: null                                    │
+│   - subscription: null                                           │
+│   - lastReminder: törölve                                        │
+└──────────────────────────────────────────────────────────────────┘
+
+
+TESZT FORGATÓKÖNYV (EMAIL DUPLIKÁTUM VÉDELEM TESZTELÉSE):
+──────────────────────────────────────────────────────────
+1. "3 napos lejárat" gomb → Email KIKÜLDVE ✅
+2. "3 napos lejárat" gomb ÚJRA → Email NEM KÜLDVE (duplikátum!) ✅
+3. "Reset" gomb → lastReminder törölve
+4. "3 napos lejárat" gomb → Email ÚJRA KIKÜLDVE ✅
+
+Ez garantálja, hogy felhasználónként szigorúan 1-1 email kerül kiküldésre!
+
+
+================================================================================
+6. BACKEND IMPLEMENTÁCIÓ RÉSZLETEK
+================================================================================
+
+CLOUD FUNCTIONS (Firebase Functions, europe-west1 régió):
+──────────────────────────────────────────────────────────
+
+1. initiateWebPayment
+   ────────────────────
+   Típus: Callable (HTTPS)
+   Input: { planId, userId }
+   Funkció:
+     - Ellenőrzi: adattovábbítási nyilatkozat elfogadva?
+     - SimplePay START API hívás
+     - Fizetőoldal URL generálás
+     - web_payments Firestore dokumentum létrehozás
+   Output: { success, paymentUrl, orderRef, amount }
+
+2. simplepayWebhook
+   ────────────────
+   Típus: HTTP (onRequest)
+   URL: https://europe-west1-orlomed-f8f9f.cloudfunctions.net/simplepayWebhook
+   Funkció:
+     - SimplePay IPN üzenet fogadása
+     - Aláírás validálás (HMAC-SHA384, timingSafeEqual)
+     - Előfizetés aktiválás
+     - IPN Confirm válasz (receiveDate + Signature header)
+   Spec: SimplePay 3.14 fejezet (IPN)
+
+3. confirmWebPayment
+   ─────────────────
+   Típus: Callable
+   Input: { orderRef }
+   Funkció:
+     - SimplePay QUERY API hívás
+     - Tranzakció státusz lekérdezés
+     - Előfizetés aktiválás (ha SUCCESS)
+   Output: { success, status }
+
+4. queryPaymentStatus
+   ──────────────────
+   Típus: Callable
+   Input: { orderRef }
+   Funkció:
+     - Manuális státusz lekérdezés
+     - SimplePay QUERY API
+     - Auto-complete ha sikeres de még nem frissült
+   Output: { success, status, transactionId, details }
+
+5. checkSubscriptionExpiryScheduled
+   ─────────────────────────────────
+   Típus: Scheduled (Cron: 0 2 * * *)
+   Futás: Minden nap 02:00 (Europe/Budapest)
+   Funkció:
+     - 1-3 nap múlva lejáró előfizetések keresése
+     - expiry_warning email küldése
+     - Lejárt előfizetések keresése
+     - expired email küldése
+     - Duplikátum védelem (lastReminder mező)
+
+
+ALÁÍRÁSI MECHANIZMUS (SimplePay 3.2 Spec):
+───────────────────────────────────────────
+Algoritmus: HMAC-SHA384
+Encoding: Base64
+Header név: "Signature"
+Validáció: crypto.timingSafeEqual (timing attack védelem)
+
+START kérés példa:
+  Body: JSON string (salt, merchant, orderRef, currency, ...)
+  Signature: HMAC-SHA384(SECRET_KEY, body) → Base64
+
+IPN válasz példa:
+  Body: { receiveDate: ISO 8601 timestamp }
+  Signature: HMAC-SHA384(SECRET_KEY, body) → Base64
+
+
+TIMEOUT FORMÁTUM (SimplePay 3.3 Spec):
+───────────────────────────────────────
+Format: ISO 8601, milliszekundumok nélkül
+Példa: 2025-10-24T14:30:00Z
+Beállítás: 30 perc a jövőben
+
+Kód:
+  const timeout = new Date(Date.now() + 30 * 60 * 1000)
+    .toISOString()
+    .replace(/\.\d{3}Z$/, 'Z');
+
+
+KÖRNYEZETEK (SimplePay 1.7 Spec):
+──────────────────────────────────
+Sandbox: https://sandbox.simplepay.hu/payment/v2/
+Production: https://secure.simplepay.hu/payment/v2/
+
+Váltás: SIMPLEPAY_ENV environment variable (sandbox/production)
+
+
+================================================================================
+7. IPN/WEBHOOK KONFIGURÁCIÓ
+================================================================================
+
+WEBHOOK URL (SimplePay Admin-ban beállítandó):
+───────────────────────────────────────────────
+https://europe-west1-orlomed-f8f9f.cloudfunctions.net/simplepayWebhook
+
+FIREBASE HOSTING ROUTING (firebase.json):
+──────────────────────────────────────────
+{
+  "source": "/api/webhook/simplepay",
+  "function": {
+    "functionId": "simplepayWebhook",
+    "region": "europe-west1",
+    "pinTag": true
+  }
+}
+
+IPN CONFIRM VÁLASZ (SimplePay 3.14 - KÖTELEZŐ!):
+─────────────────────────────────────────────────
+Response Body:
+  {
+    "receiveDate": "2025-10-24T12:34:56+02:00"
+  }
+
+Response Headers:
+  Content-Type: application/json; charset=utf-8
+  Signature: [HMAC-SHA384 base64]
+
+Ez teljes mértékben megfelel a SimplePay v2.1 specifikációnak!
+
+
+================================================================================
+8. AUDIT ÉS MONITORING
+================================================================================
+
+AUDIT LOG (Firestore Kollekció: payment_audit_logs):
+─────────────────────────────────────────────────────
+Minden fizetési tranzakció naplózva van:
+
+Rekord struktúra:
+  {
+    userId: "user123",
+    orderRef: "WEB_user123_1234567890",
+    action: "PAYMENT_INITIATED" | "PAYMENT_CONFIRMED" | 
+            "WEBHOOK_RECEIVED" | "PAYMENT_INITIATION_FAILED",
+    planId: "monthly_premium_prepaid",
+    amount: 4350,
+    environment: "sandbox" | "production",
+    timestamp: Firestore Timestamp,
+    metadata: {
+      simplePayTransactionId: "...",
+      userEmail: "...",
+      errorCodes: [],
+      ...
+    }
+  }
+
+ELLENŐRZÉS:
+  Firebase Console → Firestore → payment_audit_logs kollekció
+  Minden teszt tranzakció bejegyzést hoz létre!
+
+
+CLOUD FUNCTIONS LOGS:
+──────────────────────
+Firebase Console → Functions → Logs
+
+Keresendő log bejegyzések:
+  [initiateWebPayment] input { planId, userId }
+  [simplepayWebhook] received { status, orderRef }
+  [simplepayWebhook] updated payment to COMPLETED
+  [queryPaymentStatus] auto-completed payment
+
+
+================================================================================
+9. VÁRHATÓ EREDMÉNYEK (TESZTELÉS SORÁN)
+================================================================================
+
+9.6.1 SIKERES TRANZAKCIÓ - TELJES FOLYAMAT:
+════════════════════════════════════════════
+
+1. Fizetés indítás
+   → Frontend log: "Adattovábbítási nyilatkozat elfogadva"
+   → Backend log: "[initiateWebPayment] outgoing payload"
+
+2. SimplePay START API válasz
+   → paymentUrl generálva
+   → Firestore: web_payments/{orderRef} létrehozva (status: INITIATED)
+   → Audit log: PAYMENT_INITIATED
+
+3. SimplePay fizetőoldal
+   → Kártyaadatok megadása
+   → Authorizáció sikeres
+
+4. SimplePay IPN üzenet
+   → Backend log: "[simplepayWebhook] received { status: SUCCESS }"
+   → Aláírás validálás: SIKERES
+   → Firestore: users/{uid} előfizetés aktiválás
+   → Firestore: web_payments/{orderRef} status: COMPLETED
+   → Audit log: WEBHOOK_RECEIVED
+   → IPN Confirm válasz (receiveDate + Signature)
+
+5. Visszairányítás
+   → URL: /account?payment=success&orderRef=...
+   → Dialog megjelenítés
+   → SimplePay tranzakcióazonosító látható
+
+
+9.6.2 SIKERTELEN - TELJES FOLYAMAT:
+════════════════════════════════════
+
+1-3. Ugyanaz mint sikeres
+4. Authorizáció SIKERTELEN (4000 0000 0000 0119 kártya)
+5. Visszairányítás
+   → URL: /account?payment=fail&orderRef=...
+   → Dialog: SimplePay ID + részletes tájékoztatás
+   → Audit log: (ha van IPN sikertelen státuszról)
+
+
+9.6.3 IDŐTÚLLÉPÉS - TELJES FOLYAMAT:
+═════════════════════════════════════
+
+1-2. Ugyanaz
+3. SimplePay fizetőoldalon: VÁRJON 30+ percet
+4. Automatikus timeout
+5. Visszairányítás
+   → URL: /account?payment=timeout&orderRef=...
+   → Dialog: "Időtúllépés" + biztosítás
+   → Tranzakció státusz: TIMEOUT
+
+
+9.6.4 MEGSZAKÍTOTT - TELJES FOLYAMAT:
+══════════════════════════════════════
+
+1-2. Ugyanaz
+3. SimplePay fizetőoldalon: "Vissza" gomb
+4. Visszairányítás
+   → URL: /account?payment=cancelled&orderRef=...
+   → Dialog: "Megszakított" + biztosítás
+   → Tranzakció státusz: CANCELLED
+
+
+================================================================================
+10. HIBAELHÁRÍTÁS
+================================================================================
+
+PROBLÉMA: "Adattovábbítási nyilatkozat hiányzik" hiba
+──────────────────────────────────────────────────────
+OK: Backend validáció működik
+MEGOLDÁS:
+  1. Fizetés indításnál megjelenik a dialog
+  2. "Elfogadom" checkbox bejelölése
+  3. "Elfogadom és fizetek" gomb
+
+PROBLÉMA: SimplePay logo nem látható
+──────────────────────────────────────
+OK: Még nincs lescrollozva
+MEGOLDÁS: Görgess le a Fiók adatok oldalon
+
+
+PROBLÉMA: IPN webhook nem érkezik meg
+──────────────────────────────────────
+ELLENŐRZÉS:
+  1. SimplePay Admin Panel → Technikai adatok
+  2. IPN URL beállítva:
+     https://europe-west1-orlomed-f8f9f.cloudfunctions.net/simplepayWebhook
+  3. Firebase Functions logs:
+     firebase functions:log --only simplepayWebhook
+
+PROBLÉMA: Teszt gombok nem látszanak
+─────────────────────────────────────
+ELLENŐRZÉS:
+  1. Bejelentkezett felhasználó: lomeduteszt@gmail.com?
+  2. Fiók adatok oldal: lescrollozva a lap aljára?
+  
+  Ha továbbra sem látszik:
+    - Ellenőrizd az email címet (kis/nagybetű!)
+    - Build újra: flutter build web --release
+
+
+PROBLÉMA: Email nem érkezik meg (teszt gombok)
+───────────────────────────────────────────────
+ELLENŐRZÉS:
+  1. Email cím: lomeduteszt@gmail.com helyes?
+  2. SPAM mappában van?
+  3. Firebase Functions log:
+     "Subscription reminder email sent to lomeduteszt@gmail.com"
+  4. SMTP konfiguráció: functions/index.js (mail.lomedu.hu)
+
+
+================================================================================
+ÖSSZEFOGLALÁS - TESZTELŐ SZÁMÁRA
+================================================================================
+
+BEJELENTKEZÉSI ADATOK:
+  URL: https://lomedu-user-web.web.app/login
+  Email: lomeduteszt@gmail.com
+  Jelszó: Lomeduteszt55!
+
+KÖTELEZŐ TESZTEK (SimplePay 9.6):
+  ✅ 9.6.1 Sikeres fizetés (4000 0000 0000 0002)
+  ✅ 9.6.2 Sikertelen fizetés (4000 0000 0000 0119)
+  ✅ 9.6.3 Időtúllépés (várakozás > 30 perc)
+  ✅ 9.6.4 Megszakított (Vissza gomb)
+  ✅ 9.6.5 SimplePay logo látható
+  ✅ 9.6.6 Adattovábbítási nyilatkozat
+
+SPECIÁLIS TESZTEK (Email rendszer):
+  ✅ "3 napos lejárat" gomb → expiry_warning email
+  ✅ "Lejárt állapot" gomb → expired email
+  ✅ Duplikátum védelem tesztelése
+  ✅ "Reset" gomb → újra tesztelhetőség
+
+BACKEND ELLENŐRZÉS:
+  ✅ IPN webhook működés (Functions logs)
+  ✅ Audit log bejegyzések (Firestore)
+  ✅ Aláírás validálás
+  ✅ Timeout formátum
+
+STÁTUSZ: PRODUCTION READY
+  - SimplePay 9.6 protokoll: 100% MEGFELEL
+  - Backend implementáció: TELJES
+  - Frontend dialógok: TELJES
+  - Email rendszer: MŰKÖDIK
+  - Teszt eszközök: ELÉRHETŐ (lomeduteszt@gmail.com)
+
+KÖVETKEZŐ LÉPÉS: SimplePay IT Support élesítési teszt ✅
+
+
+================================================================================
+KAPCSOLATFELVÉTEL
+================================================================================
+
+Kérdés esetén:
+  Email: info@lomedu.hu
+  SimplePay support: itsupport@simplepay.com
+
+Technikai dokumentáció:
+  - docs/SIMPLEPAY_ELES_AUDIT_EREDMENYEK.md
+  - OTP_SIMPLEPAY_INTEGRATION_GUIDE.md
+  - SIMPLEPAY_ELES_GYORSINDITO.md
+
+
+================================================================================
+VÉG - SimplePay Tesztelési Útmutató
+Készítve: 2025.10.24
+Verzió: 1.0.1+2
+SimplePay API: v2.1
+Státusz: PRODUCTION READY ✅
+================================================================================
+
