@@ -15,7 +15,7 @@ import 'dart:convert';
 class VersionCheckService {
   /// A jelenlegi alkalmazás verzió (pubspec.yaml-ból)
   static const String currentVersion = '1.0.0+15';
-  
+
   // Private getter a backward compatibility miatt
   static const String _currentVersion = currentVersion;
   static const Duration _checkInterval = Duration(minutes: 5);
@@ -57,30 +57,40 @@ class VersionCheckService {
   /// Beállítja a felhasználói aktivitás figyelőket
   void _setupActivityListeners() {
     // Egér mozgás
-    web.window.addEventListener('mousemove', ((web.Event event) {
-      _lastActivityTime = DateTime.now();
-    }).toJS);
+    web.window.addEventListener(
+        'mousemove',
+        ((web.Event event) {
+          _lastActivityTime = DateTime.now();
+        }).toJS);
 
     // Billentyűzet
-    web.window.addEventListener('keydown', ((web.Event event) {
-      _lastActivityTime = DateTime.now();
-    }).toJS);
+    web.window.addEventListener(
+        'keydown',
+        ((web.Event event) {
+          _lastActivityTime = DateTime.now();
+        }).toJS);
 
     // Scroll események
-    web.window.addEventListener('scroll', ((web.Event event) {
-      _lastActivityTime = DateTime.now();
-      _lastScrollTime = DateTime.now();
-    }).toJS);
+    web.window.addEventListener(
+        'scroll',
+        ((web.Event event) {
+          _lastActivityTime = DateTime.now();
+          _lastScrollTime = DateTime.now();
+        }).toJS);
 
     // Touch események (mobil)
-    web.window.addEventListener('touchstart', ((web.Event event) {
-      _lastActivityTime = DateTime.now();
-    }).toJS);
+    web.window.addEventListener(
+        'touchstart',
+        ((web.Event event) {
+          _lastActivityTime = DateTime.now();
+        }).toJS);
 
     // Click események
-    web.window.addEventListener('click', ((web.Event event) {
-      _lastActivityTime = DateTime.now();
-    }).toJS);
+    web.window.addEventListener(
+        'click',
+        ((web.Event event) {
+          _lastActivityTime = DateTime.now();
+        }).toJS);
   }
 
   /// Elindítja a periodikus verzió ellenőrzést
@@ -166,6 +176,9 @@ class VersionCheckService {
       '/deck/',
       '/study',
       '/quiz/',
+      '/note/',              // Jegyzet olvasás
+      '/read/note/',         // Jegyzet olvasás (alternatív route)
+      '/interactive-note/',  // Interaktív jegyzet
     ];
 
     for (final route in criticalRoutes) {
