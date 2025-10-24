@@ -357,7 +357,7 @@ class LoginScreenState extends State<LoginScreen> {
                           Icon(
                             Icons.info_outline,
                             size: 13,
-                            color: const Color(0xFF1E3A8A).withOpacity(0.5),
+                            color: const Color(0xFF1E3A8A).withValues(alpha: 0.5),
                           ),
                           const SizedBox(width: 6),
                           Text(
@@ -366,7 +366,7 @@ class LoginScreenState extends State<LoginScreen> {
                               fontFamily: 'Inter',
                               fontSize: 11,
                               fontWeight: FontWeight.w400,
-                              color: Colors.black.withOpacity(0.4),
+                              color: Colors.black.withValues(alpha: 0.4),
                               letterSpacing: 0.3,
                             ),
                           ),

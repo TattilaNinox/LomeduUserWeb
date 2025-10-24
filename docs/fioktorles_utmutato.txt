@@ -8,7 +8,7 @@ Ez a dokumentum bemutatja, mi történik, amikor törlöd a Lomedu fiókodat, ak
 
 1.  **Kezdeményezés**: A fiókod törlését az alkalmazásban indíthatod el:
     -   **Webalkalmazásban**: A **"Fiók adatok"** oldalon, a **"Fiók végleges törlése"** gombra kattintva.
-    -   **Mobilalkalmazásban**: A **"Beállítások"** menüpontban, a **"Fiók végleges törlése"** opcióval.
+    -   **Mobilalkalmazásban**: A menüben a **"Fiók végleges törlése"** opcióval.
 2.  **Figyelmeztetés**: Egy ablakban megerősítést kérünk, hogy biztosan törölni szeretnéd-e a fiókodat. Felhívjuk a figyelmed, hogy a művelet végleges és nem vonható vissza.
 3.  **Jelszó-megerősítés**: Biztonsági okokból meg kell adnod a jelszavadat a törlés véglegesítéséhez.
 4.  **Törlés**: A jelszó megerősítése után a rendszerünk automatikusan és véglegesen törli az összes hozzád kapcsolódó adatot.

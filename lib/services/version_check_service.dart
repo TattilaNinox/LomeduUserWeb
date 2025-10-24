@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'dart:html' as html;
+import 'package:web/web.dart' as web;
+import 'dart:js_interop';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -13,7 +14,7 @@ import 'dart:convert';
 /// - Nem frissít kritikus műveletek (kvíz, flashcard tanulás) közben
 class VersionCheckService {
   /// A jelenlegi alkalmazás verzió (pubspec.yaml-ból)
-  static const String currentVersion = '1.0.0+14';
+  static const String currentVersion = '1.0.0+15';
   
   // Private getter a backward compatibility miatt
   static const String _currentVersion = currentVersion;
@@ -56,30 +57,30 @@ class VersionCheckService {
   /// Beállítja a felhasználói aktivitás figyelőket
   void _setupActivityListeners() {
     // Egér mozgás
-    html.window.onMouseMove.listen((_) {
+    web.window.addEventListener('mousemove', ((web.Event event) {
       _lastActivityTime = DateTime.now();
-    });
+    }).toJS);
 
     // Billentyűzet
-    html.window.onKeyDown.listen((_) {
+    web.window.addEventListener('keydown', ((web.Event event) {
       _lastActivityTime = DateTime.now();
-    });
+    }).toJS);
 
     // Scroll események
-    html.window.onScroll.listen((_) {
+    web.window.addEventListener('scroll', ((web.Event event) {
       _lastActivityTime = DateTime.now();
       _lastScrollTime = DateTime.now();
-    });
+    }).toJS);
 
     // Touch események (mobil)
-    html.window.onTouchStart.listen((_) {
+    web.window.addEventListener('touchstart', ((web.Event event) {
       _lastActivityTime = DateTime.now();
-    });
+    }).toJS);
 
     // Click események
-    html.window.onClick.listen((_) {
+    web.window.addEventListener('click', ((web.Event event) {
       _lastActivityTime = DateTime.now();
-    });
+    }).toJS);
   }
 
   /// Elindítja a periodikus verzió ellenőrzést
@@ -158,7 +159,7 @@ class VersionCheckService {
   /// Ellenőrzi, hogy biztonságos-e az oldal újratöltése
   bool _isSafeToReload() {
     // Jelenlegi URL ellenőrzése
-    final currentPath = html.window.location.pathname ?? '';
+    final currentPath = web.window.location.pathname;
 
     // Ne frissítsen kritikus útvonalakon
     final criticalRoutes = [
@@ -175,9 +176,9 @@ class VersionCheckService {
     }
 
     // Ellenőrzi, hogy van-e fókuszált input mező
-    final activeElement = html.document.activeElement;
-    if (activeElement is html.InputElement ||
-        activeElement is html.TextAreaElement) {
+    final activeElement = web.document.activeElement;
+    if (activeElement?.tagName.toLowerCase() == 'input' ||
+        activeElement?.tagName.toLowerCase() == 'textarea') {
       debugPrint('[VersionCheck] Input field is focused');
       return false;
     }
@@ -195,7 +196,7 @@ class VersionCheckService {
   /// Végrehajtja az oldal újratöltését
   void _performReload() {
     // Hard reload a teljes cache törléssel
-    html.window.location.reload();
+    web.window.location.reload();
   }
 
   /// Manuális verzió ellenőrzés triggerelése (teszteléshez)

@@ -65,7 +65,7 @@ class _NoteCardGridState extends State<NoteCardGrid> {
 
         final userData = userSnapshot.data?.data() ?? {};
         final bool hasPremiumAccess = _checkPremiumAccess(userData);
-        
+
         // FIX: Webalkalmazásban MINDIG csak "Egészségügyi kártevőírtó" tudományág
         const userScience = 'Egészségügyi kártevőírtó';
 

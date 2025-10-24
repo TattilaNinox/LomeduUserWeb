@@ -722,7 +722,8 @@ class AccountScreen extends StatelessWidget {
   }
 
   /// Sikeres fizetés dialóg (SimplePay 3.13.4 szerint)
-  static void _showPaymentSuccessDialog(BuildContext context, String? orderRef) {
+  static void _showPaymentSuccessDialog(
+      BuildContext context, String? orderRef) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -743,7 +744,8 @@ class AccountScreen extends StatelessWidget {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 16),
-            const Text('Előfizetése aktiválva lett. Most már teljes hozzáférése van minden funkcióhoz.'),
+            const Text(
+                'Előfizetése aktiválva lett. Most már teljes hozzáférése van minden funkcióhoz.'),
             if (orderRef != null) ...[
               const SizedBox(height: 16),
               Container(
@@ -906,12 +908,14 @@ class AccountScreen extends StatelessWidget {
                   // Cím
                   Row(
                     children: [
-                      Icon(Icons.access_time, color: Colors.orange[600], size: 28),
+                      Icon(Icons.access_time,
+                          color: Colors.orange[600], size: 28),
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Text(
                           'Időtúllépés',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -938,12 +942,14 @@ class AccountScreen extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.verified_user, color: Colors.green[700], size: 20),
+                        Icon(Icons.verified_user,
+                            color: Colors.green[700], size: 20),
                         const SizedBox(width: 8),
                         const Expanded(
                           child: Text(
                             'Biztosítjuk: Nem történt pénzügyi terhelés.',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w600),
                           ),
                         ),
                       ],
@@ -999,12 +1005,14 @@ class AccountScreen extends StatelessWidget {
                   // Cím
                   Row(
                     children: [
-                      Icon(Icons.cancel_outlined, color: Colors.grey[600], size: 28),
+                      Icon(Icons.cancel_outlined,
+                          color: Colors.grey[600], size: 28),
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Text(
                           'Megszakított fizetés',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -1031,12 +1039,14 @@ class AccountScreen extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.verified_user, color: Colors.green[700], size: 20),
+                        Icon(Icons.verified_user,
+                            color: Colors.green[700], size: 20),
                         const SizedBox(width: 8),
                         const Expanded(
                           child: Text(
                             'Biztosítjuk: Nem történt pénzügyi terhelés.',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w600),
                           ),
                         ),
                       ],
