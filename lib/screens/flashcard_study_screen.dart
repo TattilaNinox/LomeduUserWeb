@@ -62,7 +62,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
           final allCardIds =
               List.generate(flashcards.length, (i) => '${widget.deckId}#$i');
           const chunkSize = 30; // Firestore whereIn limit
-          
+
           // Párhuzamos query-k Future.wait()-tel
           final futures = <Future<QuerySnapshot<Map<String, dynamic>>>>[];
           for (var i = 0; i < allCardIds.length; i += chunkSize) {
@@ -78,10 +78,11 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
                 .get();
             futures.add(queryFuture);
           }
-          
+
           // PÁRHUZAMOS végrehajtás
           final results = await Future.wait(futures);
-          final learningDocs = results.expand((snapshot) => snapshot.docs).toList();
+          final learningDocs =
+              results.expand((snapshot) => snapshot.docs).toList();
 
           // Számlálók számítása az utolsó értékelések alapján
           for (final doc in learningDocs) {

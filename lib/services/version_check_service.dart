@@ -1,0 +1,205 @@
+import 'dart:async';
+import 'dart:html' as html;
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+/// Szolgáltatás az alkalmazás verzió automatikus ellenőrzéséhez és frissítéséhez.
+///
+/// Ez a szolgáltatás:
+/// - Periodikusan (5 percenként) ellenőrzi a szerverről a version.json fájlt
+/// - Figyeli a felhasználói aktivitást (egér, billentyűzet, scroll)
+/// - Automatikusan újratölti az oldalt új verzió esetén, ha a felhasználó inaktív
+/// - Nem frissít kritikus műveletek (kvíz, flashcard tanulás) közben
+class VersionCheckService {
+  /// A jelenlegi alkalmazás verzió (pubspec.yaml-ból)
+  static const String currentVersion = '1.0.0+13';
+  
+  // Private getter a backward compatibility miatt
+  static const String _currentVersion = currentVersion;
+  static const Duration _checkInterval = Duration(minutes: 5);
+  static const Duration _inactivityThreshold = Duration(minutes: 3);
+  static const Duration _recentScrollThreshold = Duration(seconds: 10);
+
+  Timer? _versionCheckTimer;
+  DateTime _lastActivityTime = DateTime.now();
+  DateTime _lastScrollTime = DateTime.now();
+  bool _isActive = false;
+
+  /// Singleton instance
+  static final VersionCheckService _instance = VersionCheckService._internal();
+  factory VersionCheckService() => _instance;
+  VersionCheckService._internal();
+
+  /// Elindítja a verzió ellenőrzést és az aktivitás figyelését
+  void start() {
+    if (_isActive) return;
+    _isActive = true;
+
+    debugPrint('[VersionCheck] Service started with version: $_currentVersion');
+
+    // Aktivitás figyelő listener-ek beállítása
+    _setupActivityListeners();
+
+    // Verzió ellenőrzés indítása
+    _startVersionCheck();
+  }
+
+  /// Leállítja a szolgáltatást
+  void stop() {
+    _isActive = false;
+    _versionCheckTimer?.cancel();
+    _versionCheckTimer = null;
+    debugPrint('[VersionCheck] Service stopped');
+  }
+
+  /// Beállítja a felhasználói aktivitás figyelőket
+  void _setupActivityListeners() {
+    // Egér mozgás
+    html.window.onMouseMove.listen((_) {
+      _lastActivityTime = DateTime.now();
+    });
+
+    // Billentyűzet
+    html.window.onKeyDown.listen((_) {
+      _lastActivityTime = DateTime.now();
+    });
+
+    // Scroll események
+    html.window.onScroll.listen((_) {
+      _lastActivityTime = DateTime.now();
+      _lastScrollTime = DateTime.now();
+    });
+
+    // Touch események (mobil)
+    html.window.onTouchStart.listen((_) {
+      _lastActivityTime = DateTime.now();
+    });
+
+    // Click események
+    html.window.onClick.listen((_) {
+      _lastActivityTime = DateTime.now();
+    });
+  }
+
+  /// Elindítja a periodikus verzió ellenőrzést
+  void _startVersionCheck() {
+    // Első ellenőrzés 1 perc múlva (ne azonnal induláskor)
+    Future.delayed(const Duration(minutes: 1), () {
+      if (_isActive) _checkVersion();
+    });
+
+    // Periodikus ellenőrzés 5 percenként
+    _versionCheckTimer = Timer.periodic(_checkInterval, (_) {
+      if (_isActive) _checkVersion();
+    });
+  }
+
+  /// Ellenőrzi a szerverről az elérhető verziót
+  Future<void> _checkVersion() async {
+    try {
+      // Cache bypass timestamp hozzáadása
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final url = '/version.json?t=$timestamp';
+
+      debugPrint('[VersionCheck] Checking version from: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final serverVersion = data['version'] as String?;
+
+        if (serverVersion != null && serverVersion != _currentVersion) {
+          debugPrint(
+              '[VersionCheck] New version available: $serverVersion (current: $_currentVersion)');
+          _attemptReload();
+        } else {
+          debugPrint('[VersionCheck] Version up to date: $_currentVersion');
+        }
+      } else {
+        debugPrint(
+            '[VersionCheck] Failed to check version: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('[VersionCheck] Error checking version: $e');
+    }
+  }
+
+  /// Megpróbálja újratölteni az oldalt, ha a feltételek teljesülnek
+  void _attemptReload() {
+    // Ellenőrzi, hogy biztonságos-e a frissítés
+    if (!_isSafeToReload()) {
+      debugPrint('[VersionCheck] Reload skipped - not safe to reload');
+      return;
+    }
+
+    // Ellenőrzi az inaktivitást
+    final inactiveDuration = DateTime.now().difference(_lastActivityTime);
+    if (inactiveDuration < _inactivityThreshold) {
+      debugPrint(
+          '[VersionCheck] Reload skipped - user is active (inactive for: ${inactiveDuration.inMinutes}m)');
+      return;
+    }
+
+    // Minden feltétel teljesült, újratöltés
+    debugPrint(
+        '[VersionCheck] Reloading application - new version detected and user inactive for ${inactiveDuration.inMinutes} minutes');
+    _performReload();
+  }
+
+  /// Ellenőrzi, hogy biztonságos-e az oldal újratöltése
+  bool _isSafeToReload() {
+    // Jelenlegi URL ellenőrzése
+    final currentPath = html.window.location.pathname ?? '';
+
+    // Ne frissítsen kritikus útvonalakon
+    final criticalRoutes = [
+      '/deck/',
+      '/study',
+      '/quiz/',
+    ];
+
+    for (final route in criticalRoutes) {
+      if (currentPath.contains(route)) {
+        debugPrint('[VersionCheck] On critical route: $currentPath');
+        return false;
+      }
+    }
+
+    // Ellenőrzi, hogy van-e fókuszált input mező
+    final activeElement = html.document.activeElement;
+    if (activeElement is html.InputElement ||
+        activeElement is html.TextAreaElement) {
+      debugPrint('[VersionCheck] Input field is focused');
+      return false;
+    }
+
+    // Ellenőrzi, hogy volt-e közelmúltbeli scroll
+    final timeSinceScroll = DateTime.now().difference(_lastScrollTime);
+    if (timeSinceScroll < _recentScrollThreshold) {
+      debugPrint('[VersionCheck] Recent scroll detected');
+      return false;
+    }
+
+    return true;
+  }
+
+  /// Végrehajtja az oldal újratöltését
+  void _performReload() {
+    // Hard reload a teljes cache törléssel
+    html.window.location.reload();
+  }
+
+  /// Manuális verzió ellenőrzés triggerelése (teszteléshez)
+  Future<void> checkNow() async {
+    await _checkVersion();
+  }
+}

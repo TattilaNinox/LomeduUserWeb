@@ -34,8 +34,8 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
     // Reszponzív méretek
     final screenSize = MediaQuery.of(context).size;
     final isMobile = screenSize.width < 600;
-    final dialogHeight = isMobile 
-        ? screenSize.height * 0.5  // Mobil: 50%
+    final dialogHeight = isMobile
+        ? screenSize.height * 0.5 // Mobil: 50%
         : (screenSize.height * 0.6).clamp(300.0, 500.0);
     final fontSize = isMobile ? 11.0 : 13.0;
     final titleSize = isMobile ? 13.0 : 15.0;
@@ -111,13 +111,15 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
         ),
         ElevatedButton(
           onPressed: _accepted ? () => Navigator.of(context).pop(true) : null,
-          child: Text('Elfogadom', style: TextStyle(fontSize: isMobile ? 13 : 14)),
+          child:
+              Text('Elfogadom', style: TextStyle(fontSize: isMobile ? 13 : 14)),
         ),
       ],
     );
   }
 
-  Widget _buildHungarianConsent(bool isMobile, double fontSize, double titleSize) {
+  Widget _buildHungarianConsent(
+      bool isMobile, double fontSize, double titleSize) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -155,7 +157,8 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
         ),
         SizedBox(height: isMobile ? 4 : 8),
         _buildDataRow('Név:', 'Oak Quality Kft.', isMobile, fontSize),
-        _buildDataRow('Székhely:', '2113 Erdőkertes, Bocskai utca 13.', isMobile, fontSize),
+        _buildDataRow('Székhely:', '2113 Erdőkertes, Bocskai utca 13.',
+            isMobile, fontSize),
         _buildDataRow('Cégjegyzékszám:', '13 09 084075', isMobile, fontSize),
         _buildDataRow('Adószám:', '11803010-2-13', isMobile, fontSize),
         _buildDataRow('E-mail:', 'support@lomedu.hu', isMobile, fontSize),
@@ -172,7 +175,8 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
     );
   }
 
-  Widget _buildEnglishConsent(bool isMobile, double fontSize, double titleSize) {
+  Widget _buildEnglishConsent(
+      bool isMobile, double fontSize, double titleSize) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -201,7 +205,8 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
         ),
         SizedBox(height: isMobile ? 4 : 8),
         _buildDataRow('Name:', 'Oak Quality Kft.', isMobile, fontSize),
-        _buildDataRow('Headquarters:', '2113 Erdőkertes, Bocskai u. 13.', isMobile, fontSize),
+        _buildDataRow('Headquarters:', '2113 Erdőkertes, Bocskai u. 13.',
+            isMobile, fontSize),
         _buildDataRow('Registration:', '13 09 084075', isMobile, fontSize),
         _buildDataRow('Tax number:', '11803010-2-13', isMobile, fontSize),
         _buildDataRow('Email:', 'support@lomedu.hu', isMobile, fontSize),
@@ -218,7 +223,8 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
     );
   }
 
-  Widget _buildDataRow(String label, String value, bool isMobile, double fontSize) {
+  Widget _buildDataRow(
+      String label, String value, bool isMobile, double fontSize) {
     // Mobilon column layout, asztali nézetben row
     if (isMobile) {
       return Padding(
@@ -243,7 +249,7 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
         ),
       );
     }
-    
+
     // Asztali nézet - row layout
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),

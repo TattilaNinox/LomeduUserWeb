@@ -1,0 +1,768 @@
+================================================================================
+  AUTOMATIKUS VERZIÓFRISSÍTÉS - TELJES MŰKÖDÉSI MAGYARÁZAT
+  Lomedu User Web Alkalmazás
+================================================================================
+
+TARTALOMJEGYZÉK
+---------------
+1. Áttekintés és Probléma
+2. Megoldás Alapelve
+3. Hogyan Ismeri Fel a Rendszer az Új Verziót
+4. Miért Működik Bejelentkezés Nélkül Is
+5. Részletes Folyamatábra
+6. Deployment Folyamat
+7. Felhasználói Élmény
+8. Technikai Implementáció
+9. Gyakori Kérdések
+10. Hibaelhárítás
+
+
+================================================================================
+1. ÁTTEKINTÉS ÉS PROBLÉMA
+================================================================================
+
+EREDETI PROBLÉMA:
+-----------------
+Amikor új verziót deploy-olsz a webalkalmazásból:
+  ❌ A felhasználóknak F5-öt kell nyomniuk
+  ❌ Sokszor nem is tudják, hogy új verzió van
+  ❌ Régi, hibás verziót használnak még napokig
+  ❌ A böngésző cache-eli a régi fájlokat
+
+MEGOLDÁS:
+---------
+Automatikus verzió detektálás és intelligens frissítés:
+  ✅ 5 percenként ellenőrzi az új verziót
+  ✅ 3 perc inaktivitás után automatikusan frissít
+  ✅ Nem zavarja a felhasználót kritikus műveleetek közben
+  ✅ Teljesen automatikus, nincs szükség F5-re
+
+
+================================================================================
+2. MEGOLDÁS ALAPELVE
+================================================================================
+
+A RENDSZER 3 FŐ KOMPONENSBŐL ÁLL:
+----------------------------------
+
+┌────────────────────────────────────────────────────────────────────┐
+│  1. VERZIÓ A BÖNGÉSZŐBEN (Beégetett a JavaScript kódba)            │
+│     ────────────────────────────────────────────────────────       │
+│     File: lib/services/version_check_service.dart                  │
+│     Tartalom: static const String _currentVersion = '1.0.0+13';   │
+│     → Ez része a lefordított main.dart.js fájlnak                  │
+│     → Ezt használja a felhasználó böngészője                       │
+└────────────────────────────────────────────────────────────────────┘
+                              │
+                              │ 5 percenként HTTP GET kérés
+                              ▼
+┌────────────────────────────────────────────────────────────────────┐
+│  2. VERZIÓ A SZERVEREN (Firebase Hosting - friss adat)            │
+│     ────────────────────────────────────────────────────────       │
+│     File: /version.json                                            │
+│     Tartalom: {"version": "1.0.0+14", "buildDate": "2025-10-24"}  │
+│     → Ezt frissíted minden deployment-kor                         │
+│     → Cache: NO-CACHE (mindig friss)                              │
+└────────────────────────────────────────────────────────────────────┘
+                              │
+                              │ Összehasonlítás
+                              ▼
+┌────────────────────────────────────────────────────────────────────┐
+│  3. VERZIÓ ELLENŐRZŐ LOGIKA (Böngészőben fut)                     │
+│     ────────────────────────────────────────────────────────       │
+│     VersionCheckService                                            │
+│     - Periodikus ellenőrzés (5 perc)                              │
+│     - Aktivitás figyelés (egér, billentyűzet, scroll)             │
+│     - Feltételek ellenőrzése                                       │
+│     - Automatikus reload ha minden OK                             │
+└────────────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+3. HOGYAN ISMERI FEL A RENDSZER AZ ÚJ VERZIÓT
+================================================================================
+
+LÉPÉSRŐL LÉPÉSRE:
+-----------------
+
+LÉPÉS 1: FELHASZNÁLÓ MEGNYITJA AZ OLDALT
+-----------------------------------------
+  1. Böngésző HTTP GET kérést küld:
+     → https://lomedu-user-web.web.app/
+
+  2. Firebase Hosting visszaadja az index.html-t
+     → Cache: NO-CACHE (mindig friss)
+
+  3. index.html betölti a JavaScript fájlokat:
+     → main.dart.js (ez tartalmazza az egész alkalmazást)
+     → flutter.js
+     → stb.
+
+  4. JavaScript fájlban BENNE VAN a verzió:
+     → _currentVersion = "1.0.0+13"
+     → Ez egy KONSTANS, beégetett érték!
+
+LÉPÉS 2: ALKALMAZÁS INICIALIZÁLÁSA
+-----------------------------------
+  1. MyApp widget létrejön (app gyökér)
+  2. MyApp.initState() lefut
+  3. VersionCheckService.start() meghívódik
+  4. Service beállítja a timerek-t és listener-eket:
+     - Timer: 5 percenként ellenőriz
+     - Listener: figyeli az egér/billentyűzet/scroll eseményeket
+
+LÉPÉS 3: ELSŐ VERZIÓ ELLENŐRZÉS (1 perc után)
+----------------------------------------------
+  1. Timer elindul, HTTP GET kérés:
+     → GET /version.json?t=1729780123456
+     → (timestamp: cache bypass)
+
+  2. Firebase Hosting válaszol:
+     → {"version": "1.0.0+13", "buildDate": "2025-10-24"}
+
+  3. Összehasonlítás:
+     Szerver verzió:  "1.0.0+13"
+     Böngésző verzió: "1.0.0+13"
+     → EGYEZIK ✅ Nincs teendő
+
+  4. Konzolban log:
+     [VersionCheck] Version up to date: 1.0.0+13
+
+LÉPÉS 4: TE DEPLOY-OLSZ ÚJ VERZIÓT
+-----------------------------------
+  1. Verzió frissítés:
+     pubspec.yaml: version: 1.0.0+14
+     version_check_service.dart: _currentVersion = '1.0.0+14'
+
+  2. Build:
+     flutter build web --release
+     → Új main.dart.js készül (benne: _currentVersion = "1.0.0+14")
+
+  3. Version.json generálás:
+     dart tools/update_version.dart
+     → web/version.json: {"version": "1.0.0+14"}
+
+  4. Deploy:
+     firebase deploy --only hosting
+     → Firebase szerveren mostantól:
+       - index.html → új (hivatkozik új main.dart.js-re)
+       - main.dart.js → új (benne _currentVersion = "1.0.0+14")
+       - version.json → új ({"version": "1.0.0+14"})
+
+LÉPÉS 5: KÖVETKEZŐ VERZIÓ ELLENŐRZÉS (5 perc múlva)
+----------------------------------------------------
+  ** A FELHASZNÁLÓ BÖNGÉSZŐJÉBEN MÉG MINDIG A RÉGI KÓD FUT! **
+
+  1. Timer újra elindul, HTTP GET kérés:
+     → GET /version.json?t=1729780423456
+     → (új timestamp, cache bypass)
+
+  2. Firebase Hosting válaszol (ÚJ verzióval!):
+     → {"version": "1.0.0+14", "buildDate": "2025-10-24"}
+
+  3. Összehasonlítás:
+     Szerver verzió:  "1.0.0+14"  ← ÚJ!
+     Böngésző verzió: "1.0.0+13"  ← RÉGI (még mindig a régi JS fut!)
+     → NEM EGYEZIK ❌ Frissítés szükséges!
+
+  4. Konzolban log:
+     [VersionCheck] New version available: 1.0.0+14 (current: 1.0.0+13)
+
+  5. Feltételek ellenőrzése (lásd LÉPÉS 6)
+
+LÉPÉS 6: FELTÉTELEK ELLENŐRZÉSE
+--------------------------------
+  A rendszer ellenőrzi:
+
+  ┌─────────────────────────────────────────────────┐
+  │ FELTÉTEL                         │ EREDMÉNY     │
+  ├─────────────────────────────────────────────────┤
+  │ Van új verzió?                   │ ✅ Igen      │
+  │ Felhasználó 3 perce inaktív?     │ ⏳ Ellenőriz │
+  │ Kritikus útvonal? (/quiz, /study)│ ✅ Nem       │
+  │ Input mező fókuszban?            │ ✅ Nem       │
+  │ Scroll az elmúlt 10 mp-ben?      │ ✅ Nem       │
+  └─────────────────────────────────────────────────┘
+
+  Ha MINDEN feltétel teljesül → RELOAD!
+
+LÉPÉS 7: AUTOMATIKUS RELOAD
+----------------------------
+  1. JavaScript kód futtatja:
+     window.location.reload();
+
+  2. Böngésző TELJES oldal újratöltés:
+     - Törli a régi JavaScript-et
+     - Új HTTP GET kérés: https://lomedu-user-web.web.app/
+     - Letölti az ÚJ index.html-t
+     - Letölti az ÚJ main.dart.js-t (benne: _currentVersion = "1.0.0+14")
+     - Újrainicializálja az egész appot
+
+  3. Most már az ÚJ verzió fut! ✅
+
+  4. Következő ellenőrzésnél:
+     Szerver verzió:  "1.0.0+14"
+     Böngésző verzió: "1.0.0+14"
+     → EGYEZIK ✅
+
+
+================================================================================
+4. MIÉRT MŰKÖDIK BEJELENTKEZÉS NÉLKÜL IS
+================================================================================
+
+FONTOS: A VersionCheckService a MyApp widget-ben indul!
+--------------------------------------------------------
+
+FLUTTER APP STRUKTÚRA:
+----------------------
+
+main.dart
+  └─ MyApp (StatefulWidget) ← GYÖKÉR WIDGET, MINDIG ÉL!
+      ├─ initState() → VersionCheckService.start() ← ITT INDUL!
+      └─ MaterialApp.router
+          └─ GoRouter
+              ├─ /login    (nincs bejelentkezve)
+              ├─ /register (nincs bejelentkezve)
+              ├─ /notes    (bejelentkezve)
+              ├─ /quiz     (bejelentkezve)
+              └─ /account  (bejelentkezve)
+
+KULCS: A MyApp MINDIG létezik, függetlenül a routeok-tól!
+----------------------------------------------------------
+
+┌────────────────────────────────────────────────────────────┐
+│ SCENARIO 1: NINCS BEJELENTKEZVE                           │
+├────────────────────────────────────────────────────────────┤
+│ 1. User megnyitja az oldalt                               │
+│ 2. main() lefut → runApp(MyApp())                         │
+│ 3. MyApp widget létrejön                                  │
+│ 4. MyApp.initState() → VersionCheckService.start() ✅     │
+│ 5. Router ellenőrzi: nincs auth → redirect /login        │
+│ 6. User a login oldalon van                              │
+│ 7. DE: MyApp továbbra is él!                             │
+│ 8. VersionCheckService továbbra is fut! ✅               │
+│ 9. 5 percenként ellenőrzi a verziót ✅                   │
+│ 10. Új verzió esetén: reload (login oldalról is!)       │
+└────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────┐
+│ SCENARIO 2: BE VAN JELENTKEZVE                            │
+├────────────────────────────────────────────────────────────┤
+│ 1. User megnyitja az oldalt                               │
+│ 2. main() lefut → runApp(MyApp())                         │
+│ 3. MyApp widget létrejön                                  │
+│ 4. MyApp.initState() → VersionCheckService.start() ✅     │
+│ 5. Router ellenőrzi: van auth → redirect /notes          │
+│ 6. User a jegyzetek oldalon van                          │
+│ 7. MyApp továbbra is él!                                 │
+│ 8. VersionCheckService fut! ✅                            │
+│ 9. 5 percenként ellenőrzi a verziót ✅                   │
+│ 10. Új verzió esetén: reload (jegyzetek oldalról)       │
+└────────────────────────────────────────────────────────────┘
+
+TEHÁT:
+------
+  ✅ Login oldalon → MyApp él → Service fut → Frissül
+  ✅ Jegyzetek oldalon → MyApp él → Service fut → Frissül
+  ✅ Kvíz oldalon → MyApp él → Service fut → NEM frissül (védett!)
+  ✅ Bármelyik oldalon → Service fut → Automatikus reload
+
+
+KIVÉTEL: TAB BEZÁRVA
+---------------------
+  ❌ Tab bezárva → JavaScript leáll → Service leáll
+  ✅ DE: Következő megnyitáskor:
+     - index.html → NO-CACHE → ÚJ verzió töltődik
+     - ÚJ main.dart.js töltődik
+     - Azonnal az új verziót futtatja!
+
+
+================================================================================
+5. RÉSZLETES FOLYAMATÁBRA (TELJES ÉLETCIKLUS)
+================================================================================
+
+T = 0 PERC: FELHASZNÁLÓ MEGNYITJA AZ OLDALT (VERZIÓ: 1.0.0+13)
+--------------------------------------------------------------
+┌───────────────────────────────────────────────────────────┐
+│ BÖNGÉSZŐ                                                  │
+├───────────────────────────────────────────────────────────┤
+│ GET https://lomedu-user-web.web.app/                     │
+│   → Válasz: index.html (no-cache)                        │
+│   → Betölti: main.dart.js (benne: _currentVersion="1.0.0+13") │
+│   → MyApp inicializálódik                                │
+│   → VersionCheckService.start()                          │
+│   → Timer beállítva: 1 perc múlva első ellenőrzés       │
+└───────────────────────────────────────────────────────────┘
+
+
+T = 1 PERC: ELSŐ VERZIÓ ELLENŐRZÉS
+-----------------------------------
+┌───────────────────────────────────────────────────────────┐
+│ BÖNGÉSZŐ                    │ FIREBASE HOSTING            │
+├─────────────────────────────┼─────────────────────────────┤
+│ GET /version.json?t=123456  │                             │
+│                             │ → {"version":"1.0.0+13"}    │
+│ Helyi: "1.0.0+13"          │                             │
+│ Szerver: "1.0.0+13"        │                             │
+│ → Egyezik ✅               │                             │
+│ [Log] Version up to date   │                             │
+└─────────────────────────────┴─────────────────────────────┘
+
+
+T = 6 PERC: MÁSODIK ELLENŐRZÉS (5 perc múlva)
+----------------------------------------------
+┌───────────────────────────────────────────────────────────┐
+│ BÖNGÉSZŐ                    │ FIREBASE HOSTING            │
+├─────────────────────────────┼─────────────────────────────┤
+│ GET /version.json?t=423456  │                             │
+│                             │ → {"version":"1.0.0+13"}    │
+│ → Egyezik ✅               │                             │
+└─────────────────────────────┴─────────────────────────────┘
+
+
+T = 10 PERC: TE DEPLOY-OLSZ ÚJ VERZIÓT (1.0.0+14)
+--------------------------------------------------
+┌───────────────────────────────────────────────────────────┐
+│ FEJLESZTŐI GÉP                                            │
+├───────────────────────────────────────────────────────────┤
+│ 1. pubspec.yaml: version: 1.0.0+14                       │
+│ 2. version_check_service.dart: _currentVersion="1.0.0+14"│
+│ 3. dart tools/update_version.dart                        │
+│    → web/version.json: {"version":"1.0.0+14"}           │
+│ 4. flutter build web --release                           │
+│    → build/web/main.dart.js (benne: "1.0.0+14")         │
+│ 5. firebase deploy --only hosting                        │
+└───────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌───────────────────────────────────────────────────────────┐
+│ FIREBASE HOSTING (ÚJ ÁLLAPOT)                            │
+├───────────────────────────────────────────────────────────┤
+│ /index.html        → ÚJ (refs új main.dart.js)          │
+│ /main.dart.js      → ÚJ (benne: _currentVersion="1.0.0+14") │
+│ /version.json      → ÚJ ({"version":"1.0.0+14"})        │
+└───────────────────────────────────────────────────────────┘
+
+** DE: A felhasználó böngészőjében MÉG A RÉGI verzió fut! **
+
+
+T = 11 PERC: HARMADIK ELLENŐRZÉS (5 perc múlva) - ÚJ VERZIÓ ÉSZLELVE!
+---------------------------------------------------------------------
+┌───────────────────────────────────────────────────────────┐
+│ BÖNGÉSZŐ (RÉGI KÓD FUT!)   │ FIREBASE HOSTING (ÚJ!)      │
+├─────────────────────────────┼─────────────────────────────┤
+│ GET /version.json?t=723456  │                             │
+│                             │ → {"version":"1.0.0+14"} ✨ │
+│ Helyi: "1.0.0+13" (régi!)  │                             │
+│ Szerver: "1.0.0+14" (új!)  │                             │
+│ → NEM egyezik! ❌          │                             │
+│ [Log] New version: 1.0.0+14│                             │
+│                             │                             │
+│ Feltételek ellenőrzése:     │                             │
+│ ├─ Új verzió van? ✅       │                             │
+│ ├─ 3 perc inaktív? ⏳      │                             │
+│ ├─ Kritikus route? ✅ Nem  │                             │
+│ ├─ Input fókusz? ✅ Nem    │                             │
+│ └─ Scroll 10mp? ✅ Nem     │                             │
+│                             │                             │
+│ ⏳ Várakozás: inaktivitás   │                             │
+└─────────────────────────────┴─────────────────────────────┘
+
+
+T = 14 PERC: 3 PERC INAKTIVITÁS ELTELT - AUTOMATIKUS RELOAD!
+-------------------------------------------------------------
+┌───────────────────────────────────────────────────────────┐
+│ BÖNGÉSZŐ                                                  │
+├───────────────────────────────────────────────────────────┤
+│ [Log] Reloading - user inactive for 3 minutes            │
+│ window.location.reload()                                  │
+│                                                           │
+│ ↓ TELJES OLDAL ÚJRATÖLTÉS ↓                             │
+│                                                           │
+│ GET https://lomedu-user-web.web.app/                     │
+│   → Válasz: ÚJ index.html                                │
+│   → Betölti: ÚJ main.dart.js (benne: "1.0.0+14") ✨     │
+│   → MyApp inicializálódik (újra)                         │
+│   → VersionCheckService.start()                          │
+└───────────────────────────────────────────────────────────┘
+
+** MOSTANTÓL AZ ÚJ VERZIÓ FUT! **
+
+
+T = 15 PERC: KÖVETKEZŐ ELLENŐRZÉS (ÚJ verzióval)
+-------------------------------------------------
+┌───────────────────────────────────────────────────────────┐
+│ BÖNGÉSZŐ (ÚJ KÓD FUT!)     │ FIREBASE HOSTING            │
+├─────────────────────────────┼─────────────────────────────┤
+│ GET /version.json?t=923456  │                             │
+│                             │ → {"version":"1.0.0+14"}    │
+│ Helyi: "1.0.0+14" ✨       │                             │
+│ Szerver: "1.0.0+14"        │                             │
+│ → Egyezik ✅               │                             │
+│ [Log] Version up to date   │                             │
+└─────────────────────────────┴─────────────────────────────┘
+
+** FRISSÍTÉS SIKERES! Minden rendben! **
+
+
+================================================================================
+6. DEPLOYMENT FOLYAMAT (LÉPÉSRŐL LÉPÉSRE)
+================================================================================
+
+TE (FEJLESZTŐ) - MINDEN ÚJ VERZIÓ ELŐTT:
+-----------------------------------------
+
+┌────────────────────────────────────────────────────────────┐
+│ LÉPÉS 1: VERZIÓ FRISSÍTÉS (KÖTELEZŐ! 2 helyen!)           │
+├────────────────────────────────────────────────────────────┤
+│                                                            │
+│ File: pubspec.yaml (3. sor)                               │
+│ ─────────────────────────────────────────                 │
+│ version: 1.0.0+14  ← Növeld +1-gyel                      │
+│                                                            │
+│ File: lib/services/version_check_service.dart (17. sor)   │
+│ ─────────────────────────────────────────────────────────  │
+│ static const String _currentVersion = '1.0.0+14';        │
+│                     ^^^^^^^^^^^^^^^^                       │
+│                     UGYANAZ mint pubspec.yaml!             │
+│                                                            │
+│ ⚠️  KRITIKUS: Ha nem egyezik, nem fog frissülni!         │
+└────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────┐
+│ LÉPÉS 2: DEPLOYMENT (Automatizált script)                 │
+├────────────────────────────────────────────────────────────┤
+│                                                            │
+│ Windows PowerShell:                                        │
+│   .\deploy.bat                                            │
+│                                                            │
+│ Linux/Mac Terminal:                                        │
+│   ./deploy.sh                                             │
+│                                                            │
+│ Ez automatikusan:                                          │
+│   [1/4] ✅ Frissíti version.json-t                        │
+│   [2/4] ✅ Build: flutter build web --release             │
+│   [3/4] ✅ Ellenőrzi build/web/version.json-t             │
+│   [4/4] ✅ Deploy: firebase deploy --only hosting         │
+└────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────┐
+│ LÉPÉS 3: KÉSZEN VAGY! ✅                                  │
+├────────────────────────────────────────────────────────────┤
+│                                                            │
+│ Az új verzió elérhető: https://lomedu-user-web.web.app   │
+│                                                            │
+│ A felhasználók automatikusan frissülnek:                   │
+│   - Max 5 perc: Észleli az új verziót                    │
+│   - +3 perc inaktivitás: Automatikus reload               │
+│   - Összesen: 8 percen belül mindenki frissül! 🎉        │
+└────────────────────────────────────────────────────────────┘
+
+
+MANUÁLIS DEPLOYMENT (ha nem használod a scriptet):
+---------------------------------------------------
+
+1. Verzió frissítés (2 helyen, lásd fent)
+
+2. Version.json generálása:
+   dart tools/update_version.dart
+
+3. Build:
+   flutter build web --release
+
+4. Deploy:
+   firebase deploy --only hosting
+
+
+================================================================================
+7. FELHASZNÁLÓI ÉLMÉNY
+================================================================================
+
+FELHASZNÁLÓ SZEMSZÖGÉBŐL:
+-------------------------
+
+┌─────────────────────────────────────────────────────────┐
+│ SCENARIO A: Aktívan használja az appot                 │
+├─────────────────────────────────────────────────────────┤
+│ 10:00 - Bejelentkezik, böngészi a jegyzeteket          │
+│ 10:05 - (háttérben: verzió ellenőrzés, nincs új)       │
+│ 10:10 - Deploy-olsz új verziót                         │
+│ 10:11 - (háttérben: verzió ellenőrzés, ÚJ verzió!)     │
+│ 10:11 - Továbbra is böngészi a jegyzeteket            │
+│         (Service vár az inaktivitásra)                  │
+│ 10:15 - Elmegy kávét inni, hagyja nyitva a tab-ot     │
+│ 10:18 - (3 perc inaktivitás!) → Automatikus reload    │
+│ 10:19 - Visszajön, friss verzió fut! ✅                │
+│         (Észre sem veszi, egyszerűen működik)          │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│ SCENARIO B: Kvízt tölt                                  │
+├─────────────────────────────────────────────────────────┤
+│ 14:00 - Elkezd egy kvízt                               │
+│ 14:05 - (háttérben: verzió ellenőrzés, ÚJ verzió!)     │
+│         De: /quiz route → VÉDETT, NEM frissít!         │
+│ 14:10 - Kvízt befejezi                                 │
+│ 14:11 - Visszalép a jegyzetek oldalra (/notes)         │
+│ 14:14 - (3 perc inaktivitás) → Automatikus reload      │
+│         ✅ Biztonságos volt, kvíz NEM szakadt meg!     │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│ SCENARIO C: Bezárja a tab-ot, később visszajön         │
+├─────────────────────────────────────────────────────────┤
+│ 09:00 - Használja az appot (verzió: 1.0.0+13)          │
+│ 09:30 - Bezárja a tab-ot                               │
+│ 10:00 - TE deploy-olsz új verziót (1.0.0+14)           │
+│ 15:00 - Felhasználó újra megnyitja az oldalt           │
+│         → index.html: NO-CACHE                          │
+│         → ÚJ main.dart.js töltődik                      │
+│         → Azonnal az új verzió fut! ✅                  │
+└─────────────────────────────────────────────────────────┘
+
+
+VÉDETT MŰVELETEK (NEM frissít):
+--------------------------------
+  ✅ /deck/*/study    - Flashcard tanulás
+  ✅ /quiz/*          - Kvíz
+  ✅ Input mező fókusz - Űrlap kitöltés
+  ✅ Scroll < 10 mp   - Aktív olvasás
+
+
+================================================================================
+8. TECHNIKAI IMPLEMENTÁCIÓ
+================================================================================
+
+LÉTREHOZOTT FÁJLOK:
+-------------------
+
+lib/services/version_check_service.dart
+  - VersionCheckService osztály
+  - Singleton pattern
+  - Timer: 5 percenként ellenőrzi a verziót
+  - Listener: figyeli a felhasználói aktivitást
+  - Logika: feltételek ellenőrzése és reload
+  - currentVersion: public static const (UI megjelenítéshez)
+
+web/version.json
+  - Verzió információ a szerveren
+  - Cache: NO-CACHE (mindig friss)
+  - Ezt ellenőrzi a service
+
+tools/update_version.dart
+  - Automatikus verzió generáló script
+  - Pubspec.yaml-ból kinyeri a verziót
+  - Frissíti a version.json fájlokat
+
+deploy.bat / deploy.sh
+  - Egy-kattintásos deployment
+  - Windows és Linux/Mac támogatás
+
+firebase.json (módosítva)
+  - Optimalizált cache stratégia
+  - version.json: NO-CACHE
+  - index.html: NO-CACHE
+  - JS/CSS: 1 év (immutable)
+
+
+VERZIÓ MEGJELENÍTÉS (UI):
+--------------------------
+
+lib/screens/login_screen.dart
+  - Verzió szám megjelenítése a bal alsó sarokban
+  - Elegáns design: fehér rounded badge, info ikon
+  - Valós idejű verzió: VersionCheckService.currentVersion
+  - Célja: Gyors vizuális ellenőrzés
+  - Formátum: "v1.0.0+13"
+
+ELŐNYÖK:
+  ✅ Azonnal látható a verzió
+  ✅ Nem kell console-t nézni
+  ✅ Support számára is egyszerűbb
+  ✅ Felhasználó is tudja ellenőrizni
+
+
+CACHE STRATÉGIA (Firebase Hosting):
+------------------------------------
+
+┌─────────────────────────────────────────────────────┐
+│ FÁJL                │ CACHE POLICY                  │
+├─────────────────────────────────────────────────────┤
+│ /version.json       │ NO-CACHE (mindig friss!)      │
+│ /index.html         │ NO-CACHE (mindig friss!)      │
+│ /flutter_sw.js      │ NO-CACHE (mindig friss!)      │
+│ /*.js               │ 1 év (immutable, hash-elt)    │
+│ /*.css              │ 1 év (immutable, hash-elt)    │
+│ /*.png/jpg/svg      │ 1 nap                         │
+│ /** (egyéb)         │ 1 óra                         │
+└─────────────────────────────────────────────────────┘
+
+MIÉRT?
+  - version.json: Gyorsan frissül, kis fájl
+  - index.html: Hivatkozik az új JS fájlokra
+  - JS/CSS: Hash a névben (main.dart.js?v=abc123), nem változik
+  - Képek: Ritkán változnak, de nem immutable
+
+
+================================================================================
+9. GYAKORI KÉRDÉSEK
+================================================================================
+
+❓ Mennyi idő alatt frissülnek a felhasználók?
+───────────────────────────────────────────────
+  ✅ Minimum: 1-3 perc (ha pont ellenőriz és inaktív)
+  ✅ Maximum: 8 perc (5 perc ellenőrzés + 3 perc inaktivitás)
+  ✅ Átlag: 4-6 perc
+
+❓ Mi van ha a felhasználó aktívan használja az appot?
+──────────────────────────────────────────────────────
+  ✅ A service vár amíg 3 percig inaktív nem lesz
+  ✅ Nem zavarja meg a munkát
+  ✅ Csak inaktivitás után frissít
+
+❓ Mi van ha kvízt tölt éppen?
+──────────────────────────────
+  ✅ /quiz/* route védett
+  ✅ NEM frissít kvíz közben
+  ✅ Kvíz befejezése után (és inaktivitás) frissít
+
+❓ Mi van ha nincs bejelentkezve?
+─────────────────────────────────
+  ✅ A service a MyApp-ben fut (gyökér widget)
+  ✅ Login oldalon is fut!
+  ✅ Minden oldalon frissül, függetlenül az auth-tól
+
+❓ Mi van ha bezárja a tab-ot?
+──────────────────────────────
+  ✅ JavaScript leáll, service is leáll
+  ✅ DE: Következő megnyitáskor:
+     - index.html → NO-CACHE → új verzió
+     - Azonnal az új verzió fut!
+
+❓ Kell csinálni valamit a felhasználónak?
+──────────────────────────────────────────
+  ❌ NEM! Teljesen automatikus!
+  ✅ Nem kell F5
+  ✅ Nem kell cache törlés
+  ✅ Egyszerűen működik
+
+❓ Hogyan tudom tesztelni?
+──────────────────────────
+  1. Lokális build: flutter build web --release
+  2. Szerver: cd build/web && python -m http.server 8000
+  3. Böngésző: http://localhost:8000
+  4. Ellenőrizd: Login oldal bal alsó sarkában látható a verzió ✅
+  5. Módosítsd version.json-t másik verzióra
+  6. Várj 5 percet vagy módosítsd a _checkInterval-t
+  7. Légy inaktív 3 percig
+  8. Automatikus reload! ✅
+  9. Reload után: Verzió megváltozik a login oldalon ✅
+
+
+================================================================================
+10. HIBAELHÁRÍTÁS
+================================================================================
+
+PROBLÉMA: "Nem frissül a felhasználóknál"
+─────────────────────────────────────────
+  Ellenőrzés:
+    1. Frissítetted a verziót MINDKÉT helyen?
+       - pubspec.yaml
+       - version_check_service.dart
+    2. Egyezik a két verzió?
+    3. Futott le a dart tools/update_version.dart?
+    4. Sikeres volt a deploy?
+    5. Ellenőrizd: https://lomedu-user-web.web.app/version.json
+       (látod az új verziót?)
+
+PROBLÉMA: "Túl sokáig tart a frissítés"
+───────────────────────────────────────
+  Ez normális:
+    - Ellenőrzés: 5 percenként
+    - Inaktivitás: 3 perc
+    - Max: 8 perc
+  
+  Ha gyorsítani szeretnéd:
+    version_check_service.dart:
+      _checkInterval = Duration(minutes: 3)
+      _inactivityThreshold = Duration(minutes: 2)
+
+PROBLÉMA: "Kritikus művelet közben frissül"
+───────────────────────────────────────────
+  Ellenőrizd a criticalRoutes listát:
+    lib/services/version_check_service.dart:
+      final criticalRoutes = [
+        '/deck/',
+        '/study',
+        '/quiz/',
+        // Add hozzá az új védett route-ot
+      ];
+
+PROBLÉMA: "version.json cache-elődik"
+─────────────────────────────────────
+  Ellenőrizd a firebase.json-t:
+    {
+      "source": "/version.json",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, no-cache" }
+      ]
+    }
+  
+  Deploy után ellenőrizd a Network tab-ban (F12):
+    - version.json kérés
+    - Response Headers
+    - Cache-Control: no-store, no-cache
+
+PROBLÉMA: "Login oldalon nem látszik a verzió"
+───────────────────────────────────────────────
+  Ellenőrzés:
+    1. Frissítetted a lib/services/version_check_service.dart-ot?
+       static const String currentVersion = '1.0.0+XX'
+    2. Build újra: flutter build web --release
+    3. Deploy újra: firebase deploy --only hosting
+    4. Hard refresh: Ctrl+Shift+R
+    5. Bal alsó sarokban kell látszania: "v1.0.0+XX"
+
+
+================================================================================
+ÖSSZEFOGLALÁS
+================================================================================
+
+A RENDSZER LÉNYEGE:
+-------------------
+  1. Böngészőben beégetett verzió (_currentVersion = "1.0.0+13")
+  2. Szerveren friss verzió (version.json: "1.0.0+14")
+  3. Periodikus HTTP ellenőrzés (5 perc)
+  4. Összehasonlítás (1.0.0+13 != 1.0.0+14)
+  5. Inaktivitás várás (3 perc)
+  6. Automatikus reload (window.location.reload())
+  7. Új verzió fut! ✅
+
+DEPLOYMENT:
+-----------
+  1. Verzió frissítés (2 helyen!)
+  2. .\deploy.bat vagy ./deploy.sh
+  3. Kész! ✅
+
+FELHASZNÁLÓI ÉLMÉNY:
+--------------------
+  ✅ Automatikus frissítés
+  ✅ Nincs F5
+  ✅ Nem zavarja a munkát
+  ✅ 8 percen belül mindenki frissül
+
+MŰKÖDIK:
+--------
+  ✅ Bejelentkezés nélkül is
+  ✅ Minden oldalon
+  ✅ Biztonságosan (védett route-ok)
+  ✅ Intelligensen (inaktivitás figyelés)
+
+
+================================================================================
+VÉG - További kérdések esetén lásd a dokumentációkat:
+  - DEPLOYMENT_QUICKSTART.md
+  - docs/AUTO_VERSION_UPDATE_GUIDE.md
+  - docs/VERSION_CHECK_CONFIG.md
+================================================================================
+

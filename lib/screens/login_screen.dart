@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import '../core/session_guard.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/version_check_service.dart';
 
 /// A bejelentkezési képernyőt megvalósító widget.
 ///
@@ -202,22 +203,18 @@ class LoginScreenState extends State<LoginScreen> {
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Flexible(
-                                child: Text(
-                                  'Adatvédelmi irányelvek és felhasználási feltételek',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.black54,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                              Text(
+                                'Adatvédelmi irányelvek és felhasználási feltételek',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black54,
                                 ),
+                                textAlign: TextAlign.center,
                               ),
-                              SizedBox(width: 4),
+                              SizedBox(width: 6),
                               Icon(
                                 Icons.open_in_new,
-                                size: 12,
+                                size: 14,
                                 color: Colors.black38,
                               ),
                             ],
@@ -349,6 +346,32 @@ class LoginScreenState extends State<LoginScreen> {
                         color: Color(0xFF1E3A8A),
                       ),
                       label: const Text('Eszköz regisztráció'),
+                    ),
+                    const SizedBox(height: 24),
+                    // Verzió megjelenítés - bal alsó sarok
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 13,
+                            color: const Color(0xFF1E3A8A).withOpacity(0.5),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'v${VersionCheckService.currentVersion}',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 11,
+                              fontWeight: FontWeight.w400,
+                              color: Colors.black.withOpacity(0.4),
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

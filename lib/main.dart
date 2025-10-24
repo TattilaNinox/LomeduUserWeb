@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
 import 'core/firebase_config.dart';
@@ -29,6 +30,7 @@ import 'screens/forgot_password_screen.dart';
 import 'screens/reset_password_screen.dart';
 import 'screens/change_password_screen.dart';
 import 'screens/web_subscription_screen.dart';
+import 'services/version_check_service.dart';
 
 /// Az alkalmazás fő belépési pontja.
 void main() async {
@@ -271,9 +273,35 @@ final _router = GoRouter(
 ///
 /// Ez az osztály felelős a `MaterialApp` beállításáért, amely az egész
 /// alkalmazás alapját képezi, beleértve a témát és a navigációt.
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   /// A `MyApp` widget konstruktora.
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final _versionCheckService = VersionCheckService();
+
+  @override
+  void initState() {
+    super.initState();
+    // Verzió ellenőrző szolgáltatás indítása (csak web platformon)
+    if (kIsWeb) {
+      _versionCheckService.start();
+      debugPrint('[App] Version check service started');
+    }
+  }
+
+  @override
+  void dispose() {
+    // Szolgáltatás leállítása
+    if (kIsWeb) {
+      _versionCheckService.stop();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
