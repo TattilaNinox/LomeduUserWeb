@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import '../services/web_payment_service.dart';
 
 /// Webes fizetési előzmények widget
@@ -298,6 +299,16 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
                     ),
                   ),
                 ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    'Műveletek',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -346,6 +357,17 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
           Expanded(
             flex: 1,
             child: _buildStatusChip(payment.status),
+          ),
+          Expanded(
+            flex: 1,
+            child: payment.status == 'initiated'
+                ? IconButton(
+                    onPressed: () => _queryPaymentStatus(payment.orderRef),
+                    icon: const Icon(Icons.refresh, size: 18),
+                    tooltip: 'Státusz frissítése',
+                    padding: EdgeInsets.zero,
+                  )
+                : const SizedBox(),
           ),
         ],
       ),
@@ -402,6 +424,17 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
               ),
             ],
           ),
+          if (payment.status == 'initiated') ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _queryPaymentStatus(payment.orderRef),
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Státusz frissítése'),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -470,6 +503,99 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
         return 'Éves előfizetés';
       default:
         return planId;
+    }
+  }
+
+  /// Fizetési státusz lekérdezése SimplePay Query API-val
+  Future<void> _queryPaymentStatus(String orderRef) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Státusz lekérdezése...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final functions = FirebaseFunctions.instanceFor(region: 'europe-west1');
+      final callable = functions.httpsCallable('queryPaymentStatus');
+      final result = await callable.call({'orderRef': orderRef});
+      final data = result.data as Map<String, dynamic>;
+
+      if (!mounted) return;
+      Navigator.of(context).pop();
+
+      if (data['success'] == true) {
+        final status = (data['status'] as String? ?? 'UNKNOWN').toUpperCase();
+
+        // Felhasználóbarát üzenet
+        String message;
+        String title;
+        Color? titleColor;
+
+        if (status == 'SUCCESS' || status == 'FINISHED') {
+          title = 'Sikeres fizetés';
+          titleColor = Colors.green[700];
+          message =
+              'A fizetés sikeresen lezárult! Az előfizetése aktiválásra került.';
+        } else if (status == 'NOTAUTHORIZED' || status == 'FAILED') {
+          title = 'Sikertelen fizetés';
+          titleColor = Colors.red[700];
+          message =
+              'A fizetés sikertelen volt. A bank elutasította a tranzakciót.\n\n'
+              'Lehetséges okok: Fedezethiány, hibás kártyaadatok, vagy napi limit túllépése.';
+        } else if (status == 'CANCELLED') {
+          title = 'Megszakított fizetés';
+          titleColor = Colors.grey[700];
+          message = 'A fizetést megszakította. Nem történt pénzügyi terhelés.';
+        } else if (status == 'TIMEOUT') {
+          title = 'Időtúllépés';
+          titleColor = Colors.orange[700];
+          message =
+              'A fizetési időkeret lejárt. Nem történt pénzügyi terhelés.';
+        } else {
+          title = 'Fizetés feldolgozás alatt';
+          titleColor = Colors.blue[700];
+          message =
+              'A fizetés még feldolgozás alatt van. Kérjük próbálja újra később, '
+              'vagy ha a fizetés nem sikerült, indítson új fizetést.';
+        }
+
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(title, style: TextStyle(color: titleColor)),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _loadPaymentHistory();
+                },
+                child: const Text('Rendben'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Hiba: ${e.toString()}')),
+      );
     }
   }
 }
