@@ -1,0 +1,382 @@
+================================================================================
+  WEB_PAYMENTS STATUS FRISSÍTÉSI PROBLÉMA - RÉSZLETES LEÍRÁS
+  2025.10.24
+================================================================================
+
+PROBLÉMA ÖSSZEFOGLALÁSA:
+────────────────────────
+A SimplePay callback után (payment=fail/success/timeout/cancelled) a 
+web_payments Firestore超um status mezője NEM frissül automatikusan.
+
+JELENLEGI HELYZET: status marad "INITIATED"
+ELVÁRT: status frissüljön "FAILED"/"COMPLETED"/"TIMEOUT"/"CANCELLED"-re
+
+
+================================================================================
+1. MI A PROBLÉMA PONTOSAN?
+================================================================================
+
+FOLYAMAT (Sikertelen fizetésnél):
+──────────────────────────────────
+1. Felhasználó fizetést indít
+2. Backend létrehozza: web_payments/{orderRef} { status: "INITIATED" }
+3. SimplePay fizetőoldal → Sikertelen kártya (4000 0000 0000 0119)
+4. SimplePay visszairányít: /account?payment=fail&orderRef=WEB_...
+5. Frontend Dialog: "Sikertelen tranzakció" ✅ MŰKÖDIK
+6. ❌ DE: Firestore web_payments/{orderRef}.status = "INITIATED" (NEM változott!)
+7. Fizetési előzmények táblázat: "Folyamatban" chip (ROSSZ!)
+
+ELVÁRT:
+───────
+6. Firestore web_payments/{orderRef}.status = "FAILED" ✅
+7. Fizetési előzmények: "Sikertelen" chip ✅
+
+
+================================================================================
+2. MIT CSINÁLTUNK EDDIG?
+================================================================================
+
+MÓDOSÍTÁS 1: Frontend Automatikus Status Frissítés
+───────────────────────────────────────────────────
+Fájl: lib/screens/account_screen.dart (69-100 sorok)
+
+Kód:
+─────
+// SimplePay callback kezelésben (postFrameCallback)
+if (paymentStatus != null && orderRef != null) {
+  // AZONNAL frissítjük a web_payments státuszt
+  try {
+    String firestoreStatus;
+    switch (paymentStatus) {
+      case 'success':
+        firestoreStatus = 'COMPLETED';
+        break;
+      case 'fail':
+        firestoreStatus = 'FAILED';
+        break;
+      case 'timeout':
+        firestoreStatus = 'TIMEOUT';
+        break;
+      case 'cancelled':
+        firestoreStatus = 'CANCELLED';
+        break;
+      default:
+        firestoreStatus = paymentStatus.toUpperCase();
+    }
+    
+    await FirebaseFirestore.instance
+        .collection('web_payments')
+        .doc(orderRef)
+        .update({
+      'status': firestoreStatus,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    
+    debugPrint('[PaymentCallback] Updated web_payments status: $firestoreStatus');
+  } catch (e) {
+    debugPrint('[PaymentCallback] Error updating status: $e');
+  }
+}
+
+
+MÓDOSÍTÁS 2: Firestore Rules - Status Update Engedélyezése
+────────────────────────────────────────────────────────────
+Fájl: firestore.rules (web_payments szekció)
+
+RÉGI (Blokkolta):
+─────────────────
+match /web_payments/{paymentId} {
+  allow get: if request.auth != null && 
+    (isAdmin() || resource.data.userId == request.auth.uid);
+  allow list: if request.auth != null;
+  allow write: if false; // ← EZ BLOKKOLTA!
+}
+
+ÚJ (Engedélyezi):
+─────────────────
+match /web_payments/{paymentId} {
+  allow get: if request.auth != null && 
+    (isAdmin() || resource.data.userId == request.auth.uid);
+  allow list: if request.auth != null;
+  
+  // Status frissítés engedélyezve (csak saját fizetés, csak status/updatedAt mezők)
+  allow update: if request.auth != null && 
+                   resource.data.userId == request.auth.uid &&
+                   request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']);
+  
+  allow create, delete: if false;
+}
+
+
+================================================================================
+3. ELLENŐRZÉSI PONTOK (SORRENDBEN)
+================================================================================
+
+ELLENŐRZÉS 1: Firestore Rules Deploy
+─────────────────────────────────────
+PARANCS:
+  firebase deploy --only firestore:rules
+
+ELLENŐRZÉS:
+  Firebase Console → Firestore Database → Rules tab
+  Látható-e az új "allow update" sor a web_payments szekciónál?
+
+STÁTUSZ: □ KÉSZ / □ NEM KÉSZ
+
+
+ELLENŐRZÉS 2: Flutter Hot Restart
+──────────────────────────────────
+MŰVELET:
+  Flutter terminálban (ahol flutter run fut): R (Shift+R)
+  
+ELVÁRT KIMENET:
+  "Restarted application in XXXms"
+  
+STÁTUSZ: □ KÉSZ / □ NEM KÉSZ
+
+
+ELLENŐRZÉS 3: Kód Betöltődött?
+───────────────────────────────
+Browser Console (F12) → Console tab
+
+TESZT:
+  1. Új sikertelen fizetés indítás
+  2. SimplePay visszairányítás
+  3. Console-ban keresni: "[PaymentCallback]"
+
+ELVÁRT LOG:
+  [PaymentCallback] Updated web_payments status: FAILED
+
+HA NEM LÁTSZIK:
+  → A kód NEM fut! Hot Restart kell!
+
+STÁTUSZ: □ LÁTSZIK / □ NEM LÁTSZIK
+
+
+ELLENŐRZÉS 4: Firestore Frissült?
+──────────────────────────────────
+Firebase Console → Firestore → web_payments → Legutolsó dokumentum
+
+MEZŐK:
+  status: ?
+  updatedAt: ?
+
+ELVÁRT:
+  status: "FAILED" (NEM "INITIATED"!)
+  updatedAt: friss timestamp
+
+STÁTUSZ: □ FRISSÜLT / □ NEM FRISSÜLT
+
+
+================================================================================
+4. BROWSER CONSOLE HIBÁK ELLENŐRZÉSE
+================================================================================
+
+F12 → Console tab
+
+KERESENDŐ HIBÁK:
+────────────────
+"permission-denied" → Firestore Rules blokkolja
+"Missing or insufficient permissions" → Rules probléma
+"FIRESTORE (..." piros hibák → Firestore query/update hiba
+
+HA VAN ILYEN HIBA:
+  → Firestore Rules deploy HIÁNYZIK vagy ROSSZ!
+
+
+================================================================================
+5. KÓD RÉSZLETEK (REFERENCIA)
+================================================================================
+
+FÁJL: lib/screens/account_screen.dart
+SOROK: 58-125
+
+KULCS RÉSZLET:
+──────────────
+if (paymentStatus != null && orderRef != null) {
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    // ...
+    
+    // Ez a kritikus rész:
+    await FirebaseFirestore.instance
+        .collection('web_payments')
+        .doc(orderRef)  // ← orderRef KELL hogy legyen!
+        .update({
+      'status': firestoreStatus,  // ← FAILED/COMPLETED/stb
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    
+    debugPrint('[PaymentCallback] Updated...'); // ← Ez kell a Console-ban!
+  });
+}
+
+
+FIRESTORE RULES:
+────────────────
+Fájl: firestore.rules
+Szekció: match /web_payments/{paymentId}
+
+Kulcs sor:
+  allow update: if request.auth != null && 
+                   resource.data.userId == request.auth.uid &&
+                   request.resource.data.diff(resource.data)
+                     .affectedKeys().hasOnly(['status', 'updatedAt']);
+
+Ez ENGEDÉLYEZI a frontend status frissítést!
+
+
+================================================================================
+6. DEBUG LÉPÉSEK (Ha Még Mindig Nem Működik)
+================================================================================
+
+DEBUG 1: orderRef Létezik?
+───────────────────────────
+Browser Console (F12) → Adjhozzá ideiglenesen:
+
+lib/screens/account_screen.dart (62. sor után):
+  debugPrint('=== Payment callback: status=$paymentStatus, orderRef=$orderRef');
+
+ELVÁRT:
+  === Payment callback: status=fail, orderRef=WEB_KKOxXPFXptPfVFRe5CkGrvP2q3P2_...
+
+
+DEBUG 2: Firestore Update Fut?
+───────────────────────────────
+lib/screens/account_screen.dart (89. sor ELŐTT):
+  debugPrint('=== Trying to update orderRef: $orderRef to status: $firestoreStatus');
+
+ELVÁRT:
+  === Trying to update orderRef: WEB_... to status: FAILED
+
+
+DEBUG 3: Catch Blokk Hiba?
+───────────────────────────
+lib/screens/account_screen.dart (99. sor):
+  debugPrint('[PaymentCallback] Error updating status: $e');
+  
+HA EZ LÁTSZIK:
+  → Firestore Rules VAGY egyéb hiba!
+  → Írd ki a pontos hibaüzenetet!
+
+
+================================================================================
+7. ALTERNATÍV MEGOLDÁS (Ha Rules Update Nem Működik)
+================================================================================
+
+Ha a Firestore Rules update nem engedi, használjuk Cloud Function-t:
+
+BACKEND: functions/index.js
+
+ÚJ FUNCTION (már implementálva):
+─────────────────────────────────
+exports.queryPaymentStatus = ...
+  // Tartalmazza a status frissítést (735-743 sorok)
+
+FRONTEND MÓDOSÍTÁS:
+───────────────────
+lib/screens/account_screen.dart
+
+SimplePay callback kezelésben (69. sor után):
+  // Firestore direct update helyett Cloud Function hívás
+  final functions = FirebaseFunctions.instanceFor(region: 'europe-west1');
+  final callable = functions.httpsCallable('queryPaymentStatus');
+  await callable.call({'orderRef': orderRef});
+
+ELŐNY:
+  - Cloud Function service account-tal ír (Rules nem blokkolja)
+  - Lekérdezi a valós SimplePay státuszt is
+
+
+================================================================================
+8. TESZTELÉSI FORGATÓKÖNYV
+================================================================================
+
+1. RESET ÁLLAPOT:
+   - "Reset (ingyenes állapot)" gomb a teszt eszközökben
+
+2. ÚJ SIKERTELEN FIZETÉS:
+   - Fizetés indítás
+   - Kártya: 4000 0000 0000 0119
+   - SimplePay: Sikertelen
+   - Visszairányítás
+
+3. ELLENŐRZÉS (AZONNAL):
+   - Browser Console (F12): Van "[PaymentCallback]..." log? 
+   - Firestore Console: web_payments status = "FAILED"?
+   - Fizetési előzmények: "Sikertelen" chip?
+
+4. HA IGEN → MŰKÖDIK! ✅
+   HA NEM → Lásd DEBUG LÉPÉSEK (6. fejezet)
+
+
+================================================================================
+9. VÁRHATÓ EREDMÉNY (Ha Minden Rendben)
+================================================================================
+
+SIKERES FIZETÉS:
+  Browser: payment=success → web_payments.status = "COMPLETED"
+  Táblázat: Zöld "Sikeres" chip
+
+SIKERTELEN FIZETÉS:
+  Browser: payment=fail → web_payments.status = "FAILED"
+  Táblázat: Piros "Sikertelen" chip
+
+TIMEOUT:
+  Browser: payment=timeout → web_payments.status = "TIMEOUT"
+  Táblázat: Narancs "Időtúllépés" chip
+
+MEGSZAKÍTOTT:
+  Browser: payment=cancelled → web_payments.status = "CANCELLED"
+  Táblázat: Szürke "Megszakított" chip
+
+
+================================================================================
+10. GYORS SEGÍTSÉG KÉRÉS - SZÜKSÉGES INFORMÁCIÓK
+================================================================================
+
+Ha segítséget kérsz:
+───────────────────
+
+1. BROWSER CONSOLE KIMENET:
+   F12 → Console → Másold ki az ÖSSZES sort!
+   
+2. FIRESTORE DOKUMENTUM:
+   Firebase Console → web_payments → Legutolsó dok → Screenshot
+
+3. FIRESTORE RULES:
+   Firebase Console → Rules tab → Screenshot
+   VAGY: firestore.rules fájl tartalma
+
+4. FLUTTER HOT RESTART KIMENET:
+   Terminál kimenet amikor R-t nyomsz
+
+5. GIT STATUS:
+   PowerShell: git status
+   PowerShell: git log --oneline -5
+
+
+================================================================================
+GYORS HIVATKOZÁSOK
+================================================================================
+
+Módosított Fájlok:
+  - lib/screens/account_screen.dart (69-100 sorok)
+  - firestore.rules (web_payments szekció)
+  - lib/widgets/web_payment_history.dart (státusz kezelés)
+  - lib/services/web_payment_service.dart (statusText)
+  - functions/index.js (queryPaymentStatus, 735-743 sorok)
+
+Firebase Console:
+  https://console.firebase.google.com/project/orlomed-f8f9f
+
+Firestore Rules Deploy:
+  firebase deploy --only firestore:rules
+
+Flutter Hot Restart:
+  R (Shift+R a terminálban)
+
+
+================================================================================
+VÉG - További kérdés esetén mellékelj screenshot-okat és console kimeneteket!
+================================================================================
+
