@@ -61,14 +61,14 @@ class AccountScreen extends StatelessWidget {
           if (paymentStatus != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) async {
               if (!context.mounted) return;
-              
+
               // URL tisztítás először
               context.go('/account');
-              
+
               // Majd megjelenítjük a megfelelő dialógot
               await Future.delayed(const Duration(milliseconds: 300));
               if (!context.mounted) return;
-              
+
               switch (paymentStatus) {
                 case 'success':
                   _showPaymentSuccessDialog(context, orderRef);
@@ -858,7 +858,7 @@ class AccountScreen extends StatelessWidget {
                   const SizedBox(width: 8),
                   const Expanded(
                     child: Text(
-                      'Lehetséges okok: Elégtelennem fedezet, hibás adatok, vagy napi limit túllépése.',
+                      'Lehetséges okok: Fedezethiány, hibás adatok, vagy napi limit túllépése.',
                       style: TextStyle(fontSize: 12, color: Colors.black87),
                     ),
                   ),
@@ -893,67 +893,90 @@ class AccountScreen extends StatelessWidget {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.access_time, color: Colors.orange[600], size: 28),
-            const SizedBox(width: 12),
-            const Text('Időtúllépés'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Ön túllépte a tranzakció elindításának lehetséges maximális idejét.',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'A fizetési időkeret (30 perc) lejárt, mielőtt elindította volna a fizetést. '
-              'A tranzakció nem jött létre, így bankkártyája nem lett terhelve.',
-              style: TextStyle(fontSize: 14, color: Colors.black87),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
+      builder: (ctx) => Dialog(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.verified_user, color: Colors.green[700], size: 20),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Biztosítjuk: Nem történt pénzügyi terhelés.',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  // Cím
+                  Row(
+                    children: [
+                      Icon(Icons.access_time, color: Colors.orange[600], size: 28),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Időtúllépés',
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  // Tájékoztatás
+                  const Text(
+                    'Ön túllépte a tranzakció elindításának lehetséges maximális idejét.',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'A fizetési időkeret (30 perc) lejárt, mielőtt elindította volna a fizetést. '
+                    'A tranzakció nem jött létre, így bankkártyája nem lett terhelve.',
+                    style: TextStyle(fontSize: 14, color: Colors.black87),
+                  ),
+                  const SizedBox(height: 16),
+                  // Biztosítás box
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green[50],
+                      borderRadius: BorderRadius.circular(8),
                     ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.verified_user, color: Colors.green[700], size: 20),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Biztosítjuk: Nem történt pénzügyi terhelés.',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Gombok
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: const Text('Bezárás'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          context.go('/account');
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1E3A8A),
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Új fizetés indítása'),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Bezárás'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              context.go('/account');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E3A8A),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Új fizetés indítása'),
-          ),
-        ],
       ),
     );
   }
@@ -963,67 +986,90 @@ class AccountScreen extends StatelessWidget {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.cancel_outlined, color: Colors.grey[600], size: 28),
-            const SizedBox(width: 12),
-            const Text('Megszakított fizetés'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Ön megszakította a fizetést.',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'A fizetési folyamat megszakításra került (a "Vissza" gomb megnyomásával '
-              'vagy a böngésző bezárásával). A tranzakció nem jött létre.',
-              style: TextStyle(fontSize: 14, color: Colors.black87),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
+      builder: (ctx) => Dialog(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.verified_user, color: Colors.green[700], size: 20),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Biztosítjuk: Nem történt pénzügyi terhelés.',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  // Cím
+                  Row(
+                    children: [
+                      Icon(Icons.cancel_outlined, color: Colors.grey[600], size: 28),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Megszakított fizetés',
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  // Tartalom
+                  const Text(
+                    'Ön megszakította a fizetést.',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'A fizetési folyamat megszakításra került (a "Vissza" gomb megnyomásával '
+                    'vagy a böngésző bezárásával). A tranzakció nem jött létre.',
+                    style: TextStyle(fontSize: 14, color: Colors.black87),
+                  ),
+                  const SizedBox(height: 16),
+                  // Biztosítás box
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green[50],
+                      borderRadius: BorderRadius.circular(8),
                     ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.verified_user, color: Colors.green[700], size: 20),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Biztosítjuk: Nem történt pénzügyi terhelés.',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Gombok
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: const Text('Bezárás'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          context.go('/account');
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1E3A8A),
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Új fizetés indítása'),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Bezárás'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              context.go('/account');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E3A8A),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Új fizetés indítása'),
-          ),
-        ],
       ),
     );
   }
