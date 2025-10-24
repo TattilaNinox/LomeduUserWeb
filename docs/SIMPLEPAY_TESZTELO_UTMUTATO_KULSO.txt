@@ -1,0 +1,489 @@
+================================================================================
+  LOMEDU USER WEB - TESZTELÉSI ÚTMUTATÓ
+  SimplePay Integrációs Tesztelés
+  2025.10.24
+================================================================================
+
+Tisztelt SimplePay Tesztelő!
+
+Ez a dokumentum segít a Lomedu User Web alkalmazás SimplePay integrációjának
+tesztelésében. Az útmutató tartalmazza a bejelentkezési adatokat, a tesztelési
+lépéseket, és a várható eredményeket.
+
+
+================================================================================
+1. BEJELENTKEZÉSI ADATOK
+================================================================================
+
+Alkalmazás URL:
+  https://lomedu-user-web.web.app
+
+Teszt felhasználó:
+  Email:    lomeduteszt@gmail.com
+  Jelszó:   Lomeduteszt55!
+
+BEJELENTKEZÉS LÉPÉSEI:
+  1. Nyissa meg: https://lomedu-user-web.web.app
+  2. Adja meg az email címet: lomeduteszt@gmail.com
+  3. Adja meg a jelszót: Lomeduteszt55!
+  4. Kattintson a "Bejelentkezés" gombra
+
+
+================================================================================
+2. NAVIGÁLÁS A FIZETÉSI FELÜLETRE
+================================================================================
+
+Bejelentkezés után:
+  1. Bal felső sarokban: "Fiók adatok" menüpont (automatikusan oda irányít)
+  2. Görgessen le az oldalon
+  3. Látni fogja:
+     - Előfizetési státusz információk
+     - "Előfizetés megújítása" gomb (nagy, kék gomb)
+     - SimplePay logo és bankkártya logók
+     - Fizetési előzmények táblázat
+
+FIZETÉS INDÍTÁSA:
+  - Kattintson az "Előfizetés megújítása" gombra
+
+
+================================================================================
+3. SIMPLEPAY 9.6 KÖVETELMÉNYEK TESZTELÉSE
+================================================================================
+
+3.1 TESZT: Sikeres Fizetés (9.6.1)
+══════════════════════════════════════════════════════════════════
+
+LÉPÉSEK:
+  1. "Előfizetés megújítása" gomb megnyomása
+  
+  2. Megjelenik: "Adattovábbítási nyilatkozat" ablak
+     - Olvassa el a nyilatkozatot
+     - Jelölje be az "Elfogadom" checkbox-ot
+     - Kattintson az "Elfogadom és fizetek" gombra
+  
+  3. Átirányítás a SimplePay fizetőoldalra
+  
+  4. Teszt bankkártya adatok megadása:
+     ┌─────────────────────────────────────┐
+     │ Kártyaszám: 4000 0000 0000 0002     │
+     │ Lejárat: 12/26 (vagy bármely jövő)   │
+     │ CVV: 123                             │
+     │ Név: Test User                       │
+     └─────────────────────────────────────┘
+  
+  5. "Fizetés" gomb megnyomása
+  
+  6. Várakozás (1-2 másodperc)
+  
+  7. Automatikus visszairányítás a Lomedu oldalra
+
+ELVÁRT EREDMÉNY:
+  ✅ Megjelenik egy párbeszédablak:
+     - Cím: "Sikeres tranzakció" (zöld pipa ikon)
+     - Szöveg: "A fizetés sikeresen megtörtént!"
+     - Megjelenik: SimplePay tranzakcióazonosító
+  
+  ✅ A Fiók adatok oldalon:
+     - Előfizetési státusz: "Prémium előfizetésed aktív"
+     - Lejárati dátum: 30 nappal későbbi dátum
+  
+  ✅ A "Fizetési előzmények" táblázatban:
+     - Új sor jelenik meg automatikusan
+     - Státusz: "Sikeres" (zöld chip)
+     - Összeg: 4,350 Ft
+     - Leírás: "30 napos előfizetés"
+
+
+3.2 TESZT: Sikertelen Fizetés (9.6.2)
+══════════════════════════════════════════════════════════════════
+
+ELŐKÉSZÜLET:
+  Először állítsa vissza az állapotot:
+  - Görgessen le a lap aljára
+  - "Teszt eszközök" szekció
+  - Kattintson a "Reset (ingyenes állapot)" gombra (kék)
+  - Erősítse meg a "Visszaállítás" gombbal
+
+LÉPÉSEK:
+  1-3. Ugyanaz mint a sikeres fizetésnél (adattovábbítási nyilatkozat elfogadás)
+  
+  4. Sikertelen teszt bankkártya megadása:
+     ┌─────────────────────────────────────┐
+     │ Kártyaszám: 4000 0000 0000 0119     │
+     │ Lejárat: 12/26                       │
+     │ CVV: 123                             │
+     └─────────────────────────────────────┘
+  
+  5. "Fizetés" gomb
+  
+  6. A bank elutasítja a tranzakciót
+  
+  7. Automatikus visszairányítás
+
+ELVÁRT EREDMÉNY:
+  ✅ Megjelenik részletes párbeszédablak:
+     - Cím: "Sikertelen tranzakció" (piros hiba ikon)
+     - SimplePay tranzakcióazonosító (piros háttérrel kiemelve)
+     - Szöveg: "Kérjük, ellenőrizze a tranzakció során megadott 
+                adatok helyességét."
+     - Banki kapcsolatfelvételi javaslat
+     - Lehetséges okok felsorolása (általános)
+     - "Újrapróbálás" gomb
+  
+  ✅ A "Fizetési előzmények" táblázatban:
+     - Új sor jelenik meg AUTOMATIKUSAN (1-2 mp)
+     - Státusz: "Sikertelen" (piros chip)
+  
+  FONTOS ELLENŐRZENDŐ (SimplePay 3.13.3 Spec):
+     ✅ SimplePay tranzakcióazonosító LÁTHATÓ
+     ✅ Részletes tájékoztatás van
+     ✅ Banki kapcsolatfelvételi javaslat van
+     ✅ NINCS konkrét ok (pl. "limittúllépés") - csak általános
+
+
+3.3 TESZT: Időtúllépés (9.6.3)
+══════════════════════════════════════════════════════════════════
+
+ELŐKÉSZÜLET:
+  "Reset (ingyenes állapot)" gomb (Teszt eszközök)
+
+LÉPÉSEK:
+  1-3. Fizetés indítás, SimplePay oldalra átirányítás
+  
+  4. A SimplePay fizetőoldalon: NE adjon meg semmit!
+  
+  5. Várjon 30 percet (ez a timeout beállítás)
+  
+  6. Automatikus visszairányítás 30 perc után
+
+ELVÁRT EREDMÉNY:
+  ✅ Megjelenik párbeszédablak:
+     - Cím: "Időtúllépés" (narancs óra ikon)
+     - Szöveg: "Ön túllépte a tranzakció elindításának lehetséges 
+                maximális idejét."
+     - Magyarázat: "A fizetési időkeret (30 perc) lejárt..."
+     - Biztosítás: "Nem történt pénzügyi terhelés" (zöld dobozban)
+  
+  ✅ A "Fizetési előzmények" táblázatban:
+     - Státusz: "Időtúllépés" (narancs chip)
+  
+  FONTOS (SimplePay 3.13.2 Spec):
+     ✅ NINCS SimplePay tranzakcióazonosító (nem történt fizetési kísérlet)
+     ✅ NINCS "sikertelen fizetés" szöveg
+     ✅ Biztosítás van a nem történt terhelésről
+
+
+3.4 TESZT: Megszakított Fizetés (9.6.4)
+══════════════════════════════════════════════════════════════════
+
+ELŐKÉSZÜLET:
+  "Reset (ingyenes állapot)" gomb
+
+LÉPÉSEK:
+  1-3. Fizetés indítás, SimplePay oldalra átirányítás
+  
+  4. A SimplePay fizetőoldalon: Kattintson a "Vissza" gombra
+  
+  5. Automatikus visszairányítás
+
+ELVÁRT EREDMÉNY:
+  ✅ Megjelenik párbeszédablak:
+     - Cím: "Megszakított fizetés" (szürke cancel ikon)
+     - Szöveg: "Ön megszakította a fizetést."
+     - Magyarázat: "A Vissza gomb megnyomásával vagy böngésző bezárás"
+     - Biztosítás: "Nem történt pénzügyi terhelés"
+  
+  ✅ A "Fizetési előzmények" táblázatban:
+     - Státusz: "Megszakított" (szürke chip)
+  
+  FONTOS (SimplePay 3.13.1 Spec):
+     ✅ NINCS SimplePay tranzakcióazonosító
+     ✅ NINCS "sikertelen fizetés" szöveg
+     ✅ Biztosítás van a nem történt terhelésről
+
+
+3.5 TESZT: SimplePay Logo (9.6.5)
+══════════════════════════════════════════════════════════════════
+
+LÉPÉSEK:
+  1. Fiók adatok oldal
+  2. Görgetés lefelé
+  3. Az "Előfizetés megújítása" gomb alatt látható a SimplePay logo
+
+ELVÁRT EREDMÉNY:
+  ✅ SimplePay logo látható
+  ✅ Bankkártya logók láthatóak (Visa, Mastercard, stb.)
+
+
+3.6 TESZT: Adattovábbítási Nyilatkozat (9.6.6)
+══════════════════════════════════════════════════════════════════
+
+LÉPÉSEK:
+  1. "Előfizetés megújítása" gomb
+  2. Megjelenik a nyilatkozat párbeszédablak
+
+ELVÁRT EREDMÉNY:
+  ✅ Adattovábbítási nyilatkozat szövege megjelenik
+  ✅ "Elfogadom" checkbox van
+  ✅ Csak elfogadás után lehet fizetést indítani
+  ✅ Backend ellenőrzés: Ha nincs elfogadva → hibaüzenet
+
+
+================================================================================
+4. TESZT ESZKÖZÖK (Speciális Gombok)
+================================================================================
+
+A Fiók adatok oldal alján található egy "Teszt eszközök" szekció.
+Ezek a gombok CSAK a lomeduteszt@gmail.com felhasználónak láthatóak.
+
+ELÉRHETŐ GOMBOK:
+
+1. "3 napos lejárat" (narancssárga gomb)
+   ────────────────────────────────────
+   Funkció: Beállítja az előfizetést 3 napos lejáratra
+   Használat: Email értesítési rendszer teszteléséhez
+   Eredmény: Email küldés a lomeduteszt@gmail.com címre
+             "Előfizetésed hamarosan lejár - 3 nap hátra"
+
+2. "Lejárt állapot" (piros gomb)
+   ─────────────────────────────
+   Funkció: Beállítja az előfizetést lejárt állapotra
+   Használat: Lejárat utáni email teszteléséhez
+   Eredmény: Email küldés "Előfizetésed lejárt - Újítsd meg most!"
+
+3. "Reset (ingyenes állapot)" (kék gomb)
+   ─────────────────────────────────────
+   Funkció: Visszaállítja az ingyenes állapotra (tiszta állapot)
+   Használat: Újabb tesztek előkészítéséhez
+   Eredmény: Előfizetés törlése, 5 napos próbaidőszak beállítása
+
+HASZNÁLAT:
+  - Minden új teszt előtt használja a "Reset" gombot
+  - Így mindig tiszta állapotból indulhat
+
+
+================================================================================
+5. FIZETÉSI ELŐZMÉNYEK - AUTOMATIKUS FRISSÍTÉS
+================================================================================
+
+A "Fizetési előzmények" táblázat a SimplePay logo alatt található.
+
+MŰKÖDÉS:
+  - Automatikusan frissül (nincs szükség F5-re)
+  - Minden új fizetés azonnal megjelenik
+  - Státusz változások valós időben látszanak
+
+TÁBLÁZAT OSZLOPOK:
+  - Dátum: Fizetés időpontja
+  - Leírás: "30 napos előfizetés"
+  - Összeg: 4,350 Ft
+  - Státusz: Színes chip (Sikeres/Sikertelen/stb.)
+
+STÁTUSZ TÍPUSOK:
+  🟢 Sikeres - Sikeres fizetés
+  🔴 Sikertelen - Elutasított fizetés
+  🟡 Folyamatban - Még feldolgozás alatt
+  🟠 Időtúllépés - 30 perc eltelt
+  ⚪ Megszakított - Vissza gomb/bezárt böngésző
+
+
+================================================================================
+6. TESZTELÉSI FORGATÓKÖNYV (Ajánlott Sorrend)
+================================================================================
+
+TESZT 1: Sikeres Fizetés
+  1. Reset gomb
+  2. Fizetés indítás
+  3. Teszt kártya: 4000 0000 0000 0002
+  4. Ellenőrizze a sikeres dialógot
+  5. Ellenőrizze a fizetési előzményeket (Sikeres chip)
+
+TESZT 2: Sikertelen Fizetés
+  1. Reset gomb
+  2. Fizetés indítás
+  3. Teszt kártya: 4000 0000 0000 0119
+  4. Ellenőrizze a sikertelen dialógot (SimplePay ID, banki javaslat)
+  5. Ellenőrizze a fizetési előzményeket (Sikertelen chip)
+
+TESZT 3: Megszakított Fizetés
+  1. Reset gomb
+  2. Fizetés indítás
+  3. SimplePay oldalon: "Vissza" gomb
+  4. Ellenőrizze a megszakított dialógot
+  5. Ellenőrizze: NINCS SimplePay ID, van biztosítás
+
+TESZT 4: Időtúllépés
+  1. Reset gomb
+  2. Fizetés indítás
+  3. NE adjon meg kártyaadatokat 30 percig
+  4. Ellenőrizze az időtúllépés dialógot
+  5. Ellenőrizze: NINCS SimplePay ID, van biztosítás
+
+TESZT 5: SimplePay Logo
+  - Görgessen le a Fiók adatok oldalon
+  - Ellenőrizze: SimplePay logo látható
+
+TESZT 6: Adattovábbítási Nyilatkozat
+  - Fizetés indításnál megjelenik
+  - Checkbox elfogadás szükséges
+  - Csak elfogadás után lehet fizetni
+
+
+================================================================================
+7. VÁRHATÓ PÁRBESZÉDABLAKOK
+================================================================================
+
+SIKERES FIZETÉS:
+  ┌────────────────────────────────────┐
+  │ [✓] Sikeres tranzakció             │
+  │                                    │
+  │ A fizetés sikeresen megtörtént!    │
+  │ Előfizetése aktiválva lett...      │
+  │                                    │
+  │ SimplePay tranzakcióazonosító:     │
+  │ WEB_xxxxxxxxxxxxx                  │
+  │                                    │
+  │ [ Rendben ]                        │
+  └────────────────────────────────────┘
+
+SIKERTELEN FIZETÉS:
+  ┌────────────────────────────────────┐
+  │ [!] Sikertelen tranzakció          │
+  │                                    │
+  │ SimplePay tranzakcióazonosító:     │
+  │ WEB_xxxxxxxxxxxxx                  │
+  │                                    │
+  │ Kérjük, ellenőrizze a tranzakció   │
+  │ során megadott adatok helyes...    │
+  │                                    │
+  │ Amennyiben minden adatot helyesen  │
+  │ adott meg, kérjük kapcsolatba      │
+  │ lépni kártyakibocsátó bankjával.   │
+  │                                    │
+  │ [i] Lehetséges okok:               │
+  │     Fedezethiány, hibás adatok...  │
+  │                                    │
+  │ [ Bezárás ]  [ Újrapróbálás ]      │
+  └────────────────────────────────────┘
+
+IDŐTÚLLÉPÉS:
+  ┌────────────────────────────────────┐
+  │ [○] Időtúllépés                    │
+  │                                    │
+  │ Ön túllépte a tranzakció           │
+  │ elindításának max. idejét.         │
+  │                                    │
+  │ A fizetési időkeret (30 perc)      │
+  │ lejárt... bankkártyája nem lett    │
+  │ terhelve.                          │
+  │                                    │
+  │ [✓] Biztosítjuk: Nem történt       │
+  │     pénzügyi terhelés.             │
+  │                                    │
+  │ [ Bezárás ] [ Új fizetés indítása ]│
+  └────────────────────────────────────┘
+
+MEGSZAKÍTOTT:
+  ┌────────────────────────────────────┐
+  │ [×] Megszakított fizetés           │
+  │                                    │
+  │ Ön megszakította a fizetést.       │
+  │                                    │
+  │ A fizetési folyamat megszakításra  │
+  │ került (Vissza gomb / böngésző     │
+  │ bezárás). Tranzakció nem jött létre│
+  │                                    │
+  │ [✓] Biztosítjuk: Nem történt       │
+  │     pénzügyi terhelés.             │
+  │                                    │
+  │ [ Bezárás ] [ Új fizetés indítása ]│
+  └────────────────────────────────────┘
+
+
+================================================================================
+8. FIGYELMEZTETÉSEK
+================================================================================
+
+HA PROBLÉMÁT TAPASZTAL:
+  - Használja a "Reset (ingyenes állapot)" gombot
+  - Próbálja újra a tesztet
+  - Ellenőrizze a böngésző console-t (F12 → Console)
+
+TESZTELÉS UTÁN:
+  - A teszt adatok maradhatnak
+  - Nem szükséges visszaállítás
+  - A lomeduteszt@gmail.com account tesztelésre készült
+
+
+================================================================================
+9. SIMPLEPAY 9.6 KÖVETELMÉNYEK - CHECKLIST
+================================================================================
+
+Kérjük, jelölje be a sikeres teszteket:
+
+□ 9.6.1 Sikeres tranzakció
+   □ Tranzakció végigfut
+   □ "Sikeres fizetés" tájékoztatás megjelenik
+   □ SimplePay tranzakcióazonosító látható
+
+□ 9.6.2 Sikertelen tranzakció
+   □ Tranzakció végigfut
+   □ "Sikertelen fizetés" részletes tájékoztatás
+   □ SimplePay tranzakcióazonosító látható
+   □ Banki kapcsolatfelvételi javaslat van
+
+□ 9.6.3 Időtúllépés
+   □ Tranzakció végigfut
+   □ "Időtúllépés" tájékoztatás
+   □ NINCS SimplePay azonosító
+   □ Biztosítás van (nem történt terhelés)
+
+□ 9.6.4 Megszakított tranzakció
+   □ Tranzakció végigfut
+   □ "Megszakított fizetés" tájékoztatás
+   □ NINCS SimplePay azonosító
+   □ Biztosítás van (nem történt terhelés)
+
+□ 9.6.5 SimplePay Logo
+   □ Logo megjelenik a Fiók adatok oldalon
+
+□ 9.6.6 Adattovábbítási nyilatkozat
+   □ Nyilatkozat megjelenik fizetés előtt
+   □ Checkbox elfogadás szükséges
+   □ Backend validáció működik
+
+
+================================================================================
+10. KAPCSOLATFELVÉTEL
+================================================================================
+
+Kérdés, probléma vagy visszajelzés esetén:
+
+Email: info@lomedu.hu
+Tárgy: SimplePay integráció tesztelés
+
+Kérjük mellékelje:
+  - Screenshot-okat a problémáról
+  - Böngésző neve és verziója
+  - Pontos lépések amikor a hiba előfordult
+
+
+================================================================================
+KÖSZÖNJÜK A TESZTELÉST!
+================================================================================
+
+Köszönjük, hogy időt szán az alkalmazásunk SimplePay integrációjának
+tesztelésére! A visszajelzése segít biztosítani, hogy felhasználóink
+számára biztonságos és megbízható fizetési élményt nyújtsunk.
+
+Tisztelettel,
+A Lomedu Csapat
+
+
+================================================================================
+VÉG - SimplePay Tesztelési Útmutató (Külső Tesztelő Részére)
+Készítve: 2025.10.24
+Alkalmazás verzió: 1.0.1+5
+SimplePay API: v2.1
+================================================================================
+
