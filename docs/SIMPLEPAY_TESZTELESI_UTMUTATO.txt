@@ -1,7 +1,8 @@
 ================================================================================
   LOMEDU USER WEB - SIMPLEPAY INTEGRÁCIÓS TESZTELÉSI ÚTMUTATÓ
   SimplePay IT Support Teszteléshez
-  2025.10.24
+  FRISSÍTVE: 2025.10.24 - Végleges verzió
+  Verzió: 1.0.1+4
 ================================================================================
 
 TARTALOMJEGYZÉK
@@ -94,8 +95,13 @@ specifikációnak és a 9.6 tesztelési protokollnak.
 ELŐKÉSZÍTÉS:
 ────────────
 1. Bejelentkezés: lomeduteszt@gmail.com / Lomeduteszt55!
-2. Navigálás: Fiók adatok menüpont
-3. Görgetés: SimplePay logo látható a lap alján
+2. Navigálás: Fiók adatok menüpont (bal felső sarok)
+3. Görgetés le: 
+   - Előfizetési státusz kártya
+   - "Előfizetés megújítása" gomb (nagy, kék)
+   - SimplePay logo
+   - Fizetési előzmények (real-time lista) ← ÚJ!
+   - Teszt eszközök (csak lomeduteszt@gmail.com-nak)
 
 
 4.1 TESZT: 9.6.1 SIKERES TRANZAKCIÓ
@@ -348,6 +354,13 @@ Bejelentkezés után: Fiók adatok oldal
 Görgetés: A lap aljára
 Szekció: "Teszt eszközök" (csak lomeduteszt@gmail.com látja!)
 
+FONTOS:
+───────
+Ezek a gombok CSAK a "lomeduteszt@gmail.com" felhasfeelingsónak láthatóak!
+  - Debug build-ben: Látható
+  - Release build-ben: Látható ← ÚJ! (email alapú ellenőrzés)
+  - Más felhasználóknak: Nem látható
+
 ELÉRHETŐ GOMBOK:
 ────────────────
 
@@ -407,6 +420,7 @@ ELÉRHETŐ GOMBOK:
 ├──────────────────────────────────────────────────────────────────┤
 │ FUNKCIÓ:                                                         │
 │   - Visszaállítja az előfizetést ingyenes (free) állapotra       │
+│   - 5 napos próbaidőszak beállítása ← ÚJ!                       │
 │   - Törli az email emlékeztetőket (újra lehet tesztelni)         │
 │   - Tiszta állapot létrehozása újabb tesztekhez                  │
 │                                                                  │
@@ -420,6 +434,7 @@ ELÉRHETŐ GOMBOK:
 │   - subscriptionStatus: 'free'                                   │
 │   - subscriptionEndDate: null                                    │
 │   - subscription: null                                           │
+│   - freeTrialEndDate: [MA + 5 NAP] ← ÚJ!                        │
 │   - lastReminder: törölve                                        │
 └──────────────────────────────────────────────────────────────────┘
 
@@ -441,7 +456,20 @@ Ez garantálja, hogy felhasználónként szigorúan 1-1 email kerül kiküldésr
 CLOUD FUNCTIONS (Firebase Functions, europe-west1 régió):
 ──────────────────────────────────────────────────────────
 
-1. initiateWebPayment
+1. updatePaymentStatusFromCallback ← ÚJ!
+   ──────────────────────────────────
+   Típus: Callable (HTTPS)
+   Input: { orderRef, callbackStatus }
+   Funkció:
+     - SimplePay browser callback alapján azonnali status frissítés
+     - callbackStatus (success/fail/timeout/cancelled) → Firestore status
+     - Garantált működés (service account jogosultság)
+   Output: { success, status }
+   
+   FONTOS: Ez biztosítja hogy sikertelen/timeout/cancelled fizetéseknél is
+   azonnal frissüljön a status (nem kell várni az IPN-re vagy manuális query-re)
+
+2. initiateWebPayment
    ────────────────────
    Típus: Callable (HTTPS)
    Input: { planId, userId }
@@ -640,15 +668,18 @@ Keresendő log bejegyzések:
    → SimplePay tranzakcióazonosító látható
 
 
-9.6.2 SIKERTELEN - TELJES FOLYAMAT:
-════════════════════════════════════
+9.6.2 SIKERTELEN - TELJES FOLYAMAT (Frissített!):
+═════════════════════════════════════════════════
 
 1-3. Ugyanaz mint sikeres
 4. Authorizáció SIKERTELEN (4000 0000 0000 0119 kártya)
 5. Visszairányítás
    → URL: /account?payment=fail&orderRef=...
+   → updatePaymentStatusFromCallback function automatikusan hívódik ← ÚJ!
+   → web_payments status AZONNAL frissül: FAILED ← ÚJ!
    → Dialog: SimplePay ID + részletes tájékoztatás
-   → Audit log: (ha van IPN sikertelen státuszról)
+   → Fizetési előzmények real-time frissül: "Sikertelen" chip ← ÚJ!
+   → Audit log: PAYMENT_INITIATED (már létezik)
 
 
 9.6.3 IDŐTÚLLÉPÉS - TELJES FOLYAMAT:
@@ -731,6 +762,14 @@ BEJELENTKEZÉSI ADATOK:
   Email: lomeduteszt@gmail.com
   Jelszó: Lomeduteszt55!
 
+FIÓK ADATOK OLDAL ELRENDEZÉS:
+  1. Felhasználói adatok (név, email)
+  2. Előfizetési státusz kártya
+  3. "Előfizetés megújítása" gomb (nagy, kék)
+  4. SimplePay logo (linkkel)
+  5. ⭐ Fizetési előzmények (real-time táblázat) ← ÚJ!
+  6. Teszt eszközök (csak lomeduteszt@gmail.com-nak)
+
 KÖTELEZŐ TESZTEK (SimplePay 9.6):
   ✅ 9.6.1 Sikeres fizetés (4000 0000 0000 0002)
   ✅ 9.6.2 Sikertelen fizetés (4000 0000 0000 0119)
@@ -743,20 +782,29 @@ SPECIÁLIS TESZTEK (Email rendszer):
   ✅ "3 napos lejárat" gomb → expiry_warning email
   ✅ "Lejárt állapot" gomb → expired email
   ✅ Duplikátum védelem tesztelése
-  ✅ "Reset" gomb → újra tesztelhetőség
+  ✅ "Reset" gomb → újra tesztelhetőség + 5 napos trial
+
+ÚJ FUNKCIÓK (2025.10.24):
+  ⭐ Real-time fizetési előzmények (automatikus frissítés)
+  ⭐ Automatikus status frissítés (callback alapján)
+  ⭐ 5 napos trial reset
+  ⭐ Teszt eszközök release build-ben is (email alapú)
+  ⭐ Automatikus verziófrissítés (háttérben)
 
 BACKEND ELLENŐRZÉS:
   ✅ IPN webhook működés (Functions logs)
   ✅ Audit log bejegyzések (Firestore)
   ✅ Aláírás validálás
   ✅ Timeout formátum
+  ✅ updatePaymentStatusFromCallback function
 
 STÁTUSZ: PRODUCTION READY
   - SimplePay 9.6 protokoll: 100% MEGFELEL
-  - Backend implementáció: TELJES
-  - Frontend dialógok: TELJES
-  - Email rendszer: MŰKÖDIK
-  - Teszt eszközök: ELÉRHETŐ (lomeduteszt@gmail.com)
+  - Backend: 12 Cloud Function
+  - Frontend: Dialógok + Real-time előzmények
+  - Email: Automatikus (2x naponta cron)
+  - Teszt eszközök: Release build-ben is
+  - Verzió: 1.0.1+4
 
 KÖVETKEZŐ LÉPÉS: SimplePay IT Support élesítési teszt ✅
 
@@ -776,10 +824,45 @@ Technikai dokumentáció:
 
 
 ================================================================================
+FIZETÉSI ELŐZMÉNYEK - REAL-TIME MŰKÖDÉS
+================================================================================
+
+A Fiók adatok oldalon található "Fizetési előzmények" szekció:
+
+JELLEMZŐK:
+  ⭐ Real-time frissítés (StreamBuilder)
+  ⭐ Automatikus update amikor status változik
+  ⭐ Nincs szükség manuális frissítésre
+  ⭐ Desktop: Táblázat nézet (Dátum, Leírás, Összeg, Státusz)
+  ⭐ Mobil: Kártya nézet (reszponzív)
+
+STÁTUSZ CHIPEK:
+  🟢 Sikeres - Zöld háttér
+  🔴 Sikertelen - Piros háttér
+  🟡 Folyamatban - Sárga háttér (INITIATED)
+  ⚪ Megszakított - Szürke háttér
+  🟠 Időtúllépés - Narancs háttér
+
+AUTOMATIKUS FRISSÍTÉS:
+  1. Fizetés indítás → web_payments: INITIATED → "Folyamatban"
+  2. SimplePay callback → updatePaymentStatusFromCallback
+  3. Status frissül: FAILED/COMPLETED/stb
+  4. Fizetési előzmények AUTOMATIKUSAN frissül (< 1 sec) ⚡
+  5. Megfelelő chip jelenik meg
+
+NINCS SZÜKSÉG:
+  ❌ Frissítés gombra (törölve)
+  ❌ F5-re
+  ❌ Újratöltésre
+
+
+================================================================================
 VÉG - SimplePay Tesztelési Útmutató
 Készítve: 2025.10.24
-Verzió: 1.0.1+2
+Frissítve: 2025.10.24 (Végleges)
+Verzió: 1.0.1+4
 SimplePay API: v2.1
 Státusz: PRODUCTION READY ✅
+Real-time: StreamBuilder ⚡
 ================================================================================
 
