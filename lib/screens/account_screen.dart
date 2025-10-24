@@ -18,42 +18,7 @@ class AccountScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    
-    // SimplePay payment callback kezelés - várunk az auth state betöltésére
-    final qp = GoRouterState.of(context).uri.queryParameters;
-    final hasPaymentCallback = qp['payment'] != null;
-    
-    if (user == null && hasPaymentCallback) {
-      // Loading state - Firebase Auth még töltődik SimplePay visszairányítás után
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Fiók adatok'),
-          backgroundColor: const Color(0xFF1E3A8A),
-          foregroundColor: Colors.white,
-        ),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text(
-                'Fizetés feldolgozása...',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Kérjük várjon, amíg betöltődnek az adatai.',
-                style: TextStyle(fontSize: 14, color: Colors.black54),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-    
     if (user == null) {
-      // Normál eset - valóban nincs bejelentkezett felhasználó
       return Scaffold(
         appBar: AppBar(
           title: const Text('Fiók adatok'),
@@ -79,15 +44,15 @@ class AccountScreen extends StatelessWidget {
             .collection('users')
             .doc(user.uid)
             .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+        builder: (context, userSnapshot) {
+          if (userSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (!snapshot.hasData || !snapshot.data!.exists) {
+          if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
             return const Center(
                 child: Text('Nincsenek adataink a felhasználóról.'));
           }
-          final data = snapshot.data!.data()!;
+          final data = userSnapshot.data!.data()!;
 
           // Fizetési visszairányítás kezelése: részletes dialógok a SimplePay spec szerint
           final qp = GoRouterState.of(context).uri.queryParameters;
