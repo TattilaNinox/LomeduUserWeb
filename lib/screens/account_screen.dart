@@ -475,6 +475,9 @@ class AccountScreen extends StatelessWidget {
                       if (!confirmed) return;
 
                       try {
+                        final now = DateTime.now();
+                        final trialEnd = now.add(const Duration(days: 5));
+
                         await FirebaseFirestore.instance
                             .collection('users')
                             .doc(user.uid)
@@ -485,6 +488,7 @@ class AccountScreen extends StatelessWidget {
                             'subscriptionEndDate': null,
                             'subscription': null,
                             'lastPaymentDate': null,
+                            'freeTrialEndDate': Timestamp.fromDate(trialEnd),
                             'updatedAt': FieldValue.serverTimestamp(),
                             // Töröljük a lastReminder mezőt, hogy újra küldhessünk emailt
                             'lastReminder': FieldValue.delete(),
@@ -494,7 +498,7 @@ class AccountScreen extends StatelessWidget {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                               content: Text(
-                                  'Előfizetés visszaállítva ingyenes állapotra!')));
+                                  'Előfizetés visszaállítva ingyenes állapotra! (5 napos próbaidőszak)')));
                         }
                       } catch (e) {
                         if (context.mounted) {
