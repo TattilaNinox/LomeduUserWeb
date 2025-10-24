@@ -73,3 +73,7 @@ JAVASLATOK:
 Készítette: AI Assistant
 Dátum: 2024-12-19
 
+
+orlomed-f8f9f     firebase functions:list --project orlomed-f8f9f
+
+attila.ninox@gmail.com

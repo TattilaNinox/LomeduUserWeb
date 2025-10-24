@@ -10,6 +10,7 @@ import '../widgets/subscription_renewal_button.dart';
 import '../services/account_deletion_service.dart';
 import '../widgets/trial_period_banner.dart';
 import '../widgets/simplepay_logo.dart';
+import '../widgets/web_payment_history.dart';
 
 /// Egyszerű fiókadatok képernyő, előfizetési státusszal.
 class AccountScreen extends StatelessWidget {
@@ -96,7 +97,7 @@ class AccountScreen extends StatelessWidget {
               children: [
                 // Emlékeztető banner
                 SubscriptionReminderBanner(
-                  onRenewPressed: () => context.go('/subscription'),
+                  onRenewPressed: () => context.go('/account'),
                 ),
 
                 // Próbaidőszak bannere
@@ -214,7 +215,7 @@ class AccountScreen extends StatelessWidget {
                 // Fejlesztett előfizetési státusz kártya
                 EnhancedSubscriptionStatusCard(
                   userData: data,
-                  onRenewPressed: () => context.go('/subscription'),
+                  onRenewPressed: () => context.go('/account'),
                 ),
 
                 const SizedBox(height: 20),
@@ -256,6 +257,14 @@ class AccountScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                 ],
+
+                // Fizetési előzmények
+                WebPaymentHistory(
+                  userData: {...data, 'uid': user.uid},
+                  onRefresh: () {}, // StreamBuilder automatikusan frissít
+                ),
+
+                const SizedBox(height: 20),
 
                 // Teszt eszközök (SimplePay teszteléshez)
                 // Csak a lomeduteszt@gmail.com felhasználónak látható (release build-ben is)

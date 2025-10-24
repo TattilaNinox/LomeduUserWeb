@@ -29,7 +29,6 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/reset_password_screen.dart';
 import 'screens/change_password_screen.dart';
-import 'screens/web_subscription_screen.dart';
 import 'services/version_check_service.dart';
 
 /// Az alkalmazás fő belépési pontja.
@@ -144,10 +143,6 @@ final _router = GoRouter(
         final qp = state.uri.queryParameters;
         return LoginScreen(initialEmail: qp['email']);
       },
-    ),
-    GoRoute(
-      path: '/subscription',
-      builder: (context, state) => const WebSubscriptionScreen(),
     ),
     // Reset password képernyő (oobCode query param kezelése)
     GoRoute(
