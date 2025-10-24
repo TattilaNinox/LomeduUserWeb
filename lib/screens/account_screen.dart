@@ -875,7 +875,7 @@ class AccountScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               Navigator.of(ctx).pop();
-              context.go('/subscription');
+              context.go('/account');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1E3A8A),
@@ -945,7 +945,7 @@ class AccountScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               Navigator.of(ctx).pop();
-              context.go('/subscription');
+              context.go('/account');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1E3A8A),
@@ -1015,7 +1015,7 @@ class AccountScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               Navigator.of(ctx).pop();
-              context.go('/subscription');
+              context.go('/account');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1E3A8A),
