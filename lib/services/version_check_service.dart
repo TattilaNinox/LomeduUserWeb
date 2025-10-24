@@ -13,7 +13,7 @@ import 'dart:convert';
 /// - Nem frissít kritikus műveletek (kvíz, flashcard tanulás) közben
 class VersionCheckService {
   /// A jelenlegi alkalmazás verzió (pubspec.yaml-ból)
-  static const String currentVersion = '1.0.0+13';
+  static const String currentVersion = '1.0.0+14';
   
   // Private getter a backward compatibility miatt
   static const String _currentVersion = currentVersion;

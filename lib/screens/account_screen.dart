@@ -54,24 +54,38 @@ class AccountScreen extends StatelessWidget {
           }
           final data = snapshot.data!.data()!;
 
-          // Fizetési visszairányítás kezelése: üzenet, majd tisztítás
+          // Fizetési visszairányítás kezelése: részletes dialógok a SimplePay spec szerint
           final qp = GoRouterState.of(context).uri.queryParameters;
           final paymentStatus = qp['payment'];
+          final orderRef = qp['orderRef'];
           if (paymentStatus != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) async {
-              // UI jelzés
-              final msg = switch (paymentStatus) {
-                'success' => 'Fizetés sikeres! Előfizetése aktiválva.',
-                'fail' => 'Fizetés sikertelen.',
-                'timeout' => 'Fizetés időtúllépés.',
-                'cancelled' => 'Fizetés megszakítva.',
-                _ => 'Fizetés státusz: $paymentStatus',
-              };
-              if (context.mounted) {
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(SnackBar(content: Text(msg)));
-                // URL tisztítás
-                context.go('/account');
+              if (!context.mounted) return;
+              
+              // URL tisztítás először
+              context.go('/account');
+              
+              // Majd megjelenítjük a megfelelő dialógot
+              await Future.delayed(const Duration(milliseconds: 300));
+              if (!context.mounted) return;
+              
+              switch (paymentStatus) {
+                case 'success':
+                  _showPaymentSuccessDialog(context, orderRef);
+                  break;
+                case 'fail':
+                  _showPaymentFailedDialog(context, orderRef);
+                  break;
+                case 'timeout':
+                  _showPaymentTimeoutDialog(context);
+                  break;
+                case 'cancelled':
+                  _showPaymentCancelledDialog(context);
+                  break;
+                default:
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Fizetés státusz: $paymentStatus')),
+                  );
               }
             });
           }
@@ -705,5 +719,312 @@ class AccountScreen extends StatelessWidget {
         context.go('/login');
       }
     }
+  }
+
+  /// Sikeres fizetés dialóg (SimplePay 3.13.4 szerint)
+  static void _showPaymentSuccessDialog(BuildContext context, String? orderRef) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green[600], size: 28),
+            const SizedBox(width: 12),
+            const Text('Sikeres tranzakció'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'A fizetés sikeresen megtörtént!',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            const Text('Előfizetése aktiválva lett. Most már teljes hozzáférése van minden funkcióhoz.'),
+            if (orderRef != null) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'SimplePay tranzakcióazonosító:',
+                      style: TextStyle(fontSize: 12, color: Colors.black54),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      orderRef,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E3A8A),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Rendben'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Sikertelen fizetés dialóg (SimplePay 3.13.3 szerint - KÖTELEZŐ!)
+  static void _showPaymentFailedDialog(BuildContext context, String? orderRef) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.red[600], size: 28),
+            const SizedBox(width: 12),
+            const Text('Sikertelen tranzakció'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (orderRef != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'SimplePay tranzakcióazonosító:',
+                      style: TextStyle(fontSize: 12, color: Colors.black54),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      orderRef,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            const Text(
+              'Kérjük, ellenőrizze a tranzakció során megadott adatok helyességét.',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Amennyiben minden adatot helyesen adott meg, a visszautasítás okának '
+              'kivizsgálása érdekében kérjük, szíveskedjen kapcsolatba lépni '
+              'kártyakibocsátó bankjával.',
+              style: TextStyle(fontSize: 14, color: Colors.black87),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Lehetséges okok: Elégtelennem fedezet, hibás adatok, vagy napi limit túllépése.',
+                      style: TextStyle(fontSize: 12, color: Colors.black87),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Bezárás'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              context.go('/subscription');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E3A8A),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Újrapróbálás'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Időtúllépés dialóg (SimplePay 3.13.2 szerint - KÖTELEZŐ!)
+  static void _showPaymentTimeoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.access_time, color: Colors.orange[600], size: 28),
+            const SizedBox(width: 12),
+            const Text('Időtúllépés'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Ön túllépte a tranzakció elindításának lehetséges maximális idejét.',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'A fizetési időkeret (30 perc) lejárt, mielőtt elindította volna a fizetést. '
+              'A tranzakció nem jött létre, így bankkártyája nem lett terhelve.',
+              style: TextStyle(fontSize: 14, color: Colors.black87),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.verified_user, color: Colors.green[700], size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Biztosítjuk: Nem történt pénzügyi terhelés.',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Bezárás'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              context.go('/subscription');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E3A8A),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Új fizetés indítása'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Megszakított fizetés dialóg (SimplePay 3.13.1 szerint - KÖTELEZŐ!)
+  static void _showPaymentCancelledDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.cancel_outlined, color: Colors.grey[600], size: 28),
+            const SizedBox(width: 12),
+            const Text('Megszakított fizetés'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Ön megszakította a fizetést.',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'A fizetési folyamat megszakításra került (a "Vissza" gomb megnyomásával '
+              'vagy a böngésző bezárásával). A tranzakció nem jött létre.',
+              style: TextStyle(fontSize: 14, color: Colors.black87),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.verified_user, color: Colors.green[700], size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Biztosítjuk: Nem történt pénzügyi terhelés.',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Bezárás'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              context.go('/subscription');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E3A8A),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Új fizetés indítása'),
+          ),
+        ],
+      ),
+    );
   }
 }
