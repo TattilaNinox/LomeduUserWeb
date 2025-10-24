@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/web_payment_service.dart';
 
 /// Webes fizetési előzmények widget
 ///
-/// Megjeleníti a felhasználó fizetési előzményeit.
-class WebPaymentHistory extends StatefulWidget {
+/// Megjeleníti a felhasználó fizetési előzményeit real-time (StreamBuilder).
+class WebPaymentHistory extends StatelessWidget {
   final Map<String, dynamic>? userData;
   final VoidCallback? onRefresh;
 
@@ -16,112 +16,113 @@ class WebPaymentHistory extends StatefulWidget {
     this.onRefresh,
   });
 
-  @override
-  State<WebPaymentHistory> createState() => _WebPaymentHistoryState();
-}
-
-class _WebPaymentHistoryState extends State<WebPaymentHistory> {
-  List<PaymentHistoryItem> _payments = [];
-  bool _isLoading = true;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPaymentHistory();
-  }
-
-  Future<void> _loadPaymentHistory() async {
-    if (widget.userData == null) {
-      setState(() {
-        _isLoading = false;
-      });
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      final userId = widget.userData!['uid'] ?? widget.userData!['id'];
-      if (userId == null) {
-        throw Exception('Felhasználói azonosító nem elérhető');
-      }
-
-      final payments = await WebPaymentService.getPaymentHistory(userId);
-      setState(() {
-        _payments = payments;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
+  // Import hozzáadása szükséges
+  // import 'package:cloud_firestore/cloud_firestore.dart';
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            children: [
-              const Icon(
-                Icons.history,
-                size: 24,
-                color: Color(0xFF1E3A8A),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'Fizetési előzmények',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E3A8A),
-                  ),
-                ),
-              ),
-              IconButton(
-                onPressed: _loadPaymentHistory,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Frissítés',
+    final userId = userData?['uid'] ?? userData?['id'];
+
+    if (userId == null) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: Text('Felhasználói azonosító nem elérhető'),
+        ),
+      );
+    }
+
+    // StreamBuilder - automatikus frissítés!
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('web_payments')
+          .where('userId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true)
+          .limit(50)
+          .snapshots(),
+      builder: (context, snapshot) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              const Row(
+                children: [
+                  Icon(
+                    Icons.history,
+                    size: 24,
+                    color: Color(0xFF1E3A8A),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Fizetési előzmények',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E3A8A),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
 
-          const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-          // Content
-          if (_isLoading)
-            _buildLoadingState()
-          else if (_error != null)
-            _buildErrorState()
-          else if (_payments.isEmpty)
-            _buildEmptyState()
-          else
-            _buildPaymentsList(),
-        ],
-      ),
+              // Content
+              if (snapshot.connectionState == ConnectionState.waiting)
+                _buildLoadingState()
+              else if (snapshot.hasError)
+                _buildErrorState(snapshot.error.toString())
+              else if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+                _buildEmptyState()
+              else
+                _buildPaymentsList(_convertToPaymentItems(snapshot.data!.docs)),
+            ],
+          ),
+        );
+      },
     );
+  }
+
+  List<PaymentHistoryItem> _convertToPaymentItems(
+      List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
+    return docs.map((doc) {
+      final data = doc.data();
+      return PaymentHistoryItem(
+        id: doc.id,
+        orderRef: data['orderRef'] as String? ?? '',
+        amount: data['amount'] as int? ?? 0,
+        status: (data['status'] as String? ?? 'unknown').toLowerCase(),
+        createdAt:
+            (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        planId: data['planId'] as String? ?? '',
+        transactionId: data['transactionId']?.toString(),
+      );
+    }).toList();
   }
 
   Widget _buildLoadingState() {
@@ -136,7 +137,7 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
     );
   }
 
-  Widget _buildErrorState() {
+  Widget _buildErrorState(String error) {
     return Center(
       child: Column(
         children: [
@@ -155,17 +156,12 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
           ),
           const SizedBox(height: 8),
           Text(
-            _error!,
+            error,
             style: TextStyle(
               fontSize: 14,
               color: Colors.red[600],
             ),
             textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _loadPaymentHistory,
-            child: const Text('Újrapróbálás'),
           ),
         ],
       ),
@@ -203,16 +199,16 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
     );
   }
 
-  Widget _buildPaymentsList() {
+  Widget _buildPaymentsList(List<PaymentHistoryItem> payments) {
     return Column(
       children: [
         // Desktop table view
         LayoutBuilder(
           builder: (context, constraints) {
             if (constraints.maxWidth > 768) {
-              return _buildDesktopTable();
+              return _buildDesktopTable(payments);
             } else {
-              return _buildMobileList();
+              return _buildMobileList(payments);
             }
           },
         ),
@@ -228,7 +224,7 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
             border: Border.all(color: Colors.grey[200]!),
           ),
           child: Text(
-            '${_payments.length} db megrendelés található',
+            '${payments.length} db megrendelés található',
             style: TextStyle(
               color: Colors.grey[600],
               fontSize: 14,
@@ -239,7 +235,7 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
     );
   }
 
-  Widget _buildDesktopTable() {
+  Widget _buildDesktopTable(List<PaymentHistoryItem> payments) {
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey[200]!),
@@ -299,22 +295,12 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
                     ),
                   ),
                 ),
-                Expanded(
-                  flex: 1,
-                  child: Text(
-                    'Műveletek',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
 
           // Rows
-          ..._payments.map((payment) => _buildTableRow(payment)),
+          ...payments.map((payment) => _buildTableRow(payment)),
         ],
       ),
     );
@@ -358,25 +344,14 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
             flex: 1,
             child: _buildStatusChip(payment.status),
           ),
-          Expanded(
-            flex: 1,
-            child: payment.status == 'initiated'
-                ? IconButton(
-                    onPressed: () => _queryPaymentStatus(payment.orderRef),
-                    icon: const Icon(Icons.refresh, size: 18),
-                    tooltip: 'Státusz frissítése',
-                    padding: EdgeInsets.zero,
-                  )
-                : const SizedBox(),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildMobileList() {
+  Widget _buildMobileList(List<PaymentHistoryItem> payments) {
     return Column(
-      children: _payments.map((payment) => _buildMobileCard(payment)).toList(),
+      children: payments.map((payment) => _buildMobileCard(payment)).toList(),
     );
   }
 
@@ -424,17 +399,6 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
               ),
             ],
           ),
-          if (payment.status == 'initiated') ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => _queryPaymentStatus(payment.orderRef),
-                icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('Státusz frissítése'),
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -503,99 +467,6 @@ class _WebPaymentHistoryState extends State<WebPaymentHistory> {
         return 'Éves előfizetés';
       default:
         return planId;
-    }
-  }
-
-  /// Fizetési státusz lekérdezése SimplePay Query API-val
-  Future<void> _queryPaymentStatus(String orderRef) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Státusz lekérdezése...'),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    try {
-      final functions = FirebaseFunctions.instanceFor(region: 'europe-west1');
-      final callable = functions.httpsCallable('queryPaymentStatus');
-      final result = await callable.call({'orderRef': orderRef});
-      final data = result.data as Map<String, dynamic>;
-
-      if (!mounted) return;
-      Navigator.of(context).pop();
-
-      if (data['success'] == true) {
-        final status = (data['status'] as String? ?? 'UNKNOWN').toUpperCase();
-
-        // Felhasználóbarát üzenet
-        String message;
-        String title;
-        Color? titleColor;
-
-        if (status == 'SUCCESS' || status == 'FINISHED') {
-          title = 'Sikeres fizetés';
-          titleColor = Colors.green[700];
-          message =
-              'A fizetés sikeresen lezárult! Az előfizetése aktiválásra került.';
-        } else if (status == 'NOTAUTHORIZED' || status == 'FAILED') {
-          title = 'Sikertelen fizetés';
-          titleColor = Colors.red[700];
-          message =
-              'A fizetés sikertelen volt. A bank elutasította a tranzakciót.\n\n'
-              'Lehetséges okok: Fedezethiány, hibás kártyaadatok, vagy napi limit túllépése.';
-        } else if (status == 'CANCELLED') {
-          title = 'Megszakított fizetés';
-          titleColor = Colors.grey[700];
-          message = 'A fizetést megszakította. Nem történt pénzügyi terhelés.';
-        } else if (status == 'TIMEOUT') {
-          title = 'Időtúllépés';
-          titleColor = Colors.orange[700];
-          message =
-              'A fizetési időkeret lejárt. Nem történt pénzügyi terhelés.';
-        } else {
-          title = 'Fizetés feldolgozás alatt';
-          titleColor = Colors.blue[700];
-          message =
-              'A fizetés még feldolgozás alatt van. Kérjük próbálja újra később, '
-              'vagy ha a fizetés nem sikerült, indítson új fizetést.';
-        }
-
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(title, style: TextStyle(color: titleColor)),
-            content: Text(message),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  _loadPaymentHistory();
-                },
-                child: const Text('Rendben'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Hiba: ${e.toString()}')),
-      );
     }
   }
 }

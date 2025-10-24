@@ -11,6 +11,7 @@ import '../services/account_deletion_service.dart';
 import '../widgets/trial_period_banner.dart';
 import '../widgets/simplepay_logo.dart';
 import '../widgets/web_payment_history.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 /// Egyszerű fiókadatok képernyő, előfizetési státusszal.
 class AccountScreen extends StatelessWidget {
@@ -59,12 +60,27 @@ class AccountScreen extends StatelessWidget {
           final qp = GoRouterState.of(context).uri.queryParameters;
           final paymentStatus = qp['payment'];
           final orderRef = qp['orderRef'];
-          if (paymentStatus != null) {
+          if (paymentStatus != null && orderRef != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) async {
               if (!context.mounted) return;
 
               // URL tisztítás először
               context.go('/account');
+
+              // AZONNAL frissítjük a web_payments státuszt callback alapján
+              try {
+                final functions =
+                    FirebaseFunctions.instanceFor(region: 'europe-west1');
+                final callable =
+                    functions.httpsCallable('updatePaymentStatusFromCallback');
+                await callable.call({
+                  'orderRef': orderRef,
+                  'callbackStatus': paymentStatus,
+                });
+                debugPrint('[PaymentCallback] Status updated: $paymentStatus');
+              } catch (e) {
+                debugPrint('[PaymentCallback] Update error: $e');
+              }
 
               // Majd megjelenítjük a megfelelő dialógot
               await Future.delayed(const Duration(milliseconds: 300));

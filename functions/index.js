@@ -731,6 +731,16 @@ exports.queryPaymentStatus = onCall({ secrets: ['SIMPLEPAY_MERCHANT_ID', 'SIMPLE
         console.log('[queryPaymentStatus] auto-completed payment', { userId, orderRef });
       }
     }
+    
+    // Sikertelen/megszakított státuszok frissítése (ha még INITIATED)
+    if (['NOTAUTHORIZED', 'FAILED', 'CANCELLED', 'TIMEOUT'].includes(status) && 
+        paymentData.status === 'INITIATED') {
+      await paymentRef.update({
+        status: status,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      console.log('[queryPaymentStatus] updated failed/cancelled payment', { userId, orderRef, status });
+    }
 
     return {
       success: true,
@@ -745,6 +755,42 @@ exports.queryPaymentStatus = onCall({ secrets: ['SIMPLEPAY_MERCHANT_ID', 'SIMPLE
     console.error('[queryPaymentStatus] error', { message: err?.message, stack: err?.stack });
     if (err instanceof HttpsError) throw err;
     throw new HttpsError('internal', err?.message || 'Ismeretlen hiba');
+  }
+});
+
+/**
+ * SimplePay callback alapján status frissítés
+ * - Browser callback (payment=fail/success/stb) alapján azonnal frissíti a status-t
+ * - Egyszerű, gyors, garantált működés
+ */
+exports.updatePaymentStatusFromCallback = onCall(async (request) => {
+  const { orderRef, callbackStatus } = request.data || {};
+  
+  if (!orderRef || !callbackStatus) {
+    throw new HttpsError('invalid-argument', 'orderRef és callbackStatus szükséges');
+  }
+  
+  // Callback status → Firestore status mapping
+  const statusMap = {
+    'success': 'COMPLETED',
+    'fail': 'FAILED',
+    'timeout': 'TIMEOUT',
+    'cancelled': 'CANCELLED',
+  };
+  
+  const firestoreStatus = statusMap[callbackStatus] || 'INITIATED';
+  
+  try {
+    await db.collection('web_payments').doc(orderRef).update({
+      status: firestoreStatus,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    
+    console.log('[updatePaymentStatusFromCallback] Updated', { orderRef, callbackStatus, firestoreStatus });
+    return { success: true, status: firestoreStatus };
+  } catch (error) {
+    console.error('[updatePaymentStatusFromCallback] Error', { orderRef, error: error.message });
+    throw new HttpsError('internal', error.message || 'Status frissítés sikertelen');
   }
 });
 
