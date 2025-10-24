@@ -127,11 +127,11 @@ class WebPaymentService {
           id: doc.id,
           orderRef: data['orderRef'] as String? ?? '',
           amount: data['amount'] as int? ?? 0,
-          status: data['status'] as String? ?? 'unknown',
+          status: (data['status'] as String? ?? 'unknown').toLowerCase(),
           createdAt:
               (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
           planId: data['planId'] as String? ?? '',
-          transactionId: data['transactionId'] as String?,
+          transactionId: data['transactionId']?.toString(),
         );
       }).toList();
     } catch (e) {
@@ -251,15 +251,21 @@ class PaymentHistoryItem {
       '${amount.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')} Ft';
 
   String get statusText {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'completed':
         return 'Sikeres';
+      case 'initiated':
+        return 'Folyamatban';
       case 'pending':
         return 'Folyamatban';
       case 'failed':
         return 'Sikertelen';
+      case 'notauthorized':
+        return 'Sikertelen';
       case 'cancelled':
         return 'Lemondva';
+      case 'timeout':
+        return 'Időtúllépés';
       default:
         return 'Ismeretlen';
     }
