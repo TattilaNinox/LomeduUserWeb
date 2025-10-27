@@ -99,6 +99,16 @@ class SessionGuard extends ChangeNotifier {
       return;
     }
 
+    // Teszt fiók esetén ne korlátozzuk az eszközt (ideiglenesen)
+    final email = (data['email'] as String? ?? '').toLowerCase();
+    if (email == 'lomeduteszt@gmail.com') {
+      _deviceAccess = DeviceAccess.allowed;
+      debugPrint(
+          '[SessionGuard] test account (lomeduteszt@gmail.com) -> allowed');
+      notifyListeners();
+      return;
+    }
+
     final String? allowedFingerprint =
         data['authorizedDeviceFingerprint'] as String?;
 
