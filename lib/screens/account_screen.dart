@@ -688,12 +688,12 @@ class AccountScreen extends StatelessWidget {
       try {
         // Várunk 2 másodpercet az IPN feldolgozásra
         await Future.delayed(const Duration(seconds: 2));
-        
+
         // queryPaymentStatus Cloud Function hívása
         final callable = FirebaseFunctions.instanceFor(region: 'europe-west1')
             .httpsCallable('queryPaymentStatus');
         final result = await callable.call({'orderRef': orderRef});
-        
+
         if (result.data['success'] == true) {
           transactionId = result.data['transactionId'] as String?;
           debugPrint('transactionId lekérdezve: $transactionId');
@@ -707,7 +707,8 @@ class AccountScreen extends StatelessWidget {
               .doc(orderRef)
               .get();
           if (paymentDoc.exists) {
-            transactionId = paymentDoc.data()?['simplePayTransactionId'] as String?;
+            transactionId =
+                paymentDoc.data()?['simplePayTransactionId']?.toString();
           }
         } catch (e2) {
           debugPrint('Firestore fallback is sikertelen: $e2');
@@ -793,12 +794,12 @@ class AccountScreen extends StatelessWidget {
       try {
         // Várunk 2 másodpercet az IPN feldolgozásra
         await Future.delayed(const Duration(seconds: 2));
-        
+
         // queryPaymentStatus Cloud Function hívása
         final callable = FirebaseFunctions.instanceFor(region: 'europe-west1')
             .httpsCallable('queryPaymentStatus');
         final result = await callable.call({'orderRef': orderRef});
-        
+
         if (result.data['success'] == true) {
           transactionId = result.data['transactionId'] as String?;
           debugPrint('transactionId lekérdezve (failed): $transactionId');
@@ -812,7 +813,8 @@ class AccountScreen extends StatelessWidget {
               .doc(orderRef)
               .get();
           if (paymentDoc.exists) {
-            transactionId = paymentDoc.data()?['simplePayTransactionId'] as String?;
+            transactionId =
+                paymentDoc.data()?['simplePayTransactionId']?.toString();
           }
         } catch (e2) {
           debugPrint('Firestore fallback is sikertelen: $e2');
