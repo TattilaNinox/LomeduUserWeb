@@ -610,7 +610,10 @@ exports.confirmWebPayment = onCall({ secrets: ['SIMPLEPAY_MERCHANT_ID', 'SIMPLEP
  * - Input: { orderRef }
  * - Output: { success, status, transactionId, details }
  */
-exports.queryPaymentStatus = onCall({ secrets: ['SIMPLEPAY_MERCHANT_ID', 'SIMPLEPAY_SECRET_KEY', 'SIMPLEPAY_ENV'] }, async (request) => {
+exports.queryPaymentStatus = onCall({ 
+  secrets: ['SIMPLEPAY_MERCHANT_ID', 'SIMPLEPAY_SECRET_KEY', 'SIMPLEPAY_ENV'],
+  cors: true 
+}, async (request) => {
   try {
     const SIMPLEPAY_CONFIG = getSimplePayConfig();
     const { orderRef } = request.data || {};
