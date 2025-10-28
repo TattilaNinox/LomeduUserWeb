@@ -1079,9 +1079,10 @@ exports.simplepayWebhook = onRequest({ secrets: ['SIMPLEPAY_SECRET_KEY','NEXTAUT
     
     console.log('[simplepayWebhook] updated payment to COMPLETED', { userId, orderRef });
     
-    // IPN CONFIRM - SimplePay v2.1 követelmény (9.6.2)
-    // A válasznak tartalmaznia kell egy aláírt JSON objektumot receiveDate mezővel
+    // IPN CONFIRM - SimplePay v2.1 követelmény (9.6.2 és 3.14)
+    // A válasznak tartalmaznia kell az ÖSSZES fogadott IPN adatot + receiveDate
     const confirmResponse = {
+      ...body,  // Összes fogadott IPN adat visszaküldése
       receiveDate: new Date().toISOString(),
     };
     const confirmBody = JSON.stringify(confirmResponse);

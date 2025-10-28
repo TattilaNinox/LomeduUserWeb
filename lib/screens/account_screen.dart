@@ -88,10 +88,10 @@ class AccountScreen extends StatelessWidget {
 
               switch (paymentStatus) {
                 case 'success':
-                  _showPaymentSuccessDialog(context, orderRef);
+                  await _showPaymentSuccessDialog(context, orderRef);
                   break;
                 case 'fail':
-                  _showPaymentFailedDialog(context, orderRef);
+                  await _showPaymentFailedDialog(context, orderRef);
                   break;
                 case 'timeout':
                   _showPaymentTimeoutDialog(context);
@@ -679,8 +679,26 @@ class AccountScreen extends StatelessWidget {
   }
 
   /// Sikeres fizetés dialóg (SimplePay 3.13.4 szerint)
-  static void _showPaymentSuccessDialog(
-      BuildContext context, String? orderRef) {
+  static Future<void> _showPaymentSuccessDialog(
+      BuildContext context, String? orderRef) async {
+    // SimplePay transactionId lekérése Firestore-ból
+    String? transactionId;
+    if (orderRef != null) {
+      try {
+        final paymentDoc = await FirebaseFirestore.instance
+            .collection('web_payments')
+            .doc(orderRef)
+            .get();
+        if (paymentDoc.exists) {
+          transactionId = paymentDoc.data()?['transactionId'] as String?;
+        }
+      } catch (e) {
+        debugPrint('Hiba a transactionId lekérdezésekor: $e');
+      }
+    }
+
+    if (!context.mounted) return;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -703,7 +721,7 @@ class AccountScreen extends StatelessWidget {
             const SizedBox(height: 16),
             const Text(
                 'Előfizetése aktiválva lett. Most már teljes hozzáférése van minden funkcióhoz.'),
-            if (orderRef != null) ...[
+            if (transactionId != null || orderRef != null) ...[
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -720,7 +738,7 @@ class AccountScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      orderRef,
+                      transactionId ?? orderRef!,
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -748,7 +766,26 @@ class AccountScreen extends StatelessWidget {
   }
 
   /// Sikertelen fizetés dialóg (SimplePay 3.13.3 szerint - KÖTELEZŐ!)
-  static void _showPaymentFailedDialog(BuildContext context, String? orderRef) {
+  static Future<void> _showPaymentFailedDialog(
+      BuildContext context, String? orderRef) async {
+    // SimplePay transactionId lekérése Firestore-ból
+    String? transactionId;
+    if (orderRef != null) {
+      try {
+        final paymentDoc = await FirebaseFirestore.instance
+            .collection('web_payments')
+            .doc(orderRef)
+            .get();
+        if (paymentDoc.exists) {
+          transactionId = paymentDoc.data()?['transactionId'] as String?;
+        }
+      } catch (e) {
+        debugPrint('Hiba a transactionId lekérdezésekor: $e');
+      }
+    }
+
+    if (!context.mounted) return;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -764,7 +801,7 @@ class AccountScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (orderRef != null) ...[
+            if (transactionId != null || orderRef != null) ...[
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -781,7 +818,7 @@ class AccountScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      orderRef,
+                      transactionId ?? orderRef!,
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -803,26 +840,6 @@ class AccountScreen extends StatelessWidget {
               'kivizsgálása érdekében kérjük, szíveskedjen kapcsolatba lépni '
               'kártyakibocsátó bankjával.',
               style: TextStyle(fontSize: 14, color: Colors.black87),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Lehetséges okok: Fedezethiány, hibás adatok, vagy napi limit túllépése.',
-                      style: TextStyle(fontSize: 12, color: Colors.black87),
-                    ),
-                  ),
-                ],
-              ),
             ),
           ],
         ),
