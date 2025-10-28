@@ -932,10 +932,17 @@ exports.simplepayWebhook = onRequest({ secrets: ['SIMPLEPAY_SECRET_KEY','NEXTAUT
       receiveDate: new Date().toISOString(),
     };
     const confirmBody = JSON.stringify(confirmResponse);
+    
+    // DEBUG: Log a teljes IPN confirm választ
+    console.log('[simplepayWebhook] IPN CONFIRM REQUEST BODY:', JSON.stringify(body, null, 2));
+    console.log('[simplepayWebhook] IPN CONFIRM RESPONSE BODY:', confirmBody);
+    
     const confirmSignature = crypto
       .createHmac('sha384', SIMPLEPAY_CONFIG.secretKey.trim())
       .update(confirmBody)
       .digest('base64');
+    
+    console.log('[simplepayWebhook] IPN CONFIRM SIGNATURE:', confirmSignature.substring(0, 20) + '...');
     
     res.set('Content-Type', 'application/json; charset=utf-8');
     res.set('Signature', confirmSignature);
