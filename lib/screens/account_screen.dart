@@ -681,19 +681,37 @@ class AccountScreen extends StatelessWidget {
   /// Sikeres fizetés dialóg (SimplePay 3.13.4 szerint)
   static Future<void> _showPaymentSuccessDialog(
       BuildContext context, String? orderRef) async {
-    // SimplePay transactionId lekérése Firestore-ból
+    // SimplePay transactionId lekérése queryPaymentStatus használatával
+    // Ez várja meg az IPN feldolgozását és garantáltan friss adatot ad
     String? transactionId;
     if (orderRef != null) {
       try {
-        final paymentDoc = await FirebaseFirestore.instance
-            .collection('web_payments')
-            .doc(orderRef)
-            .get();
-        if (paymentDoc.exists) {
-          transactionId = paymentDoc.data()?['transactionId'] as String?;
+        // Várunk 2 másodpercet az IPN feldolgozásra
+        await Future.delayed(const Duration(seconds: 2));
+        
+        // queryPaymentStatus Cloud Function hívása
+        final callable = FirebaseFunctions.instanceFor(region: 'europe-west1')
+            .httpsCallable('queryPaymentStatus');
+        final result = await callable.call({'orderRef': orderRef});
+        
+        if (result.data['success'] == true) {
+          transactionId = result.data['transactionId'] as String?;
+          debugPrint('transactionId lekérdezve: $transactionId');
         }
       } catch (e) {
-        debugPrint('Hiba a transactionId lekérdezésekor: $e');
+        debugPrint('Hiba a queryPaymentStatus híváskor: $e');
+        // Fallback: próbáljuk meg közvetlenül Firestore-ból
+        try {
+          final paymentDoc = await FirebaseFirestore.instance
+              .collection('web_payments')
+              .doc(orderRef)
+              .get();
+          if (paymentDoc.exists) {
+            transactionId = paymentDoc.data()?['transactionId'] as String?;
+          }
+        } catch (e2) {
+          debugPrint('Firestore fallback is sikertelen: $e2');
+        }
       }
     }
 
@@ -768,19 +786,37 @@ class AccountScreen extends StatelessWidget {
   /// Sikertelen fizetés dialóg (SimplePay 3.13.3 szerint - KÖTELEZŐ!)
   static Future<void> _showPaymentFailedDialog(
       BuildContext context, String? orderRef) async {
-    // SimplePay transactionId lekérése Firestore-ból
+    // SimplePay transactionId lekérése queryPaymentStatus használatával
+    // Ez várja meg az IPN feldolgozását és garantáltan friss adatot ad
     String? transactionId;
     if (orderRef != null) {
       try {
-        final paymentDoc = await FirebaseFirestore.instance
-            .collection('web_payments')
-            .doc(orderRef)
-            .get();
-        if (paymentDoc.exists) {
-          transactionId = paymentDoc.data()?['transactionId'] as String?;
+        // Várunk 2 másodpercet az IPN feldolgozásra
+        await Future.delayed(const Duration(seconds: 2));
+        
+        // queryPaymentStatus Cloud Function hívása
+        final callable = FirebaseFunctions.instanceFor(region: 'europe-west1')
+            .httpsCallable('queryPaymentStatus');
+        final result = await callable.call({'orderRef': orderRef});
+        
+        if (result.data['success'] == true) {
+          transactionId = result.data['transactionId'] as String?;
+          debugPrint('transactionId lekérdezve (failed): $transactionId');
         }
       } catch (e) {
-        debugPrint('Hiba a transactionId lekérdezésekor: $e');
+        debugPrint('Hiba a queryPaymentStatus híváskor: $e');
+        // Fallback: próbáljuk meg közvetlenül Firestore-ból
+        try {
+          final paymentDoc = await FirebaseFirestore.instance
+              .collection('web_payments')
+              .doc(orderRef)
+              .get();
+          if (paymentDoc.exists) {
+            transactionId = paymentDoc.data()?['transactionId'] as String?;
+          }
+        } catch (e2) {
+          debugPrint('Firestore fallback is sikertelen: $e2');
+        }
       }
     }
 
