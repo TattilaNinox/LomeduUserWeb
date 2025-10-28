@@ -707,7 +707,7 @@ class AccountScreen extends StatelessWidget {
               .doc(orderRef)
               .get();
           if (paymentDoc.exists) {
-            transactionId = paymentDoc.data()?['transactionId'] as String?;
+            transactionId = paymentDoc.data()?['simplePayTransactionId'] as String?;
           }
         } catch (e2) {
           debugPrint('Firestore fallback is sikertelen: $e2');
@@ -812,7 +812,7 @@ class AccountScreen extends StatelessWidget {
               .doc(orderRef)
               .get();
           if (paymentDoc.exists) {
-            transactionId = paymentDoc.data()?['transactionId'] as String?;
+            transactionId = paymentDoc.data()?['simplePayTransactionId'] as String?;
           }
         } catch (e2) {
           debugPrint('Firestore fallback is sikertelen: $e2');
