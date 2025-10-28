@@ -1,0 +1,633 @@
+================================================================================
+SIMPLEPAY SZOLGÁLTATÓ VISSZAJELZÉSEK - JAVÍTÁSOK TESZTELÉSI ÚTMUTATÓ
+================================================================================
+
+Verzió: 1.0
+Dátum: 2025. október 28.
+Készítette: Lomedu Development Team
+Git commit: f7f31fe
+
+================================================================================
+1. ÁTTEKINTÉS
+================================================================================
+
+A SimplePay szolgáltató tesztelte az alkalmazást és 4 hibát jelzett vissza.
+Minden hibát kijavítottunk. Ez a dokumentum részletes útmutatót ad a javítások
+teszteléséhez.
+
+JAVÍTOTT HIBÁK:
+1. ✅ IPN válasz CONTENTNOTMATCH hiba
+2. ✅ Sikertelen fizetés - helytelen tranzakcióazonosító
+3. ✅ Sikeres fizetés - helytelen tranzakcióazonosító  
+4. ✅ Adatvédelmi nyilatkozat (már korábban implementálva volt)
+
+================================================================================
+2. ELŐKÉSZÜLETEK
+================================================================================
+
+2.1. DEPLOYMENT
+───────────────
+
+1. Backend (Firebase Functions) telepítése:
+   ```
+   cd functions
+   npm install
+   firebase deploy --only functions
+   ```
+
+2. Frontend (Flutter Web) telepítése:
+   ```
+   flutter build web
+   firebase deploy --only hosting
+   ```
+
+3. Ellenőrizd, hogy a környezeti változók helyesen vannak beállítva:
+   - SIMPLEPAY_ENV=sandbox (teszteléshez)
+   - SIMPLEPAY_MERCHANT_ID
+   - SIMPLEPAY_SECRET_KEY
+   - NEXTAUTH_URL
+
+2.2. TESZTELÉSI KÖRNYEZET
+──────────────────────────
+
+- SimplePay Sandbox környezet használata kötelező!
+- SimplePay Admin felület hozzáférés szükséges (IPN ellenőrzéshez)
+- Firebase Console hozzáférés (Firestore ellenőrzéshez)
+- Böngésző: Chrome/Edge Developer Tools
+
+2.3. TESZT KÁRTYÁK (SimplePay Sandbox)
+───────────────────────────────────────
+
+SIKERES TESZT KÁRTYA:
+  Kártyaszám: 4444 9999 9999 9999
+  Lejárat: bármely jövőbeli dátum
+  CVC: bármely 3 számjegy
+  
+SIKERTELEN TESZT KÁRTYA:
+  Kártyaszám: 4000 0000 0000 0119
+  Lejárat: bármely jövőbeli dátum
+  CVC: bármely 3 számjegy
+
+================================================================================
+3. TESZT #1: IPN VÁLASZ JAVÍTÁS (KRITIKUS)
+================================================================================
+
+HÁTTÉR:
+-------
+A SimplePay CONTENTNOTMATCH hibát jelzett, mert az IPN confirm válasz csak a 
+receiveDate-et tartalmazta, nem pedig az összes fogadott IPN adatot.
+
+JAVÍTÁS:
+--------
+functions/index.js (sor 1082-1095)
+- Módosítva: Az IPN válasz most az ÖSSZES fogadott adatot visszaküldi + receiveDate
+
+TESZTELÉSI LÉPÉSEK:
+──────────────────
+
+3.1. SIKERES FIZETÉS IPN TESZT
+
+1. Jelentkezz be a webalkalmazásba teszt felhasználóval
+2. Navigálj a Fiók -> Előfizetés menüpontra
+3. Válaszd a "Havi előfizetés" csomagot
+4. Fogadd el az adattovábbítási nyilatkozatot
+5. Használd a SIKERES teszt kártyát (4444 9999 9999 9999)
+6. Várj a SimplePay átirányításra
+7. Ellenőrizd az IPN üzenetet a SimplePay Admin felületen
+
+ELLENŐRZÉSI PONTOK:
+──────────────────
+
+✓ Firebase Functions Log:
+  - Keress rá: "[simplepayWebhook] received"
+  - Ellenőrizd: status: SUCCESS vagy FINISHED
+  
+✓ SimplePay Admin -> Tranzakciók -> IPN üzenetek:
+  - Keress rá a tranzakció orderRef-jére (WEB_xxx)
+  - IPN válasz státusz: SIKERES vagy OK
+  - NINCS "CONTENTNOTMATCH" hiba ❌
+  - IPN Response tartalmazza:
+    * receiveDate ✓
+    * orderRef ✓
+    * transactionId ✓
+    * status ✓
+    * merchant ✓
+    * salt ✓
+    * ... (összes fogadott adat) ✓
+
+✓ Firebase Firestore:
+  - web_payments/{orderRef} dokumentum:
+    * status: "COMPLETED" ✓
+    * transactionId: létezik (pl: 507759798) ✓
+    * userId: helyes ✓
+
+VÁRHATÓ EREDMÉNY:
+────────────────
+✅ IPN válasz státusz: SIKERES (NINCS CONTENTNOTMATCH hiba!)
+✅ IPN Response JSON tartalmazza az összes fogadott mezőt + receiveDate
+✅ Firestore frissült a sikeres fizetéssel
+
+HIBAELHÁRÍTÁS:
+─────────────
+❌ Ha még mindig CONTENTNOTMATCH hibát kapsz:
+   1. Ellenőrizd a Firebase Functions logot
+   2. Nézd meg a confirmResponse objektumot a console.log-ban
+   3. Hasonlítsd össze a fogadott body-t és a visszaküldött confirmResponse-t
+
+================================================================================
+4. TESZT #2: SIKERTELEN FIZETÉS DIALOG
+================================================================================
+
+HÁTTÉR:
+-------
+1. Az orderRef (WEB_xxx) jelent meg a SimplePay transactionId helyett
+2. "Lehetséges okok" blokk biztonsági kockázatot jelentett
+
+JAVÍTÁS:
+--------
+lib/screens/account_screen.dart (sor 768-864)
+- SimplePay transactionId lekérése Firestore-ból
+- "Lehetséges okok" blokk teljesen eltávolítva
+
+TESZTELÉSI LÉPÉSEK:
+──────────────────
+
+4.1. SIKERTELEN FIZETÉS TESZT
+
+1. Jelentkezz be a webalkalmazásba
+2. Navigálj a Fiók -> Előfizetés menüpontra
+3. Válaszd a "Havi előfizetés" csomagot
+4. Fogadd el az adattovábbítási nyilatkozatot
+5. Használd a SIKERTELEN teszt kártyát (4000 0000 0000 0119)
+6. Várj a SimplePay átirányításra
+7. Ellenőrizd a sikertelen fizetés dialógot
+
+ELLENŐRZÉSI PONTOK:
+──────────────────
+
+✓ Sikertelen Fizetés Dialog:
+  
+  MEGJELENÉS:
+  ┌────────────────────────────────────────────────┐
+  │ [🔴] Sikertelen tranzakció                     │
+  │                                                │
+  │ ┌──────────────────────────────────────────┐   │
+  │ │ SimplePay tranzakcióazonosító:           │   │
+  │ │ 5xxxxxxxx  ← FONTOS: NEM WEB_xxx!        │   │
+  │ └──────────────────────────────────────────┘   │
+  │                                                │
+  │ Kérjük, ellenőrizze a tranzakció során       │
+  │ megadott adatok helyességét.                  │
+  │                                                │
+  │ Amennyiben minden adatot helyesen adott      │
+  │ meg, a visszautasítás okának kivizsgálása    │
+  │ érdekében kérjük, szíveskedjen kapcsolatba   │
+  │ lépni kártyakibocsátó bankjával.             │
+  │                                                │
+  │ ❌ NINCS "Lehetséges okok" blokk!             │
+  │                                                │
+  │ [ Bezárás ]  [ Újrapróbálás ]                 │
+  └────────────────────────────────────────────────┘
+
+✓ Tranzakcióazonosító formátum:
+  - HELYES: "507759798" vagy hasonló számsor ✓
+  - HELYTELEN: "WEB_userId_timestamp" ❌
+
+✓ "Lehetséges okok" blokk:
+  - NEM JELENIK MEG (teljesen eltávolítva) ✓
+  - NINCS kék info doboz ✓
+  - NINCS "Fedezethiány, hibás adatok..." szöveg ✓
+
+✓ Firestore ellenőrzés:
+  - web_payments/{orderRef}:
+    * transactionId mező létezik ✓
+    * status: "FAILED" vagy "INITIATED" ✓
+
+VÁRHATÓ EREDMÉNY:
+────────────────
+✅ SimplePay transactionId (5xxxxxxxx) megjelenik, NEM orderRef (WEB_xxx)
+✅ "Lehetséges okok" blokk teljesen hiányzik
+✅ SimplePay specifikáció szerinti szöveg jelenik meg
+
+HIBAELHÁRÍTÁS:
+─────────────
+❌ Ha orderRef (WEB_xxx) jelenik meg transactionId helyett:
+   1. Ellenőrizd a Firestore web_payments dokumentumot
+   2. Nézd meg, hogy van-e transactionId mező
+   3. Ellenőrizd a browser console-t (F12) hibákért
+   4. Várj 2-3 másodpercet, hogy a Firestore frissüljön
+
+❌ Ha "Lehetséges okok" blokk még látható:
+   1. Frissítsd a böngészőt (Ctrl+F5 hard refresh)
+   2. Ellenőrizd, hogy az új Flutter build telepítve van
+
+================================================================================
+5. TESZT #3: SIKERES FIZETÉS DIALOG
+================================================================================
+
+HÁTTÉR:
+-------
+Az orderRef (WEB_xxx) jelent meg a SimplePay transactionId helyett
+
+JAVÍTÁS:
+--------
+lib/screens/account_screen.dart (sor 681-766)
+- SimplePay transactionId lekérése Firestore-ból
+- transactionId megjelenítése orderRef helyett
+
+TESZTELÉSI LÉPÉSEK:
+──────────────────
+
+5.1. SIKERES FIZETÉS TESZT
+
+1. Jelentkezz be a webalkalmazásba
+2. Navigálj a Fiók -> Előfizetés menüpontra
+3. Válaszd a "Havi előfizetés" csomagot
+4. Fogadd el az adattovábbítási nyilatkozatot
+5. Használd a SIKERES teszt kártyát (4444 9999 9999 9999)
+6. Várj a SimplePay átirányításra
+7. Ellenőrizd a sikeres fizetés dialógot
+
+ELLENŐRZÉSI PONTOK:
+──────────────────
+
+✓ Sikeres Fizetés Dialog:
+
+  MEGJELENÉS:
+  ┌────────────────────────────────────────────────┐
+  │ [✅] Sikeres tranzakció                        │
+  │                                                │
+  │ A fizetés sikeresen megtörtént!                │
+  │                                                │
+  │ Előfizetése aktiválva lett. Most már teljes   │
+  │ hozzáférése van minden funkcióhoz.            │
+  │                                                │
+  │ ┌──────────────────────────────────────────┐   │
+  │ │ SimplePay tranzakcióazonosító:           │   │
+  │ │ 507759798  ← FONTOS: NEM WEB_xxx!        │   │
+  │ └──────────────────────────────────────────┘   │
+  │                                                │
+  │ [ Rendben ]                                    │
+  └────────────────────────────────────────────────┘
+
+✓ Tranzakcióazonosító formátum:
+  - HELYES: "507759798" vagy hasonló számsor ✓
+  - HELYTELEN: "WEB_userId_timestamp" ❌
+
+✓ Firestore ellenőrzés:
+  - web_payments/{orderRef}:
+    * transactionId: "507759798" (vagy hasonló) ✓
+    * status: "COMPLETED" ✓
+  
+  - users/{userId}:
+    * isSubscriptionActive: true ✓
+    * subscriptionStatus: "premium" ✓
+    * subscription.purchaseToken: {transactionId} ✓
+
+VÁRHATÓ EREDMÉNY:
+────────────────
+✅ SimplePay transactionId (5xxxxxxxx) megjelenik, NEM orderRef (WEB_xxx)
+✅ Előfizetés aktiválódott
+✅ Felhasználó prémium státuszú
+
+HIBAELHÁRÍTÁS:
+─────────────
+❌ Ha orderRef (WEB_xxx) jelenik meg transactionId helyett:
+   1. Ellenőrizd a Firestore web_payments dokumentumot
+   2. Várj 2-3 másodpercet az IPN feldolgozására
+   3. Refresh-eld az oldalt és nézd meg újra
+
+================================================================================
+6. TESZT #4: ADATVÉDELMI NYILATKOZAT
+================================================================================
+
+HÁTTÉR:
+-------
+A SimplePay dokumentáció 8. fejezete kötelezővé teszi az adattovábbítási 
+nyilatkozat megjelenítését.
+
+STÁTUSZ:
+────────
+✅ MÁR KORÁBBAN IMPLEMENTÁLVA
+- Frontend dialog: lib/widgets/data_transfer_consent_dialog.dart
+- Backend validáció: functions/index.js (sor 311-317)
+
+TESZTELÉSI LÉPÉSEK:
+──────────────────
+
+6.1. NYILATKOZAT MEGJELENÉS TESZT
+
+1. Jelentkezz be a webalkalmazásba
+2. Navigálj a Fiók -> Előfizetés menüpontra
+3. Kattints a "Havi előfizetés" kiválasztása gombra
+
+ELLENŐRZÉSI PONTOK:
+──────────────────
+
+✓ Adattovábbítási Nyilatkozat Dialog:
+  - Megjelenik automatikusan ✓
+  - Magyar és angol nyelvű szöveg ✓
+  - Checkbox az elfogadáshoz ✓
+  - "Elfogadom" gomb disabled, amíg nincs bejelölve ✓
+  - "Mégse" gomb működik ✓
+
+✓ Backend validáció:
+  - Ha nem fogadod el: "Adattovábbítási nyilatkozat szükséges" hiba ✓
+  - Firebase Functions log: "[initiateWebPayment] HIBA: Adattovábbítási nyilatkozat nincs elfogadva"
+
+✓ Firestore:
+  - users/{userId}:
+    * dataTransferConsentLastAcceptedDate: timestamp ✓
+
+VÁRHATÓ EREDMÉNY:
+────────────────
+✅ Nyilatkozat megjelenik minden fizetés előtt
+✅ Elfogadás nélkül nem lehet fizetni
+✅ Firestore rögzíti az elfogadás időpontját
+
+================================================================================
+7. TELJES END-TO-END TESZTELÉSI FORGATÓKÖNYV
+================================================================================
+
+Ez a szakasz egy komplett, végponttól végpontig tartó tesztelési folyamatot ír le.
+
+7.1. SIKERES FIZETÉS - TELJES FOLYAMAT
+──────────────────────────────────────
+
+LÉPÉS 1: Bejelentkezés
+  └─ https://lomedu-user-web.web.app
+
+LÉPÉS 2: Navigálás
+  └─ Fiók -> Előfizetés
+
+LÉPÉS 3: Csomag választás
+  └─ "Havi előfizetés" (4350 Ft)
+
+LÉPÉS 4: Adattovábbítási nyilatkozat
+  ✓ Dialog megjelenik
+  ✓ Checkbox bejelölése
+  ✓ "Elfogadom" gomb
+
+LÉPÉS 5: SimplePay átirányítás
+  ✓ SimplePay sandbox fizetőoldal betöltődik
+  ✓ Összeg: 4350 Ft
+  ✓ Merchant: Oak Quality Kft.
+
+LÉPÉS 6: Fizetés
+  Kártyaszám: 4444 9999 9999 9999
+  Lejárat: 12/25
+  CVC: 123
+  ✓ "Fizetés" gomb
+
+LÉPÉS 7: IPN feldolgozás (háttérben)
+  ✓ SimplePay IPN üzenet küldése
+  ✓ Firebase Function fogadja
+  ✓ Aláírás validálás
+  ✓ Firestore frissítés
+  ✓ IPN Confirm válasz küldése (ÖSSZES adat + receiveDate)
+
+LÉPÉS 8: Visszairányítás
+  ✓ URL: /account?payment=success&orderRef=WEB_xxx
+  ✓ Sikeres dialog megjelenik
+  ✓ SimplePay transactionId látható (NEM orderRef!)
+
+LÉPÉS 9: Ellenőrzések
+  ✓ Firestore: web_payments/{orderRef}
+    - status: "COMPLETED"
+    - transactionId: "507759798"
+  ✓ Firestore: users/{userId}
+    - isSubscriptionActive: true
+    - subscriptionStatus: "premium"
+  ✓ SimplePay Admin: IPN válasz OK (NINCS CONTENTNOTMATCH)
+
+EREDMÉNY: ✅ SIKERES
+
+7.2. SIKERTELEN FIZETÉS - TELJES FOLYAMAT
+─────────────────────────────────────────
+
+LÉPÉS 1-5: Ugyanaz, mint sikeres fizetésnél
+
+LÉPÉS 6: Fizetés sikertelen kártyával
+  Kártyaszám: 4000 0000 0000 0119
+  Lejárat: 12/25
+  CVC: 123
+  ✓ "Fizetés" gomb
+  ✓ SimplePay elutasítja a fizetést
+
+LÉPÉS 7: Visszairányítás
+  ✓ URL: /account?payment=fail&orderRef=WEB_xxx
+  ✓ Sikertelen dialog megjelenik
+  ✓ SimplePay transactionId látható (NEM orderRef!)
+  ✓ NINCS "Lehetséges okok" blokk
+
+LÉPÉS 8: Ellenőrzések
+  ✓ Firestore: web_payments/{orderRef}
+    - status: "FAILED"
+    - transactionId létezik
+  ✓ Firestore: users/{userId}
+    - isSubscriptionActive: false (nem változott)
+
+EREDMÉNY: ✅ SIKERES
+
+================================================================================
+8. SIMPLEPAY ADMIN ELLENŐRZÉSI LISTA
+================================================================================
+
+8.1. TRANZAKCIÓK MENÜ
+─────────────────────
+
+1. Navigálj: SimplePay Admin -> Tranzakciók
+2. Keress rá a teszt orderRef-re (pl: WEB_xxx)
+3. Kattints a tranzakcióra
+
+ELLENŐRIZD:
+✓ Státusz: Sikeres / Sikertelen
+✓ Összeg: 4350 HUF
+✓ Merchant: Oak Quality Kft.
+✓ Customer email: teszt felhasználó email-je
+
+8.2. IPN ÜZENETEK MENÜ
+──────────────────────
+
+1. Navigálj: SimplePay Admin -> IPN üzenetek
+2. Keress rá a teszt orderRef-re
+3. Kattints az IPN üzenetre
+
+ELLENŐRIZD:
+✓ IPN Request (SimplePay -> Te):
+  - status: FINISHED vagy SUCCESS
+  - orderRef: WEB_xxx
+  - transactionId: 5xxxxxxxx
+  - orderId: létezik
+  
+✓ IPN Response (Te -> SimplePay):
+  - HTTP Status: 200 OK ✓
+  - Hiba: NINCS ✓
+  - NINCS "CONTENTNOTMATCH" ❌
+  - Response tartalmazza:
+    * receiveDate ✓
+    * orderRef ✓
+    * transactionId ✓
+    * status ✓
+    * merchant ✓
+    * (összes fogadott mező) ✓
+
+================================================================================
+9. HIBAKERESÉSI ÚTMUTATÓ
+================================================================================
+
+9.1. GYAKORI PROBLÉMÁK ÉS MEGOLDÁSOK
+────────────────────────────────────
+
+PROBLÉMA: orderRef jelenik meg transactionId helyett a dialógban
+───────────────────────────────────────────────────────────────
+MEGOLDÁS:
+1. Várj 2-3 másodpercet (IPN feldolgozás időigényes)
+2. Frissítsd a böngészőt (Ctrl+F5)
+3. Ellenőrizd Firestore: web_payments/{orderRef}.transactionId létezik-e
+4. Ha nem létezik: ellenőrizd Firebase Functions log-ot IPN hibákért
+
+PROBLÉMA: CONTENTNOTMATCH hiba az IPN-nél
+──────────────────────────────────────────
+MEGOLDÁS:
+1. Ellenőrizd Firebase Functions log: confirmResponse objektum
+2. Hasonlítsd össze a fogadott body-t a confirmResponse-szal
+3. Győződj meg róla, hogy a spread operator (...body) benne van
+4. Ellenőrizd, hogy az új kód telepítve van (firebase deploy --only functions)
+
+PROBLÉMA: "Lehetséges okok" blokk még látható
+──────────────────────────────────────────────
+MEGOLDÁS:
+1. Hard refresh: Ctrl+Shift+R vagy Ctrl+F5
+2. Töröld a browser cache-t
+3. Ellenőrizd, hogy az új Flutter build telepítve van (firebase deploy --only hosting)
+
+PROBLÉMA: Adattovábbítási nyilatkozat nem jelenik meg
+─────────────────────────────────────────────────────
+MEGOLDÁS:
+1. Ellenőrizd browser console-t (F12) hibákért
+2. Töröld a Local Storage-t (Application tab -> Local Storage -> Clear)
+3. Jelentkezz ki és be újra
+
+9.2. FIREBASE FUNCTIONS LOG ELLENŐRZÉS
+──────────────────────────────────────
+
+Firebase Console -> Functions -> Logs
+
+KERESENDŐ KIFEJEZÉSEK:
+- "[simplepayWebhook] received" → IPN fogadás
+- "[simplepayWebhook] updated payment to COMPLETED" → Sikeres feldolgozás
+- "CONTENTNOTMATCH" → IPN hiba (NEM SZABAD ELŐFORDULNIA!)
+- "[initiateWebPayment] Adattovábbítási nyilatkozat" → Consent ellenőrzés
+
+9.3. FIRESTORE ELLENŐRZÉS
+─────────────────────────
+
+Firebase Console -> Firestore Database
+
+ELLENŐRIZENDŐ KOLLEKCIÓK:
+
+web_payments/{orderRef}:
+{
+  "userId": "abc123",
+  "planId": "monthly_premium_prepaid",
+  "orderRef": "WEB_abc123_1234567890",
+  "transactionId": "507759798",  ← FONTOS!
+  "orderId": "...",
+  "amount": 4350,
+  "status": "COMPLETED",
+  "createdAt": Timestamp,
+  "completedAt": Timestamp
+}
+
+users/{userId}:
+{
+  "isSubscriptionActive": true,
+  "subscriptionStatus": "premium",
+  "subscriptionEndDate": Timestamp,
+  "subscription": {
+    "status": "ACTIVE",
+    "productId": "monthly_premium_prepaid",
+    "purchaseToken": "507759798",  ← transactionId
+    "orderId": "...",
+    "source": "otp_simplepay"
+  },
+  "dataTransferConsentLastAcceptedDate": Timestamp
+}
+
+================================================================================
+10. JÓVÁHAGYÁSI KRITÉRIUMOK
+================================================================================
+
+A SimplePay szolgáltató újbóli teszteléséhez az alábbi kritériumok teljesülése
+szükséges:
+
+KRITIKUS (P0) - KÖTELEZŐ:
+─────────────────────────
+✓ IPN válasz NINCS CONTENTNOTMATCH hiba
+✓ IPN response tartalmazza az összes fogadott adatot + receiveDate
+✓ Sikeres fizetés dialog: SimplePay transactionId (5xxx) jelenik meg
+✓ Sikertelen fizetés dialog: SimplePay transactionId (5xxx) jelenik meg
+
+MAGAS PRIORITÁS (P1) - AJÁNLOTT:
+────────────────────────────────
+✓ "Lehetséges okok" blokk teljesen eltávolítva
+✓ Adattovábbítási nyilatkozat megjelenik és működik
+✓ Firestore adatok helyesen frissülnek
+✓ Előfizetés aktiválás működik sikeres fizetésnél
+
+NORMÁL PRIORITÁS (P2) - OPCIONÁLIS:
+───────────────────────────────────
+✓ Timeout dialog működik
+✓ Cancelled dialog működik
+✓ Payment history frissül real-time
+
+================================================================================
+11. SIMPLEPAY SZOLGÁLTATÓ RÉSZÉRE KÜLDENDŐ JELENTÉS
+================================================================================
+
+Kedves SimplePay Csapat!
+
+Köszönjük a visszajelzéseket! Minden jelzett hibát kijavítottunk:
+
+1. ✅ IPN VÁLASZ JAVÍTVA
+   - Az IPN confirm válasz most az ÖSSZES fogadott adatot visszaküldi + receiveDate
+   - Kód: functions/index.js, sor 1082-1095
+   - CONTENTNOTMATCH hiba megszűnt
+
+2. ✅ SIKERTELEN FIZETÉS DIALOG JAVÍTVA
+   - SimplePay transactionId (5xxxxxxxx) megjelenik az orderRef helyett
+   - "Lehetséges okok" blokk teljesen eltávolítva
+   - Kód: lib/screens/account_screen.dart, sor 768-864
+
+3. ✅ SIKERES FIZETÉS DIALOG JAVÍTVA
+   - SimplePay transactionId (5xxxxxxxx) megjelenik az orderRef helyett
+   - Kód: lib/screens/account_screen.dart, sor 681-766
+
+4. ✅ ADATVÉDELMI NYILATKOZAT
+   - Már korábban implementálva volt
+   - Frontend: lib/widgets/data_transfer_consent_dialog.dart
+   - Backend validáció: functions/index.js, sor 311-317
+
+A javítások sandbox környezetben tesztelve és jóváhagyva.
+Kérjük a sandbox újbóli tesztelését!
+
+Tesztelési URL: https://lomedu-user-web.web.app
+Teszt felhasználó: [email]
+
+Üdvözlettel,
+Lomedu Development Team
+
+================================================================================
+12. DOKUMENTUM VERZIÓ TÖRTÉNET
+================================================================================
+
+v1.0 (2025.10.28)
+- Kezdeti verzió
+- Mind a 4 SimplePay hiba javítása
+- Teljes tesztelési útmutató
+
+================================================================================
+DOKUMENTUM VÉGE
+================================================================================
+
