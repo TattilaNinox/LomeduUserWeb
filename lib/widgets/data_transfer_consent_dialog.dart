@@ -138,16 +138,42 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
         ),
         SizedBox(height: isMobile ? 6 : 12),
         Text(
-          'A megrendelési/vásárlási adatok kezelése során az alábbi adatok átadásra kerülnek a SimplePay Zrt. részére (adatfeldolgozó):',
+          'Tudomásul veszem, hogy a(z) Oak Quality Kft. 2113 Erdőkertes, Bocskai utca 13. adatkezelő által a(z) Lomedu.hu felhasználói adatbázisában tárolt alábbi személyes adataim átadásra kerülnek a SimplePay Zrt., mint adatfeldolgozó részére.',
           style: TextStyle(fontSize: fontSize),
+        ),
+        SizedBox(height: isMobile ? 8 : 12),
+        Text(
+          'Az adatkezelő által továbbított adatok köre az alábbi:',
+          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
         ),
         SizedBox(height: isMobile ? 4 : 8),
         Text(
-          '• Általános Szerződési Feltételek szerint',
+          '• Email cím',
           style: TextStyle(fontSize: fontSize),
         ),
         Text(
-          '• Kártyatársaságok szerződési feltételei szerint',
+          '• Megrendelési azonosító',
+          style: TextStyle(fontSize: fontSize),
+        ),
+        Text(
+          '• Vásárolt termék/szolgáltatás neve',
+          style: TextStyle(fontSize: fontSize),
+        ),
+        Text(
+          '• Vásárolt termék/szolgáltatás leírása',
+          style: TextStyle(fontSize: fontSize),
+        ),
+        Text(
+          '• Vásárolt termék/szolgáltatás ára',
+          style: TextStyle(fontSize: fontSize),
+        ),
+        Text(
+          '• Vásárolt termék/szolgáltatás mennyisége',
+          style: TextStyle(fontSize: fontSize),
+        ),
+        SizedBox(height: isMobile ? 8 : 12),
+        Text(
+          'Az adatfeldolgozó által végzett adatfeldolgozási tevékenység jellege és célja a SimplePay Adatkezelési tájékoztatóban, az alábbi linken tekinthető meg:',
           style: TextStyle(fontSize: fontSize),
         ),
         SizedBox(height: isMobile ? 8 : 16),
@@ -195,7 +221,42 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
         ),
         SizedBox(height: isMobile ? 6 : 8),
         Text(
-          'Personal data stored in the user account will be handed over to SimplePay Plc. as data processor.',
+          'I acknowledge that the following personal data stored in the Lomedu.hu user database by Oak Quality Kft. (2113 Erdőkertes, Bocskai utca 13.) as data controller will be transferred to SimplePay Plc. as data processor.',
+          style: TextStyle(fontSize: fontSize),
+        ),
+        SizedBox(height: isMobile ? 8 : 12),
+        Text(
+          'Data transferred by the merchant:',
+          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
+        ),
+        SizedBox(height: isMobile ? 4 : 8),
+        Text(
+          '• Email address',
+          style: TextStyle(fontSize: fontSize),
+        ),
+        Text(
+          '• Order reference number',
+          style: TextStyle(fontSize: fontSize),
+        ),
+        Text(
+          '• Name of purchased product/service',
+          style: TextStyle(fontSize: fontSize),
+        ),
+        Text(
+          '• Description of purchased product/service',
+          style: TextStyle(fontSize: fontSize),
+        ),
+        Text(
+          '• Price of purchased product/service',
+          style: TextStyle(fontSize: fontSize),
+        ),
+        Text(
+          '• Quantity of purchased product/service',
+          style: TextStyle(fontSize: fontSize),
+        ),
+        SizedBox(height: isMobile ? 8 : 12),
+        Text(
+          'The nature and purpose of data processing activities performed by the data processor can be viewed in the SimplePay Data Processing Information at the following link:',
           style: TextStyle(fontSize: fontSize),
         ),
         SizedBox(height: isMobile ? 8 : 16),
