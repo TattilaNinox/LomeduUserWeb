@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// SimplePay adattovábbítási nyilatkozat dialog
 ///
@@ -28,6 +29,20 @@ class DataTransferConsentDialog extends StatefulWidget {
 
 class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
   bool _accepted = false;
+
+  Future<void> _launchSimplePayUrl() async {
+    final uri = Uri.parse('https://simplepay.hu/adatkezelesi-tajekoztatok/');
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nem sikerült megnyitni a linket'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -176,6 +191,8 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
           'Az adatfeldolgozó által végzett adatfeldolgozási tevékenység jellege és célja a SimplePay Adatkezelési tájékoztatóban, az alábbi linken tekinthető meg:',
           style: TextStyle(fontSize: fontSize),
         ),
+        SizedBox(height: isMobile ? 6 : 8),
+        _buildClickableLink(fontSize),
         SizedBox(height: isMobile ? 8 : 16),
         Text(
           'A Szolgáltató azonosító adatai',
@@ -188,15 +205,6 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
         _buildDataRow('Cégjegyzékszám:', '13 09 084075', isMobile, fontSize),
         _buildDataRow('Adószám:', '11803010-2-13', isMobile, fontSize),
         _buildDataRow('E-mail:', 'support@lomedu.hu', isMobile, fontSize),
-        SizedBox(height: isMobile ? 8 : 12),
-        Text(
-          'További információk:',
-          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
-        ),
-        Text(
-          'https://simplepay.hu/adatkezelesi-tajekoztatok/',
-          style: TextStyle(fontSize: fontSize - 1, color: Colors.blue),
-        ),
       ],
     );
   }
@@ -259,6 +267,8 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
           'The nature and purpose of data processing activities performed by the data processor can be viewed in the SimplePay Data Processing Information at the following link:',
           style: TextStyle(fontSize: fontSize),
         ),
+        SizedBox(height: isMobile ? 6 : 8),
+        _buildClickableLink(fontSize),
         SizedBox(height: isMobile ? 8 : 16),
         Text(
           'Service Provider Information',
@@ -271,16 +281,21 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
         _buildDataRow('Registration:', '13 09 084075', isMobile, fontSize),
         _buildDataRow('Tax number:', '11803010-2-13', isMobile, fontSize),
         _buildDataRow('Email:', 'support@lomedu.hu', isMobile, fontSize),
-        SizedBox(height: isMobile ? 8 : 12),
-        Text(
-          'More info:',
-          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
-        ),
-        Text(
-          'https://simplepay.hu/adatkezelesi-tajekoztatok/',
-          style: TextStyle(fontSize: fontSize - 1, color: Colors.blue),
-        ),
       ],
+    );
+  }
+
+  Widget _buildClickableLink(double fontSize) {
+    return InkWell(
+      onTap: _launchSimplePayUrl,
+      child: Text(
+        'https://simplepay.hu/adatkezelesi-tajekoztatok/',
+        style: TextStyle(
+          fontSize: fontSize - 1,
+          color: Colors.blue,
+          decoration: TextDecoration.underline,
+        ),
+      ),
     );
   }
 

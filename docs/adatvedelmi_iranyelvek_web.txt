@@ -127,6 +127,7 @@ Fizetési szolgáltatók:
 
 OTP SimplePay: A webes előfizetések biztonságos kezelését végzi
 Az OTP SimplePay adatvédelmi irányelvei itt érhetők el: https://simplepay.hu/vasarloi-informaciok
+Az OTP SimplePay adatkezelési tájékoztatói itt érhetők el: https://simplepay.hu/adatkezelesi-tajekoztatok/
 
 Webes analitikai szolgáltatások:
 
