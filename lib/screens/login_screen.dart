@@ -67,22 +67,20 @@ class LoginScreenState extends State<LoginScreen> {
       );
       debugPrint('Firebase Auth bejelentkezés sikeres!');
 
-      // Sikeres bejelentkezés után azonnali irányítás a guard állapot alapján
-      if (userCredential.user != null) {
-        debugPrint('Bejelentkezés sikeres, guard állapot ellenőrzése...');
+      // Sikeres bejelentkezés után a router automatikusan átirányít
+      if (userCredential.user != null && mounted) {
+        debugPrint('Bejelentkezés sikeres, várakozás a SessionGuard inicializálására...');
+        
+        // Várjuk meg, hogy a SessionGuard inicializálódjon
         await SessionGuard.instance.ensureInitialized();
-        final device = SessionGuard.instance.deviceAccess;
-
+        
+        // Kis várakozás, hogy a Firestore listener felálljon
+        await Future.delayed(const Duration(milliseconds: 300));
+        
         if (!mounted) return;
-        if (device == DeviceAccess.denied) {
-          context.go('/device-change');
-          return;
-        }
-        if (device == DeviceAccess.loading) {
-          context.go('/guard');
-          return;
-        }
-        // allowed esetben a redirect úgyis /notes-ra visz, nem kell tenni semmit
+        
+        debugPrint('SessionGuard inicializálva, átirányítás a /guard képernyőre');
+        context.go('/guard');
       }
     } on FirebaseAuthException catch (e) {
       // Ha a bejelentkezés során a Firebase hibát dob (pl. rossz jelszó),
