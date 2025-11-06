@@ -60,19 +60,29 @@ final _router = GoRouter(
     // Gondoskodunk róla, hogy a guard inicializálva legyen
     SessionGuard.instance.ensureInitialized();
 
-    final auth = SessionGuard.instance.authStatus;
-    final device = SessionGuard.instance.deviceAccess;
     final loc = state.uri.path;
     final qp = state.uri.queryParameters;
     final baseQp = Uri.base.queryParameters; // query a hash előttről
 
-    // SimplePay visszairányítás kezelése - MINDIG engedjük át
+    // SimplePay callback check - KORÁBBAN, mielőtt az auth check fut
     final paymentParam = qp['payment'] ?? baseQp['payment'];
-    if (loc == '/account' && paymentParam != null) {
-      debugPrint('[Router] SimplePay payment callback: payment=$paymentParam');
-      // Nem ellenőrizzük az auth státuszt, engedjük az account oldalra
-      return null;
+    if (paymentParam != null) {
+      debugPrint('[Router] SimplePay payment callback detected: payment=$paymentParam');
+      
+      // Payment callback esetén MINDIG engedélyezzük az account oldalt,
+      // még akkor is, ha nincs currentUser (mert lehet, hogy még betöltődik)
+      // Az account_screen StreamBuilder-rel várja a user-t
+      if (loc == '/account') {
+        return null; // Engedélyezzük az account oldalt
+      } else {
+        // Átirányít account-ra query paraméterekkel
+        final queryString = state.uri.query;
+        return '/account${queryString.isNotEmpty ? '?$queryString' : ''}';
+      }
     }
+
+    final auth = SessionGuard.instance.authStatus;
+    final device = SessionGuard.instance.deviceAccess;
     final shouldUseBaseParams = {
       '/',
       '/reset-password',

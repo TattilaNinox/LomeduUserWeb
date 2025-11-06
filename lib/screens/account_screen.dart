@@ -19,6 +19,20 @@ class AccountScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final qp = GoRouterState.of(context).uri.queryParameters;
+    final paymentStatus = qp['payment'];
+    final orderRef = qp['orderRef'];
+    final hasPaymentCallback = paymentStatus != null && orderRef != null;
+
+    // Ha van payment callback, akkor StreamBuilder-rel várjuk a user-t
+    if (hasPaymentCallback) {
+      return _PaymentCallbackHandler(
+        paymentStatus: paymentStatus,
+        orderRef: orderRef,
+      );
+    }
+
+    // Nincs payment callback - normál ellenőrzés
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       return Scaffold(
@@ -33,6 +47,15 @@ class AccountScreen extends StatelessWidget {
       );
     }
 
+    return _buildAccountContent(context, user, null, null);
+  }
+
+  Widget _buildAccountContent(
+    BuildContext context,
+    User user,
+    String? paymentStatus,
+    String? orderRef,
+  ) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Fiók adatok'),
@@ -57,9 +80,6 @@ class AccountScreen extends StatelessWidget {
           final data = userSnapshot.data!.data()!;
 
           // Fizetési visszairányítás kezelése: részletes dialógok a SimplePay spec szerint
-          final qp = GoRouterState.of(context).uri.queryParameters;
-          final paymentStatus = qp['payment'];
-          final orderRef = qp['orderRef'];
           if (paymentStatus != null && orderRef != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) async {
               if (!context.mounted) return;
@@ -1060,6 +1080,137 @@ class AccountScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Payment callback kezelő widget - várja a Firebase Auth session betöltődését
+class _PaymentCallbackHandler extends StatefulWidget {
+  final String? paymentStatus;
+  final String? orderRef;
+
+  const _PaymentCallbackHandler({
+    required this.paymentStatus,
+    required this.orderRef,
+  });
+
+  @override
+  State<_PaymentCallbackHandler> createState() => _PaymentCallbackHandlerState();
+}
+
+class _PaymentCallbackHandlerState extends State<_PaymentCallbackHandler> {
+  bool _hasWaited = false;
+  bool _shouldRedirectToLogin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Várunk egy kicsit, hogy a Firebase Auth betöltse a session-t
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          setState(() {
+            _hasWaited = true;
+            _shouldRedirectToLogin = true;
+          });
+        } else {
+          setState(() {
+            _hasWaited = true;
+          });
+        }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Ha már vártunk és nincs user, átirányítunk /login-ra
+    if (_shouldRedirectToLogin) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          // Query paramétereket megőrizzük, hogy a login után visszatérhessünk
+          final qp = GoRouterState.of(context).uri.queryParameters;
+          final queryString = Uri(queryParameters: qp).query;
+          context.go('/login${queryString.isNotEmpty ? '?$queryString' : ''}');
+        }
+      });
+      return Scaffold(
+        appBar: AppBar(title: const Text('Fiók adatok')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Session betöltése...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, authSnapshot) {
+        // Ha még nem vártunk, mutatjuk a loading állapotot
+        if (!_hasWaited) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Fiók adatok')),
+            body: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Session betöltése...'),
+                ],
+              ),
+            ),
+          );
+        }
+
+        if (authSnapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Fiók adatok')),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final user = authSnapshot.data;
+        if (user == null) {
+          // Nincs user - átirányítunk /login-ra
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              final qp = GoRouterState.of(context).uri.queryParameters;
+              final queryString = Uri(queryParameters: qp).query;
+              context.go('/login${queryString.isNotEmpty ? '?$queryString' : ''}');
+            }
+          });
+          return Scaffold(
+            appBar: AppBar(title: const Text('Fiók adatok')),
+            body: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Session betöltése...'),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Van user - folytatjuk a normál renderelést
+        // Új AccountScreen instance-t hozunk létre, hogy hozzáférjünk az instance metódusokhoz
+        return AccountScreen()._buildAccountContent(
+          context,
+          user,
+          widget.paymentStatus,
+          widget.orderRef,
+        );
+      },
     );
   }
 }
