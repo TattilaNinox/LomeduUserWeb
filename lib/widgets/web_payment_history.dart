@@ -121,6 +121,7 @@ class WebPaymentHistory extends StatelessWidget {
             (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         planId: data['planId'] as String? ?? '',
         transactionId: data['transactionId']?.toString(),
+        simplePayTransactionId: data['simplePayTransactionId']?.toString(),
       );
     }).toList();
   }
@@ -288,6 +289,16 @@ class WebPaymentHistory extends StatelessWidget {
                 Expanded(
                   flex: 1,
                   child: Text(
+                    'SimplePay ID',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
                     'Státusz',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
@@ -337,6 +348,19 @@ class WebPaymentHistory extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 1,
+            child: Text(
+              payment.simplePayTransactionId ?? '-',
+              style: TextStyle(
+                fontSize: 14,
+                color: payment.simplePayTransactionId != null
+                    ? Colors.grey[800]
+                    : Colors.grey[400],
+                fontFamily: 'monospace',
               ),
             ),
           ),
@@ -399,6 +423,36 @@ class WebPaymentHistory extends StatelessWidget {
               ),
             ],
           ),
+          if (payment.simplePayTransactionId != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    'SimplePay ID: ',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    payment.simplePayTransactionId!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[800],
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

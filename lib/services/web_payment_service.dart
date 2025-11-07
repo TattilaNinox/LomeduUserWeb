@@ -132,6 +132,7 @@ class WebPaymentService {
               (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
           planId: data['planId'] as String? ?? '',
           transactionId: data['transactionId']?.toString(),
+          simplePayTransactionId: data['simplePayTransactionId']?.toString(),
         );
       }).toList();
     } catch (e) {
@@ -236,6 +237,7 @@ class PaymentHistoryItem {
   final DateTime createdAt;
   final String planId;
   final String? transactionId;
+  final String? simplePayTransactionId;
 
   const PaymentHistoryItem({
     required this.id,
@@ -245,6 +247,7 @@ class PaymentHistoryItem {
     required this.createdAt,
     required this.planId,
     this.transactionId,
+    this.simplePayTransactionId,
   });
 
   String get formattedAmount =>
