@@ -607,9 +607,16 @@ exports.confirmWebPayment = onCall({ secrets: ['SIMPLEPAY_MERCHANT_ID', 'SIMPLEP
 /**
  * SimplePay callback alapján status frissítés
  * - Browser callback (payment=fail/success/stb) alapján azonnal frissíti a status-t
- * - Egyszerű, gyors, garantált működés
+ * - Biztonsági ellenőrzések: user ID validáció, végleges státusz védelem
+ * - Az IPN webhook továbbra is felülírhat mindent (ő a végső igazság)
  */
 exports.updatePaymentStatusFromCallback = onCall(async (request) => {
+  // 1. User authentikáció ellenőrzése
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Bejelentkezés szükséges');
+  }
+  
+  const userId = request.auth.uid;
   const { orderRef, callbackStatus } = request.data || {};
   
   if (!orderRef || !callbackStatus) {
@@ -627,14 +634,58 @@ exports.updatePaymentStatusFromCallback = onCall(async (request) => {
   const firestoreStatus = statusMap[callbackStatus] || 'INITIATED';
   
   try {
+    // 2. Payment dokumentum lekérése
+    const paymentDoc = await db.collection('web_payments').doc(orderRef).get();
+    
+    if (!paymentDoc.exists) {
+      throw new HttpsError('not-found', 'Fizetés nem található');
+    }
+    
+    const paymentData = paymentDoc.data();
+    
+    // 3. User ID validáció - CSAK a saját fizetését frissítheti!
+    if (paymentData.userId !== userId) {
+      console.warn('[updatePaymentStatusFromCallback] UNAUTHORIZED attempt', { 
+        userId, 
+        orderRef, 
+        paymentUserId: paymentData.userId 
+      });
+      throw new HttpsError('permission-denied', 'Nincs jogosultság ehhez a fizetéshez');
+    }
+    
+    // 4. Státusz védelem - Ne írjuk felül, ha már végleges
+    // (Az IPN webhook továbbra is felülírhat, mert az admin jogokkal fut)
+    const finalStatuses = ['COMPLETED', 'FAILED'];
+    if (finalStatuses.includes(paymentData.status)) {
+      console.log('[updatePaymentStatusFromCallback] Already in final status', { 
+        orderRef, 
+        currentStatus: paymentData.status,
+        attemptedStatus: firestoreStatus
+      });
+      // Visszaadjuk a jelenlegi státuszt, de nem frissítjük
+      return { success: false, status: paymentData.status, message: 'Már végleges státuszban van' };
+    }
+    
+    // 5. Frissítés végrehajtása
     await db.collection('web_payments').doc(orderRef).update({
       status: firestoreStatus,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     
-    console.log('[updatePaymentStatusFromCallback] Updated', { orderRef, callbackStatus, firestoreStatus });
+    console.log('[updatePaymentStatusFromCallback] Updated successfully', { 
+      userId,
+      orderRef, 
+      callbackStatus, 
+      firestoreStatus 
+    });
+    
     return { success: true, status: firestoreStatus };
   } catch (error) {
+    // Ha már HttpsError, akkor átdobjuk
+    if (error.code) {
+      throw error;
+    }
+    // Egyéb hibák
     console.error('[updatePaymentStatusFromCallback] Error', { orderRef, error: error.message });
     throw new HttpsError('internal', error.message || 'Status frissítés sikertelen');
   }
