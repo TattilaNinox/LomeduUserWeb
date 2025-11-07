@@ -14,25 +14,77 @@ import '../widgets/web_payment_history.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 /// Egyszerű fiókadatok képernyő, előfizetési státusszal.
-class AccountScreen extends StatelessWidget {
+class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  State<AccountScreen> createState() => _AccountScreenState();
+}
+
+class _AccountScreenState extends State<AccountScreen> {
+  bool _dialogShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // PostFrameCallback használata - NEM blokkolja a build-et
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _handlePaymentCallback();
+    });
+  }
+
+  Future<void> _handlePaymentCallback() async {
+    if (!mounted) return;
+
     final qp = GoRouterState.of(context).uri.queryParameters;
     final paymentStatus = qp['payment'];
     final orderRef = qp['orderRef'];
-    final hasPaymentCallback = paymentStatus != null && orderRef != null;
 
-    // Ha van payment callback, akkor StreamBuilder-rel várjuk a user-t
-    if (hasPaymentCallback) {
-      return _PaymentCallbackHandler(
-        paymentStatus: paymentStatus,
-        orderRef: orderRef,
-      );
+    if (paymentStatus != null && orderRef != null && !_dialogShown) {
+      _dialogShown = true;
+
+      // Frissítjük a payment status-t a háttérben (NEM várjuk meg!)
+      FirebaseFunctions.instanceFor(region: 'europe-west1')
+          .httpsCallable('updatePaymentStatusFromCallback')
+          .call({
+        'orderRef': orderRef,
+        'callbackStatus': paymentStatus,
+      }).then((_) {
+        debugPrint('[PaymentCallback] Status updated: $paymentStatus');
+      }).catchError((e) {
+        debugPrint('[PaymentCallback] Update error: $e');
+      });
+
+      // Várunk egy kicsit, majd megjelenítjük a dialógot
+      await Future.delayed(const Duration(milliseconds: 1000));
+      if (!mounted) return;
+
+      // Megjelenítjük a dialógot
+      switch (paymentStatus) {
+        case 'success':
+          await _showPaymentSuccessDialog(context, orderRef);
+          break;
+        case 'fail':
+          await _showPaymentFailedDialog(context, orderRef);
+          break;
+        case 'timeout':
+          _showPaymentTimeoutDialog(context);
+          break;
+        case 'cancelled':
+          _showPaymentCancelledDialog(context);
+          break;
+        default:
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Fizetés státusz: $paymentStatus')),
+            );
+          }
+      }
     }
+  }
 
-    // Nincs payment callback - normál ellenőrzés
+  @override
+  Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       return Scaffold(
@@ -47,14 +99,12 @@ class AccountScreen extends StatelessWidget {
       );
     }
 
-    return _buildAccountContent(context, user, null, null);
+    return _buildAccountContent(context, user);
   }
 
   Widget _buildAccountContent(
     BuildContext context,
     User user,
-    String? paymentStatus,
-    String? orderRef,
   ) {
     return Scaffold(
       appBar: AppBar(
@@ -78,54 +128,6 @@ class AccountScreen extends StatelessWidget {
                 child: Text('Nincsenek adataink a felhasználóról.'));
           }
           final data = userSnapshot.data!.data()!;
-
-          // Fizetési visszairányítás kezelése: részletes dialógok a SimplePay spec szerint
-          if (paymentStatus != null && orderRef != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) async {
-              if (!context.mounted) return;
-
-              // URL tisztítás először
-              context.go('/account');
-
-              // AZONNAL frissítjük a web_payments státuszt callback alapján
-              try {
-                final functions =
-                    FirebaseFunctions.instanceFor(region: 'europe-west1');
-                final callable =
-                    functions.httpsCallable('updatePaymentStatusFromCallback');
-                await callable.call({
-                  'orderRef': orderRef,
-                  'callbackStatus': paymentStatus,
-                });
-                debugPrint('[PaymentCallback] Status updated: $paymentStatus');
-              } catch (e) {
-                debugPrint('[PaymentCallback] Update error: $e');
-              }
-
-              // Majd megjelenítjük a megfelelő dialógot
-              await Future.delayed(const Duration(milliseconds: 300));
-              if (!context.mounted) return;
-
-              switch (paymentStatus) {
-                case 'success':
-                  await _showPaymentSuccessDialog(context, orderRef);
-                  break;
-                case 'fail':
-                  await _showPaymentFailedDialog(context, orderRef);
-                  break;
-                case 'timeout':
-                  _showPaymentTimeoutDialog(context);
-                  break;
-                case 'cancelled':
-                  _showPaymentCancelledDialog(context);
-                  break;
-                default:
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Fizetés státusz: $paymentStatus')),
-                  );
-              }
-            });
-          }
 
           return Padding(
             padding: const EdgeInsets.all(16.0),
@@ -699,7 +701,7 @@ class AccountScreen extends StatelessWidget {
   }
 
   /// Sikeres fizetés dialóg (SimplePay 3.13.4 szerint)
-  static Future<void> _showPaymentSuccessDialog(
+  Future<void> _showPaymentSuccessDialog(
       BuildContext context, String? orderRef) async {
     // SimplePay transactionId lekérése queryPaymentStatus használatával
     // Ez várja meg az IPN feldolgozását és garantáltan friss adatot ad
@@ -789,7 +791,7 @@ class AccountScreen extends StatelessWidget {
   }
 
   /// Sikertelen fizetés dialóg (SimplePay 3.13.3 szerint - KÖTELEZŐ!)
-  static Future<void> _showPaymentFailedDialog(
+  Future<void> _showPaymentFailedDialog(
       BuildContext context, String? orderRef) async {
     // SimplePay transactionId lekérése KÖZVETLENÜL Firestore-ból
     String? transactionId;
@@ -890,7 +892,7 @@ class AccountScreen extends StatelessWidget {
   }
 
   /// Időtúllépés dialóg (SimplePay 3.13.2 szerint - KÖTELEZŐ!)
-  static void _showPaymentTimeoutDialog(BuildContext context) {
+  void _showPaymentTimeoutDialog(BuildContext context) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -987,7 +989,7 @@ class AccountScreen extends StatelessWidget {
   }
 
   /// Megszakított fizetés dialóg (SimplePay 3.13.1 szerint - KÖTELEZŐ!)
-  static void _showPaymentCancelledDialog(BuildContext context) {
+  void _showPaymentCancelledDialog(BuildContext context) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1080,137 +1082,6 @@ class AccountScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Payment callback kezelő widget - várja a Firebase Auth session betöltődését
-class _PaymentCallbackHandler extends StatefulWidget {
-  final String? paymentStatus;
-  final String? orderRef;
-
-  const _PaymentCallbackHandler({
-    required this.paymentStatus,
-    required this.orderRef,
-  });
-
-  @override
-  State<_PaymentCallbackHandler> createState() => _PaymentCallbackHandlerState();
-}
-
-class _PaymentCallbackHandlerState extends State<_PaymentCallbackHandler> {
-  bool _hasWaited = false;
-  bool _shouldRedirectToLogin = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Várunk egy kicsit, hogy a Firebase Auth betöltse a session-t
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user == null) {
-          setState(() {
-            _hasWaited = true;
-            _shouldRedirectToLogin = true;
-          });
-        } else {
-          setState(() {
-            _hasWaited = true;
-          });
-        }
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Ha már vártunk és nincs user, átirányítunk /login-ra
-    if (_shouldRedirectToLogin) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          // Query paramétereket megőrizzük, hogy a login után visszatérhessünk
-          final qp = GoRouterState.of(context).uri.queryParameters;
-          final queryString = Uri(queryParameters: qp).query;
-          context.go('/login${queryString.isNotEmpty ? '?$queryString' : ''}');
-        }
-      });
-      return Scaffold(
-        appBar: AppBar(title: const Text('Fiók adatok')),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Session betöltése...'),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, authSnapshot) {
-        // Ha még nem vártunk, mutatjuk a loading állapotot
-        if (!_hasWaited) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Fiók adatok')),
-            body: const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Session betöltése...'),
-                ],
-              ),
-            ),
-          );
-        }
-
-        if (authSnapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Fiók adatok')),
-            body: const Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        final user = authSnapshot.data;
-        if (user == null) {
-          // Nincs user - átirányítunk /login-ra
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              final qp = GoRouterState.of(context).uri.queryParameters;
-              final queryString = Uri(queryParameters: qp).query;
-              context.go('/login${queryString.isNotEmpty ? '?$queryString' : ''}');
-            }
-          });
-          return Scaffold(
-            appBar: AppBar(title: const Text('Fiók adatok')),
-            body: const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Session betöltése...'),
-                ],
-              ),
-            ),
-          );
-        }
-
-        // Van user - folytatjuk a normál renderelést
-        // Új AccountScreen instance-t hozunk létre, hogy hozzáférjünk az instance metódusokhoz
-        return AccountScreen()._buildAccountContent(
-          context,
-          user,
-          widget.paymentStatus,
-          widget.orderRef,
-        );
-      },
     );
   }
 }
