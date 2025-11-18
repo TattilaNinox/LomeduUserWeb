@@ -93,10 +93,10 @@ class _FiltersState extends State<Filters> {
   @override
   Widget build(BuildContext context) {
     final outerPadding = widget.vertical
-        ? const EdgeInsets.all(8.0)
+        ? const EdgeInsets.all(0.0)
         : const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0);
     final gap =
-        widget.vertical ? const SizedBox(height: 8) : const SizedBox(width: 16);
+        widget.vertical ? const SizedBox(height: 16) : const SizedBox(width: 16);
 
     final List<Widget> children = [];
     void add(Widget w) {
@@ -164,22 +164,22 @@ class _FiltersState extends State<Filters> {
       isExpanded: widget.vertical,
     ));
 
-    add(Align(
-      alignment: Alignment.centerLeft,
-      child: TextButton(
-        onPressed: () {
-          setState(() {
-            _status = null;
-            _category = null;
-            _tag = null;
-            _type = null;
-            // _science NEM törlődik, mert fix a felhasználó tudományára
-          });
-          widget.onClearFilters();
-          widget.onTypeChanged(null);
-          // widget.onScienceChanged(null); <- NEM hívjuk meg, hogy a tudomány megmaradjon
-        },
-        child: const Text('Szűrők törlése'),
+    add(TextButton(
+      onPressed: () {
+        setState(() {
+          _status = null;
+          _category = null;
+          _tag = null;
+          _type = null;
+          // _science NEM törlődik, mert fix a felhasználó tudományára
+        });
+        widget.onClearFilters();
+        widget.onTypeChanged(null);
+        // widget.onScienceChanged(null); <- NEM hívjuk meg, hogy a tudomány megmaradjon
+      },
+      child: const Text(
+        'Szűrők törlése',
+        style: TextStyle(fontSize: 13),
       ),
     ));
 
@@ -202,33 +202,91 @@ class _FiltersState extends State<Filters> {
   }) {
     return Theme(
       data: Theme.of(context).copyWith(
-        canvasColor: Colors.white,
-        highlightColor: Colors.transparent,
-        splashColor: Colors.transparent,
-      ),
-      child: DropdownButton<T>(
-        hint: Text(
-          hint,
-          style: TextStyle(
-            fontSize: 12,
-            color: Theme.of(context).colorScheme.primary,
-            fontWeight: FontWeight.w500,
+        dropdownMenuTheme: DropdownMenuThemeData(
+          menuStyle: MenuStyle(
+            backgroundColor: WidgetStateProperty.all(Colors.white),
+            elevation: WidgetStateProperty.all(8),
+            shadowColor: WidgetStateProperty.all(Colors.black.withValues(alpha: 0.1)),
+            shape: WidgetStateProperty.all(
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: const BorderSide(color: Color(0xFFE5E7EB), width: 1),
+              ),
+            ),
+            padding: WidgetStateProperty.all(const EdgeInsets.symmetric(vertical: 4)),
           ),
         ),
+      ),
+      child: DropdownButtonFormField<T>(
         value: value,
-        isExpanded: isExpanded,
+        decoration: InputDecoration(
+          labelText: hint,
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFF1E3A8A), width: 1.5),
+          ),
+          labelStyle: const TextStyle(
+            fontSize: 13,
+            color: Color(0xFF6B7280),
+          ),
+        ),
+        isExpanded: true,
+        menuMaxHeight: 300,
+        dropdownColor: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        selectedItemBuilder: (BuildContext context) {
+          return items.map<Widget>((T item) {
+            return Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(
+                item.toString(),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF111827),
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          }).toList();
+        },
         items: items
             .map((e) => DropdownMenuItem<T>(
                   value: e,
-                  child:
-                      Text(e.toString(), style: const TextStyle(fontSize: 12)),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    child: Text(
+                      e.toString(),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF111827),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ))
             .toList(),
-        selectedItemBuilder: (context) => items
-            .map(
-                (e) => Text(e.toString(), style: const TextStyle(fontSize: 12)))
-            .toList(),
         onChanged: onChanged,
+        style: const TextStyle(
+          fontSize: 13,
+          color: Color(0xFF111827),
+        ),
+        icon: const Icon(
+          Icons.keyboard_arrow_down,
+          color: Color(0xFF6B7280),
+          size: 20,
+        ),
       ),
     );
   }

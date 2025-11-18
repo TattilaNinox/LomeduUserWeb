@@ -115,9 +115,9 @@ class _NoteListScreenState extends State<NoteListScreen> {
     super.dispose();
   }
 
-  /// Betölti a kategóriákat a Firestore `categories` kollekciójából.
+  /// Betölti a kategóriákat a notes kollekcióból.
   /// Csak azokat a kategóriákat tölti be, amelyek science mezője megegyezik
-  /// a felhasználó tudományágával.
+  /// a felhasználó tudományágával és Published státuszúak.
   Future<void> _loadCategories() async {
     try {
       // Lekérjük a bejelentkezett felhasználó tudományágát
@@ -127,31 +127,30 @@ class _NoteListScreenState extends State<NoteListScreen> {
         return;
       }
 
-      final userDoc = await FirebaseConfig.firestore
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      // FIX: Webalkalmazásban MINDIG csak "Egészségügyi kártevőírtó" tudományág
+      const userScience = 'Egészségügyi kártevőírtó';
 
-      if (!userDoc.exists) {
-        setState(() => _categories = []);
-        return;
-      }
-
-      final userScience = userDoc.data()?['science'] as String?;
-      if (userScience == null || userScience.isEmpty) {
-        setState(() => _categories = []);
-        return;
-      }
-
-      // Lekérjük a kategóriákat, szűrve a felhasználó tudományágára
+      // Lekérjük a notes-okat, szűrve a felhasználó tudományágára és Published státuszra
       final snapshot = await FirebaseConfig.firestore
-          .collection('categories')
+          .collection('notes')
           .where('science', isEqualTo: userScience)
+          .where('status', isEqualTo: 'Published')
           .get();
+
+      // Kinyerjük az egyedi kategóriákat
+      final categoriesSet = <String>{};
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        if (data['deletedAt'] == null) {
+          final category = data['category'] as String?;
+          if (category != null && category.isNotEmpty) {
+            categoriesSet.add(category);
+          }
+        }
+      }
 
       setState(() {
-        _categories =
-            snapshot.docs.map((doc) => doc['name'] as String).toList();
+        _categories = categoriesSet.toList()..sort();
       });
     } catch (e) {
       // Hiba esetén üres lista
@@ -429,31 +428,26 @@ class _NoteListScreenState extends State<NoteListScreen> {
               children: [
                 Sidebar(
                   selectedMenu: 'notes',
-                  extraPanel: Card(
-                    elevation: 3,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Filters(
-                        categories: _categories,
-                        sciences: _sciences,
-                        tags: _tags,
-                        selectedStatus: _selectedStatus,
-                        selectedCategory: _selectedCategory,
-                        selectedScience: _selectedScience,
-                        selectedTag: _selectedTag,
-                        selectedType: _selectedType,
-                        onStatusChanged: _onStatusChanged,
-                        onCategoryChanged: _onCategoryChanged,
-                        onScienceChanged: _onScienceChanged,
-                        onTagChanged: _onTagChanged,
-                        onTypeChanged: _onTypeChanged,
-                        onClearFilters: _onClearFilters,
-                        vertical: true,
-                        showStatus: false,
-                        showType: false,
-                      ),
+                  extraPanel: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Filters(
+                      categories: _categories,
+                      sciences: _sciences,
+                      tags: _tags,
+                      selectedStatus: _selectedStatus,
+                      selectedCategory: _selectedCategory,
+                      selectedScience: _selectedScience,
+                      selectedTag: _selectedTag,
+                      selectedType: _selectedType,
+                      onStatusChanged: _onStatusChanged,
+                      onCategoryChanged: _onCategoryChanged,
+                      onScienceChanged: _onScienceChanged,
+                      onTagChanged: _onTagChanged,
+                      onTypeChanged: _onTypeChanged,
+                      onClearFilters: _onClearFilters,
+                      vertical: true,
+                      showStatus: false,
+                      showType: false,
                     ),
                   ),
                 ),
@@ -480,31 +474,26 @@ class _NoteListScreenState extends State<NoteListScreen> {
                 extraPanel: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Card(
-                      elevation: 3,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Filters(
-                          categories: _categories,
-                          sciences: _sciences,
-                          tags: _tags,
-                          selectedStatus: _selectedStatus,
-                          selectedCategory: _selectedCategory,
-                          selectedScience: _selectedScience,
-                          selectedTag: _selectedTag,
-                          selectedType: _selectedType,
-                          onStatusChanged: _onStatusChanged,
-                          onCategoryChanged: _onCategoryChanged,
-                          onScienceChanged: _onScienceChanged,
-                          onTagChanged: _onTagChanged,
-                          onTypeChanged: _onTypeChanged,
-                          onClearFilters: _onClearFilters,
-                          vertical: true,
-                          showStatus: false,
-                          showType: false,
-                        ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Filters(
+                        categories: _categories,
+                        sciences: _sciences,
+                        tags: _tags,
+                        selectedStatus: _selectedStatus,
+                        selectedCategory: _selectedCategory,
+                        selectedScience: _selectedScience,
+                        selectedTag: _selectedTag,
+                        selectedType: _selectedType,
+                        onStatusChanged: _onStatusChanged,
+                        onCategoryChanged: _onCategoryChanged,
+                        onScienceChanged: _onScienceChanged,
+                        onTagChanged: _onTagChanged,
+                        onTypeChanged: _onTypeChanged,
+                        onClearFilters: _onClearFilters,
+                        vertical: true,
+                        showStatus: false,
+                        showType: false,
                       ),
                     ),
                     const SizedBox(height: 12),

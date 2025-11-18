@@ -38,8 +38,12 @@ class Sidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Egy fix szélességű konténer, ami a menüsáv alapját képezi.
+    // Reszponzív szélesség: nagyobb képernyőkön szélesebb
+    final screenWidth = MediaQuery.of(context).size.width;
+    final sidebarWidth = screenWidth >= 1400 ? 320.0 : screenWidth >= 1200 ? 280.0 : 200.0;
+    
     return Container(
-      width: 200,
+      width: sidebarWidth,
       color: Colors.white,
       child: SafeArea(
         child: ListView(
