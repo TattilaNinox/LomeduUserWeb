@@ -203,23 +203,19 @@ class _CategorySectionState extends State<_CategorySection> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius:
-            _isExpanded ? BorderRadius.circular(20) : BorderRadius.circular(16),
-        // Visszafogottabb kiemelés – inkább beágyazott gomb hatás
-        border: _isExpanded
-            ? null
-            : Border.all(
-                color: const Color(0xFFE5E7EB),
-                width: 1,
-              ),
-        boxShadow: const [
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: const Color(0xFFE5E7EB),
+          width: 1,
+        ),
+        boxShadow: [
           BoxShadow(
-            color: Color.fromARGB(20, 0, 0, 0), // ~0.08 átlátszóság
-            blurRadius: 6,
-            offset: Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -236,55 +232,55 @@ class _CategorySectionState extends State<_CategorySection> {
               },
               borderRadius: _isExpanded
                   ? const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
+                      topLeft: Radius.circular(8),
+                      topRight: Radius.circular(8),
                     )
-                  : BorderRadius.circular(16),
+                  : BorderRadius.circular(8),
               child: Container(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
+                  color: _isExpanded 
+                      ? const Color(0xFFF9FAFB)
+                      : Colors.white,
                   borderRadius: _isExpanded
                       ? const BorderRadius.only(
-                          topLeft: Radius.circular(20),
-                          topRight: Radius.circular(20),
+                          topLeft: Radius.circular(8),
+                          topRight: Radius.circular(8),
                         )
-                      : BorderRadius.circular(16),
+                      : BorderRadius.circular(8),
+                  border: _isExpanded
+                      ? const Border(
+                          bottom: BorderSide(
+                            color: Color(0xFFE5E7EB),
+                            width: 1,
+                          ),
+                        )
+                      : null,
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor,
-                        borderRadius: BorderRadius.circular(8),
-                        // Piros szegély eltávolítva az ikonról
-                      ),
-                      child: Icon(
-                        _isExpanded ? Icons.folder_open : Icons.folder_outlined,
-                        color: Colors.white,
-                        size: 16,
-                      ),
+                    Icon(
+                      _isExpanded ? Icons.folder_open : Icons.folder_outlined,
+                      color: const Color(0xFF6B7280),
+                      size: 20,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         widget.category,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: Theme.of(context).primaryColor,
-                                  fontSize: 16,
-                                ),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF111827),
+                          fontSize: 15,
+                          letterSpacing: -0.2,
+                        ),
                       ),
                     ),
                     Text(
-                      '${widget.docs.length} jegyzet',
-                      style: TextStyle(
-                        color: Theme.of(context)
-                            .primaryColor
-                            .withValues(alpha: 0.7),
-                        fontSize: 12,
+                      '${widget.docs.length}',
+                      style: const TextStyle(
+                        color: Color(0xFF6B7280),
+                        fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -292,9 +288,9 @@ class _CategorySectionState extends State<_CategorySection> {
                     AnimatedRotation(
                       turns: _isExpanded ? 0.5 : 0,
                       duration: const Duration(milliseconds: 200),
-                      child: Icon(
+                      child: const Icon(
                         Icons.keyboard_arrow_down,
-                        color: Theme.of(context).primaryColor,
+                        color: Color(0xFF6B7280),
                         size: 20,
                       ),
                     ),
@@ -308,12 +304,12 @@ class _CategorySectionState extends State<_CategorySection> {
             curve: Curves.easeInOut,
             child: _isExpanded
                 ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.only(top: 4, bottom: 8),
                     child: ListView.separated(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: widget.docs.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 4),
+                      separatorBuilder: (_, __) => const SizedBox(height: 0),
                       itemBuilder: (context, index) {
                         final doc = widget.docs[index];
                         final data = doc.data();
@@ -322,6 +318,7 @@ class _CategorySectionState extends State<_CategorySection> {
                         final isFree = data['isFree'] as bool? ?? false;
 
                         final isLocked = !isFree && !widget.hasPremiumAccess;
+                        final isLast = index == widget.docs.length - 1;
 
                         return NoteListTile(
                           id: doc.id,
@@ -338,6 +335,7 @@ class _CategorySectionState extends State<_CategorySection> {
                                   .length
                               : null,
                           isLocked: isLocked,
+                          isLast: isLast,
                         );
                       },
                     ),

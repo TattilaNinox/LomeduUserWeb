@@ -18,6 +18,7 @@ class NoteListTile extends StatelessWidget {
   final String? questionBankId;
   final String? audioUrl;
   final bool isLocked; // Új paraméter a zárt állapot jelzésére
+  final bool isLast; // Jelzi, hogy ez az utolsó elem a listában
 
   const NoteListTile({
     super.key,
@@ -31,6 +32,7 @@ class NoteListTile extends StatelessWidget {
     this.questionBankId,
     this.audioUrl,
     this.isLocked = false, // Alapértelmezetten nem zárt
+    this.isLast = false, // Alapértelmezetten nem utolsó
   });
 
   IconData _typeIcon() {
@@ -201,47 +203,43 @@ class NoteListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color cardColor =
-        Color(0xFFF5F7F6); // elegáns zöldesbarna árnyalatú szürke
-    const Color borderColor = Color(0xFFE8EDE9); // finom keret (visszaállítva)
-    final Color shadowColor =
-        Colors.black.withValues(alpha: 0.03); // még finomabb árnyék mobilon is
+    // Modern, hivatalos színvilág
+    const Color cardColor = Colors.white;
+    const Color borderColor = Color(0xFFE5E7EB);
 
     // Ha a jegyzet zárt, halványabb színeket használunk
     final effectiveCardColor =
-        isLocked ? cardColor.withValues(alpha: 0.5) : cardColor;
+        isLocked ? cardColor.withValues(alpha: 0.7) : cardColor;
     final effectiveBorderColor =
         isLocked ? borderColor.withValues(alpha: 0.5) : borderColor;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
       child: Opacity(
         opacity: isLocked ? 0.6 : 1.0, // Elhalványítás zárt jegyzetek esetén
         child: Container(
           decoration: BoxDecoration(
             color: effectiveCardColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: effectiveBorderColor, width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: shadowColor,
-                blurRadius: 6,
-                offset: const Offset(0, 1),
-              ),
-            ],
+            border: isLast
+                ? null
+                : Border(
+                    bottom: BorderSide(
+                      color: effectiveBorderColor,
+                      width: 1,
+                    ),
+                  ),
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
               onTap: () => _open(context),
-              borderRadius: BorderRadius.circular(16),
               splashColor:
-                  Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                  Theme.of(context).primaryColor.withValues(alpha: 0.08),
               highlightColor:
-                  Theme.of(context).primaryColor.withValues(alpha: 0.05),
+                  Theme.of(context).primaryColor.withValues(alpha: 0.04),
               child: Padding(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    const EdgeInsets.symmetric(horizontal: 0, vertical: 14),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final bool isNarrow = constraints.maxWidth < 520;
@@ -275,10 +273,11 @@ class NoteListTile extends StatelessWidget {
                                 child: Text(
                                   title,
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 16,
-                                    color: Color(0xFF2D3748),
-                                    height: 1.3,
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 14,
+                                    color: Color(0xFF111827),
+                                    height: 1.4,
+                                    letterSpacing: -0.1,
                                   ),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
@@ -288,9 +287,9 @@ class NoteListTile extends StatelessWidget {
                               if (isLocked) ...[
                                 const SizedBox(width: 8),
                                 const Icon(
-                                  Icons.lock,
-                                  size: 20,
-                                  color: Colors.orange,
+                                  Icons.lock_outline,
+                                  size: 18,
+                                  color: Color(0xFF9CA3AF),
                                 ),
                               ],
                             ],
@@ -306,22 +305,12 @@ class NoteListTile extends StatelessWidget {
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .primaryColor
-                                      .withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(10),
-                                  // ikon körül NINCS karmazsin keret a jegyzet-listában
-                                ),
-                                child: Icon(
-                                  _typeIcon(),
-                                  color: Theme.of(context).primaryColor,
-                                  size: 20,
-                                ),
+                              Icon(
+                                _typeIcon(),
+                                color: const Color(0xFF6B7280),
+                                size: 18,
                               ),
-                              const SizedBox(width: 16),
+                              const SizedBox(width: 12),
                               titleAndMeta,
                             ],
                           ),
@@ -336,22 +325,12 @@ class NoteListTile extends StatelessWidget {
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .primaryColor
-                                .withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
-                            // ikon körül NINCS karmazsin keret a jegyzet-listában
-                          ),
-                          child: Icon(
-                            _typeIcon(),
-                            color: Theme.of(context).primaryColor,
-                            size: 20,
-                          ),
+                        Icon(
+                          _typeIcon(),
+                          color: const Color(0xFF6B7280),
+                          size: 18,
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
                         // Bal oldali cím/meta
                         titleAndMeta,
                         // Középre igazított lejátszó a sor közepén
