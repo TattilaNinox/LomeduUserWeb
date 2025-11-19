@@ -6,6 +6,8 @@ const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const { buildTemplate, logoAttachment } = require('./emailTemplates');
+const szamlaAgent = require('./szamlaAgent');
+const invoiceBuilder = require('./invoiceBuilder');
 
 // Konfiguráció forrása: 1) Firebase Functions config (firebase functions:config:set smtp.*),
 // 2) környezeti változók, 3) ha emulátor fut, próbáljon meg helyi SMTP-t (opcionális).
@@ -446,7 +448,7 @@ exports.initiateWebPayment = onCall({
       throw new HttpsError('failed-precondition', `SimplePay hiba: ${detailedError}`);
     }
 
-    await db.collection('web_payments').doc(orderRef).set({
+    const paymentDataToStore = {
       userId,
       planId: canonicalPlanId,
       orderRef,
@@ -455,7 +457,9 @@ exports.initiateWebPayment = onCall({
       status: 'INITIATED',
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    };
+    
+    await db.collection('web_payments').doc(orderRef).set(paymentDataToStore);
 
     // Audit log - fizetés indítása
     await db.collection('payment_audit_logs').add({
@@ -1232,6 +1236,380 @@ exports.reconcileWebPaymentsScheduled = onSchedule({
   } catch (e) {
     console.error('[reconcileWebPaymentsScheduled] error', { message: e?.message });
     throw e;
+  }
+});
+
+// ============================================================================
+// SZÁMLA GENERÁLÁS ÉS EMAIL KÜLDÉS - SZAMLAZZ.HU INTEGRÁCIÓ
+// ============================================================================
+
+/**
+ * Számla generálása és email küldése sikeres fizetés után
+ * 
+ * @param {string} userId - Felhasználó ID
+ * @param {string} orderRef - Fizetési rendelés azonosító
+ * @param {Object} paymentInfo - Fizetési információk
+ * @returns {Promise<Object>} - Számla generálás eredménye
+ */
+async function generateAndSendInvoice(userId, orderRef, paymentInfo, testPaymentData = null) {
+  try {
+    console.log('[generateAndSendInvoice] Starting', { userId, orderRef, isTest: !!testPaymentData });
+    
+    let paymentData;
+    let shippingAddress = null;
+    
+    // Ha teszt adatok vannak megadva, használjuk azokat
+    if (testPaymentData) {
+      paymentData = testPaymentData;
+      shippingAddress = testPaymentData.shippingAddress || null;
+    } else {
+      // Fizetési rekord lekérése (tartalmazza a szállítási címet)
+      const paymentRef = db.collection('web_payments').doc(orderRef);
+      const paymentDoc = await paymentRef.get();
+      
+      if (!paymentDoc.exists) {
+        throw new Error(`Payment record not found: ${orderRef}`);
+      }
+      
+      paymentData = paymentDoc.data();
+      shippingAddress = paymentData.shippingAddress || null;
+    }
+    
+    if (!shippingAddress) {
+      console.warn('[generateAndSendInvoice] No shipping address found, using user data', { orderRef });
+    }
+    
+    // Felhasználó adatok lekérése
+    const userDoc = await db.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+      throw new Error(`User not found: ${userId}`);
+    }
+    
+    const userData = userDoc.data();
+    
+    // Csomag adatok lekérése
+    const canonicalPlanId = CANONICAL_PLAN_ID[paymentInfo.planId] || paymentInfo.planId;
+    const plan = PAYMENT_PLANS[canonicalPlanId];
+    if (!plan) {
+      throw new Error(`Plan not found: ${paymentInfo.planId}`);
+    }
+    
+    // Számla adatok összeállítása
+    const invoiceData = invoiceBuilder.buildInvoiceData({
+      userData,
+      shippingAddress,
+      paymentData: {
+        orderRef,
+        amount: paymentInfo.amount,
+        transactionId: paymentInfo.transactionId,
+        orderId: paymentInfo.orderId
+      },
+      plan
+    });
+    
+    console.log('[generateAndSendInvoice] Invoice data built', { orderRef, hasAddress: !!shippingAddress });
+    
+    // Számla létrehozása Szamlazz.hu-n keresztül
+    const invoiceResult = await szamlaAgent.createInvoice(invoiceData);
+    
+    if (!invoiceResult.success) {
+      const errorMsg = invoiceResult.error || 'Ismeretlen hiba';
+      const rawResponse = invoiceResult.rawResponse ? ` Raw response: ${invoiceResult.rawResponse}` : '';
+      console.error('[generateAndSendInvoice] Invoice creation failed', { 
+        orderRef, 
+        error: errorMsg,
+        rawResponse: invoiceResult.rawResponse,
+        xmlDebug: invoiceResult.xmlDebug || 'Nincs XML adat'
+      });
+      throw new Error(`Invoice creation failed: ${errorMsg}${rawResponse}`);
+    }
+    
+    console.log('[generateAndSendInvoice] Invoice created', { 
+      orderRef, 
+      invoiceNumber: invoiceResult.invoiceNumber,
+      hasPdf: !!invoiceResult.pdfBase64
+    });
+    
+    // PDF letöltése, ha nincs a válaszban
+    let pdfBase64 = invoiceResult.pdfBase64;
+    if (!pdfBase64 && invoiceResult.invoiceNumber) {
+      const pdfResult = await szamlaAgent.getInvoicePdf(invoiceResult.invoiceNumber);
+      if (pdfResult.success) {
+        pdfBase64 = pdfResult.pdfBase64;
+      }
+    }
+    
+    // Számla tárolása Firestore-ban
+    const invoiceId = `INV_${orderRef}`;
+    const invoiceDoc = {
+      userId,
+      orderRef,
+      transactionId: paymentInfo.transactionId || null,
+      orderId: paymentInfo.orderId || null,
+      invoiceNumber: invoiceResult.invoiceNumber,
+      externalId: orderRef,
+      amount: paymentInfo.amount,
+      pdfBase64: pdfBase64 || null,
+      status: 'pending',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      isTest: !!testPaymentData // Teszt számla, ha teszt adatokkal generáltuk
+    };
+    
+    await db.collection('invoices').doc(invoiceId).set(invoiceDoc);
+    console.log('[generateAndSendInvoice] Invoice stored', { invoiceId });
+    
+    // Email küldése PDF melléklettel
+    if (userData.email && pdfBase64) {
+      try {
+        await sendInvoiceEmail({
+          to: userData.email,
+          invoiceNumber: invoiceResult.invoiceNumber,
+          userName: shippingAddress?.name || `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.displayName || 'Felhasználó',
+          amount: paymentInfo.amount,
+          pdfBase64: pdfBase64,
+          orderRef: orderRef
+        });
+        
+        // Email küldés státusz frissítése
+        await db.collection('invoices').doc(invoiceId).update({
+          status: 'sent',
+          sentAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        
+        console.log('[generateAndSendInvoice] Invoice email sent', { invoiceId, email: userData.email });
+      } catch (emailError) {
+        console.error('[generateAndSendInvoice] Email sending failed', { invoiceId, error: emailError.message });
+        // Email hiba esetén is frissítjük a státuszt
+        await db.collection('invoices').doc(invoiceId).update({
+          status: 'failed',
+          error: emailError.message
+        });
+      }
+    } else {
+      console.warn('[generateAndSendInvoice] Email not sent - missing email or PDF', { 
+        hasEmail: !!userData.email, 
+        hasPdf: !!pdfBase64 
+      });
+    }
+    
+    // Szállítási cím törlése a payment record-ból (csak ha nem teszt adatok)
+    if (shippingAddress && !testPaymentData) {
+      const paymentRef = db.collection('web_payments').doc(orderRef);
+      const paymentDoc = await paymentRef.get();
+      if (paymentDoc.exists) {
+        await paymentRef.update({
+          shippingAddress: admin.firestore.FieldValue.delete(),
+          shippingAddressTemporary: admin.firestore.FieldValue.delete()
+        });
+        console.log('[generateAndSendInvoice] Shipping address deleted from payment record', { orderRef });
+      }
+    }
+    
+    return {
+      success: true,
+      invoiceId,
+      invoiceNumber: invoiceResult.invoiceNumber
+    };
+  } catch (error) {
+    console.error('[generateAndSendInvoice] Error', { userId, orderRef, error: error.message, stack: error.stack });
+    
+    // Hiba esetén is próbáljuk törölni a címet (ha van és nem teszt adatok)
+    if (!testPaymentData) {
+      try {
+        const paymentRef = db.collection('web_payments').doc(orderRef);
+        const paymentDoc = await paymentRef.get();
+        if (paymentDoc.exists && paymentDoc.data().shippingAddress) {
+          await paymentRef.update({
+            shippingAddress: admin.firestore.FieldValue.delete(),
+            shippingAddressTemporary: admin.firestore.FieldValue.delete()
+          });
+          console.log('[generateAndSendInvoice] Shipping address deleted after error', { orderRef });
+        }
+      } catch (deleteError) {
+        console.error('[generateAndSendInvoice] Failed to delete address after error', { orderRef, error: deleteError.message });
+      }
+    }
+    
+    throw error;
+  }
+}
+
+/**
+ * Számla email küldése PDF melléklettel
+ */
+async function sendInvoiceEmail({ to, invoiceNumber, userName, amount, pdfBase64, orderRef }) {
+  const pdfBuffer = Buffer.from(pdfBase64, 'base64');
+  
+  const mailOptions = {
+    from: 'Lomedu <info@lomedu.hu>',
+    to: to,
+    subject: `Számla - ${invoiceNumber}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1E3A8A;">Kedves ${userName}!</h2>
+        <p>Köszönjük a vásárlást!</p>
+        <p>A számlája elkészült és csatolva találja ebben az emailben.</p>
+        <p><strong>Számlaszám:</strong> ${invoiceNumber}</p>
+        <p><strong>Összeg:</strong> ${amount.toLocaleString('hu-HU')} Ft</p>
+        <p><strong>Rendelésszám:</strong> ${orderRef}</p>
+        <p>Ha bármilyen kérdése van, keressen minket bizalommal!</p>
+        <p>Üdvözlettel,<br>A Lomedu csapat</p>
+      </div>
+    `,
+    attachments: [
+      {
+        filename: `szamla_${invoiceNumber}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }
+    ]
+  };
+  
+  await transport.sendMail(mailOptions);
+}
+
+/**
+ * Manuális számla generálás admin teszteléshez
+ */
+exports.generateInvoiceManually = onCall({
+  secrets: ['SIMPLEPAY_MERCHANT_ID', 'SIMPLEPAY_SECRET_KEY', 'SIMPLEPAY_ENV']
+}, async (request) => {
+  try {
+    const { userId: targetUserId } = request.data || {};
+    const auth = request.auth;
+    
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Hitelesítés szükséges');
+    }
+    
+    const callerUserId = auth.uid;
+    
+    // Admin ellenőrzés
+    const callerDoc = await db.collection('users').doc(callerUserId).get();
+    if (!callerDoc.exists) {
+      throw new HttpsError('permission-denied', 'Felhasználó nem található');
+    }
+    
+    const callerData = callerDoc.data();
+    const isAdmin = callerData.isAdmin === true || 
+                    callerData.email === 'tattila.ninox@gmail.com';
+    
+    if (!isAdmin) {
+      throw new HttpsError('permission-denied', 'Csak admin felhasználók használhatják ezt a funkciót');
+    }
+    
+    // Cél felhasználó meghatározása
+    const userId = targetUserId || callerUserId;
+    
+    // Felhasználó adatok lekérése
+    const userDoc = await db.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+      throw new HttpsError('not-found', 'Felhasználó nem található');
+    }
+    const userData = userDoc.data();
+    
+    // Legutolsó sikeres fizetés lekérése
+    // Megjegyzés: Ha nincs index, akkor először lekérjük az összeset, majd memóriában rendezzük
+    let paymentsSnapshot = await db.collection('web_payments')
+      .where('userId', '==', userId)
+      .where('status', '==', 'COMPLETED')
+      .get();
+    
+    // Memóriában rendezés completedAt vagy createdAt alapján
+    const payments = paymentsSnapshot.docs.sort((a, b) => {
+      const aData = a.data();
+      const bData = b.data();
+      const aTime = aData.completedAt?.toMillis?.() || aData.createdAt?.toMillis?.() || 0;
+      const bTime = bData.completedAt?.toMillis?.() || bData.createdAt?.toMillis?.() || 0;
+      return bTime - aTime; // Descending order
+    });
+    
+    let paymentData;
+    let orderRef;
+    let paymentInfo;
+    
+    // Ha nincs fizetés, fiktív adatokkal dolgozunk teszteléshez
+    if (payments.length === 0) {
+      console.log('[generateInvoiceManually] No payment found, using test data', { userId });
+      orderRef = `TEST_${userId}_${Date.now()}`;
+      paymentInfo = {
+        transactionId: 'TEST_TRANSACTION_' + Date.now(),
+        orderId: null,
+        amount: 4350, // 30 napos előfizetés ára
+        planId: 'monthly_premium_prepaid'
+      };
+      
+      // Fiktív szállítási cím (teszteléshez)
+      paymentData = {
+        shippingAddress: {
+          name: userData.firstName && userData.lastName 
+            ? `${userData.firstName} ${userData.lastName}` 
+            : userData.displayName || userData.email || 'Teszt Felhasználó',
+          zipCode: '2030',
+          city: 'Érd',
+          address: 'Teszt utca 123.',
+          isCompany: 'false',
+          taxNumber: '12345678-1-23' // Teszt adószám (különböző kell legyen az eladó adószámától)
+        },
+        amount: 4350,
+        planId: 'monthly_premium_prepaid'
+      };
+    } else {
+      // Valós fizetési adatok használata
+      const paymentDoc = payments[0];
+      paymentData = paymentDoc.data();
+      orderRef = paymentDoc.id;
+      
+      paymentInfo = {
+        transactionId: paymentData.transactionId || paymentData.simplePayTransactionId || null,
+        orderId: paymentData.orderId || null,
+        amount: paymentData.amount,
+        planId: paymentData.planId
+      };
+    }
+    
+    console.log('[generateInvoiceManually] Manual invoice generation', { userId, orderRef, callerUserId, isTest: payments.length === 0 });
+    
+    try {
+      // Számla generálása (teszt adatokkal, ha nincs fizetés)
+      const result = await generateAndSendInvoice(
+        userId, 
+        orderRef, 
+        paymentInfo,
+        payments.length === 0 ? paymentData : null // Teszt adatok csak ha nincs fizetés
+      );
+      
+      console.log('[generateInvoiceManually] Invoice generation successful', { 
+        invoiceId: result.invoiceId, 
+        invoiceNumber: result.invoiceNumber 
+      });
+      
+      return {
+        success: true,
+        invoiceId: result.invoiceId,
+        invoiceNumber: result.invoiceNumber,
+        message: 'Számla sikeresen generálva és elküldve'
+      };
+    } catch (invoiceError) {
+      console.error('[generateInvoiceManually] Invoice generation failed', { 
+        error: invoiceError.message, 
+        stack: invoiceError.stack,
+        userId,
+        orderRef
+      });
+      throw invoiceError;
+    }
+  } catch (error) {
+    console.error('[generateInvoiceManually] Error', { 
+      error: error.message, 
+      stack: error.stack,
+      errorName: error.name,
+      errorCode: error.code
+    });
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    throw new HttpsError('internal', error.message || 'Számla generálási hiba');
   }
 });
 
