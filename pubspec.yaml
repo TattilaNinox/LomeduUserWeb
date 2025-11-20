@@ -1,6 +1,6 @@
 name: orlomed_admin_web
 description: Admin web interface for OrLomed
-version: 1.0.1+4
+version: 1.0.1+9
 environment:
   sdk: '>=3.0.0 <4.0.0'
 
@@ -63,3 +63,4 @@ flutter:
     - assets/images/login_LOGO.png
     - assets/images/simplepay_bankcard_logos_top_02_new.png
     - assets/images/simplepay_bankcard_logos_left_482x40_new.jpg
+    - assets/postal_codes.json

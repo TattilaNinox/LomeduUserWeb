@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
 
 /// Szállítási cím gyűjtő dialóg
 ///
@@ -38,11 +40,91 @@ class _ShippingAddressDialogContentState
   bool _isLoading = false;
   bool _isCompany = false; // Magánszemély (false) vagy jogi személy (true)
   bool _isLoadingUserData = true;
+  
+  // Irányítószám-település adatok
+  Map<String, List<String>>? _postalCodes;
+  bool _isLoadingPostalCodes = false;
+  List<String>? _availableCities; // Több település esetén
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _loadPostalCodes();
+    // Irányítószám változás figyelése
+    _zipCodeController.addListener(_onZipCodeChanged);
+  }
+  
+  Future<void> _loadPostalCodes() async {
+    try {
+      setState(() {
+        _isLoadingPostalCodes = true;
+      });
+      
+      final String jsonString = await rootBundle.loadString('assets/postal_codes.json');
+      final Map<String, dynamic> jsonData = json.decode(jsonString);
+      
+      // Konvertálás Map<String, List<String>> formátumba
+      _postalCodes = jsonData.map((key, value) => 
+        MapEntry(key, List<String>.from(value as List))
+      );
+      
+      if (mounted) {
+        setState(() {
+          _isLoadingPostalCodes = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Hiba az irányítószám adatok betöltésekor: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingPostalCodes = false;
+        });
+      }
+    }
+  }
+  
+  void _onZipCodeChanged() {
+    final zipCode = _zipCodeController.text.trim();
+    
+    // Csak akkor keresünk, ha pontosan 4 számjegy van
+    if (zipCode.length == 4 && RegExp(r'^\d{4}$').hasMatch(zipCode)) {
+      _lookupCity(zipCode);
+    } else {
+      // Ha nem 4 számjegy, eltávolítjuk a település mezőt és a dropdown-t
+      if (_availableCities != null) {
+        setState(() {
+          _availableCities = null;
+        });
+      }
+    }
+  }
+  
+  void _lookupCity(String zipCode) {
+    if (_postalCodes == null) return;
+    
+    final cities = _postalCodes![zipCode];
+    
+    if (cities != null && cities.isNotEmpty) {
+      if (cities.length == 1) {
+        // Egy település: automatikusan kitöltjük
+        setState(() {
+          _cityController.text = cities[0];
+          _availableCities = null;
+        });
+      } else {
+        // Több település: lista megjelenítése
+        setState(() {
+          _availableCities = cities;
+          _cityController.clear(); // Töröljük a település mezőt, hogy válasszon
+        });
+      }
+    } else {
+      // Nincs találat
+      setState(() {
+        _availableCities = null;
+      });
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -90,6 +172,7 @@ class _ShippingAddressDialogContentState
 
   @override
   void dispose() {
+    _zipCodeController.removeListener(_onZipCodeChanged);
     _nameController.dispose();
     _zipCodeController.dispose();
     _cityController.dispose();
@@ -385,83 +468,188 @@ class _ShippingAddressDialogContentState
                 children: [
                   Expanded(
                     flex: 2,
-                    child: TextFormField(
-                      controller: _zipCodeController,
-                      enabled: !_isLoading,
-                      decoration: InputDecoration(
-                        labelText: 'Irányítószám *',
-                        hintText: '2030',
-                        prefixIcon: Icon(Icons.pin, color: Colors.grey[600]),
-                        filled: true,
-                        fillColor: Colors.grey[50],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
+                    child: Stack(
+                      children: [
+                        TextFormField(
+                          controller: _zipCodeController,
+                          enabled: !_isLoading,
+                          maxLength: 4,
+                          decoration: InputDecoration(
+                            labelText: 'Irányítószám *',
+                            hintText: '2030',
+                            prefixIcon: Icon(Icons.pin, color: Colors.grey[600]),
+                            suffixIcon: _isLoadingPostalCodes
+                                ? const Padding(
+                                    padding: EdgeInsets.all(12.0),
+                                    child: SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                  )
+                                : null,
+                            filled: true,
+                            fillColor: Colors.grey[50],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFF1E3A8A), width: 2),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Colors.red, width: 2),
+                            ),
+                            counterText: '', // Elrejtjük a karakter számlálót
+                          ),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Kötelező';
+                            }
+                            if (!RegExp(r'^\d{4}$').hasMatch(value.trim())) {
+                              return '4 számjegy';
+                            }
+                            return null;
+                          },
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF1E3A8A), width: 2),
-                        ),
-                        errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.red, width: 2),
-                        ),
-                      ),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Kötelező';
-                        }
-                        if (!RegExp(r'^\d{4}$').hasMatch(value.trim())) {
-                          return '4 számjegy';
-                        }
-                        return null;
-                      },
+                      ],
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     flex: 3,
-                    child: TextFormField(
-                      controller: _cityController,
-                      enabled: !_isLoading,
-                      decoration: InputDecoration(
-                        labelText: 'Település *',
-                        hintText: 'Érd',
-                        prefixIcon: Icon(Icons.location_city, color: Colors.grey[600]),
-                        filled: true,
-                        fillColor: Colors.grey[50],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
+                    child: Stack(
+                      children: [
+                        TextFormField(
+                          controller: _cityController,
+                          enabled: !_isLoading && _availableCities == null, // Le van tiltva, ha több település van
+                          readOnly: _availableCities != null, // Csak olvasható, ha több település van
+                          decoration: InputDecoration(
+                            labelText: 'Település *',
+                            hintText: _availableCities != null 
+                                ? 'Válassz települést' 
+                                : 'Érd',
+                            prefixIcon: Icon(Icons.location_city, color: Colors.grey[600]),
+                            suffixIcon: _availableCities != null
+                                ? Icon(Icons.arrow_drop_down, color: Colors.grey[600])
+                                : null,
+                            filled: true,
+                            fillColor: _availableCities != null 
+                                ? Colors.blue[50] 
+                                : Colors.grey[50],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFF1E3A8A), width: 2),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Colors.red, width: 2),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Kötelező';
+                            }
+                            return null;
+                          },
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF1E3A8A), width: 2),
-                        ),
-                        errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.red, width: 2),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Kötelező';
-                        }
-                        return null;
-                      },
+                      ],
                     ),
                   ),
                 ],
               ),
+              // Település lista, ha több település van
+              if (_availableCities != null && _availableCities!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 200),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[300]!),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${_availableCities!.length} település található, válassz egyet:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      Flexible(
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: _availableCities!.length,
+                          itemBuilder: (context, index) {
+                            final city = _availableCities![index];
+                            return InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _cityController.text = city;
+                                  _availableCities = null;
+                                });
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.location_city, size: 18, color: Colors.grey[600]),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        city,
+                                        style: const TextStyle(fontSize: 15),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               
               // Utca, házszám
