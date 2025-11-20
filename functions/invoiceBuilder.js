@@ -73,7 +73,7 @@ function buildBuyerData(userData, shippingAddress) {
     // Logika: 
     // - Ha cég ÉS van adószám -> adoalany: '6', adoszam: megadott érték
     // - Ha cég DE nincs adószám -> NEM LEHET (frontend validáció miatt nem kellene előfordulnia, de biztonság kedvéért magánszemélyként kezeljük)
-    // - Ha magánszemély -> adoalany: '7', nincs adoszam
+    // - Ha magánszemély -> adoalany: '-1' (lakossági, nincs magyar adószáma)
     // - Ha magánszemély DE van adószám -> adoalany: '6', adoszam: megadott érték
     let taxPayer;
     let finalTaxNumber;
@@ -86,7 +86,7 @@ function buildBuyerData(userData, shippingAddress) {
       } else {
         // Ez nem kellene előfordulnia a frontend validáció miatt, de biztonság kedvéért
         console.warn('[buildBuyerData] Cég kiválasztva de nincs adószám, magánszemélyként kezeljük');
-        taxPayer = '7';
+        taxPayer = '-1'; // Lakossági (nincs magyar adószáma)
         finalTaxNumber = undefined;
       }
     } else {
@@ -96,7 +96,7 @@ function buildBuyerData(userData, shippingAddress) {
         taxPayer = '6';
         finalTaxNumber = taxNumber;
       } else {
-        taxPayer = '7';
+        taxPayer = '-1'; // Lakossági (nincs magyar adószáma)
         finalTaxNumber = undefined;
       }
     }
@@ -116,12 +116,15 @@ function buildBuyerData(userData, shippingAddress) {
       buyerData.taxNumber = finalTaxNumber;
     }
     
-    console.log('[buildBuyerData] Buyer data:', {
-      isCompany,
-      hasTaxNumber,
-      taxPayer,
-      hasTaxNumberInData: !!buyerData.taxNumber
-    });
+    // RÉSZLETES LOGOLÁS: buyer adatok
+    console.log('[buildBuyerData] ===== BUYER DATA =====');
+    console.log('[buildBuyerData] isCompany:', isCompany);
+    console.log('[buildBuyerData] hasTaxNumber:', hasTaxNumber);
+    console.log('[buildBuyerData] taxPayer értéke:', taxPayer);
+    console.log('[buildBuyerData] taxNumber értéke:', finalTaxNumber || 'UNDEFINED (nem kerül a buyerData-ba)');
+    console.log('[buildBuyerData] buyerData objektum:', JSON.stringify(buyerData, null, 2));
+    console.log('[buildBuyerData] buyerData.taxNumber jelen van:', 'taxNumber' in buyerData);
+    console.log('[buildBuyerData] =======================');
     
     return buyerData;
   }
@@ -135,7 +138,7 @@ function buildBuyerData(userData, shippingAddress) {
     city: userData.city || 'Budapest',
     address: userData.address || 'Nincs megadva',
     email: userData.email,
-    taxPayer: '7' // Nincs adószám
+    taxPayer: '-1' // Lakossági (nincs magyar adószáma)
   };
 }
 

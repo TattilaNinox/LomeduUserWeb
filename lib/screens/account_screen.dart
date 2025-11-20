@@ -561,6 +561,199 @@ class _AccountScreenState extends State<AccountScreen> {
                     child: const Text('Reset (ingyenes állapot)'),
                   ),
                 ],
+
+                // Admin eszközök (számla generálás teszteléshez)
+                // Csak admin felhasználóknak látható
+                if (data['isAdmin'] == true ||
+                    user.email == 'tattila.ninox@gmail.com') ...[
+                  const SizedBox(height: 20),
+                  const Divider(),
+                  const Text(
+                    'Admin eszközök',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) {
+                              return AlertDialog(
+                                title: const Text(
+                                    'Számla generálása teszteléshez'),
+                                content: const Text(
+                                    'Ez manuálisan generál egy számlát az utolsó sikeres fizetés alapján. '
+                                    'A számla elkészül és emailben elküldésre kerül.'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(ctx).pop(false),
+                                    child: const Text('Mégse'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () =>
+                                        Navigator.of(ctx).pop(true),
+                                    child: const Text('Generálás'),
+                                  ),
+                                ],
+                              );
+                            },
+                          ) ??
+                          false;
+                      if (!confirmed) return;
+
+                      try {
+                        final functions = FirebaseFunctions.instanceFor(
+                            region: 'europe-west1');
+                        final callable =
+                            functions.httpsCallable('generateInvoiceManually');
+
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Számla generálása folyamatban...'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+
+                        final result = await callable.call();
+                        final data = result.data as Map<String, dynamic>;
+
+                        if (context.mounted) {
+                          if (data['success'] == true) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Számla sikeresen generálva! Számlaszám: ${data['invoiceNumber'] ?? 'N/A'}',
+                                ),
+                                backgroundColor: Colors.green,
+                                duration: const Duration(seconds: 5),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'Hiba: ${data['error'] ?? 'Ismeretlen hiba'}'),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 5),
+                              ),
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Hiba történt: $e'),
+                              backgroundColor: Colors.red,
+                              duration: const Duration(seconds: 5),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple[600],
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.receipt_long),
+                    label: const Text('Számla generálása teszteléshez (céges)'),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) {
+                              return AlertDialog(
+                                title: const Text(
+                                    'Lakossági vásárló számla generálása'),
+                                content: const Text(
+                                    'Ez manuálisan generál egy számlát lakossági vásárlóhoz (nincs adószám). '
+                                    'A számla elkészül és emailben elküldésre kerül.'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(ctx).pop(false),
+                                    child: const Text('Mégse'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () =>
+                                        Navigator.of(ctx).pop(true),
+                                    child: const Text('Generálás'),
+                                  ),
+                                ],
+                              );
+                            },
+                          ) ??
+                          false;
+                      if (!confirmed) return;
+
+                      try {
+                        final functions = FirebaseFunctions.instanceFor(
+                            region: 'europe-west1');
+                        final callable =
+                            functions.httpsCallable('generateInvoiceManuallyPrivate');
+
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Lakossági vásárló számla generálása folyamatban...'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+
+                        final result = await callable.call();
+                        final data = result.data as Map<String, dynamic>;
+
+                        if (context.mounted) {
+                          if (data['success'] == true) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Lakossági vásárló számla sikeresen generálva! Számlaszám: ${data['invoiceNumber'] ?? 'N/A'}',
+                                ),
+                                backgroundColor: Colors.green,
+                                duration: const Duration(seconds: 5),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'Hiba: ${data['error'] ?? 'Ismeretlen hiba'}'),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 5),
+                              ),
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Hiba történt: $e'),
+                              backgroundColor: Colors.red,
+                              duration: const Duration(seconds: 5),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue[600],
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.person),
+                    label: const Text('Lakossági vásárló számla generálása'),
+                  ),
+                ],
               ],
             ),
           );

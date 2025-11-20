@@ -35,14 +35,31 @@ async function createInvoice(invoiceData) {
     xmlContent = buildInvoiceXml(invoiceData);
     console.log('[szamlaAgent] XML request (first 500 chars):', xmlContent.substring(0, 500));
     
-    // Logoljuk, hogy van-e adoszam az XML-ben
+    // RÉSZLETES LOGOLÁS: XML ellenőrzés
     const hasAdoszamInXml = xmlContent.includes('<adoszam>');
+    const hasAdoalany1 = xmlContent.includes('<adoalany>1</adoalany>');
     const hasAdoalany6 = xmlContent.includes('<adoalany>6</adoalany>');
-    console.log('[szamlaAgent] XML check:', {
-      hasAdoszamInXml,
-      hasAdoalany6,
-      warning: hasAdoalany6 && !hasAdoszamInXml ? 'HIBA: adoalany: 6 de nincs adoszam!' : 'OK'
-    });
+    
+    console.log('[szamlaAgent] ===== XML ELLENŐRZÉS =====');
+    const hasAdoalanyMinus1 = xmlContent.includes('<adoalany>-1</adoalany>');
+    console.log('[szamlaAgent] XML contains <adoalany>-1</adoalany> (lakossági):', hasAdoalanyMinus1);
+    console.log('[szamlaAgent] XML contains <adoalany>6</adoalany> (van adószám):', hasAdoalany6);
+    console.log('[szamlaAgent] XML contains <adoszam>:', hasAdoszamInXml);
+    
+    if (hasAdoalanyMinus1 && hasAdoszamInXml) {
+      const adoszamContent = xmlContent.match(/<adoszam>(.*?)<\/adoszam>/);
+      if (adoszamContent && adoszamContent[1].trim() !== '') {
+        console.error('[szamlaAgent] HIBA: adoalany: -1 (lakossági) de adoszam nem üres az XML-ben!');
+      }
+    }
+    if (hasAdoalany6 && !hasAdoszamInXml) {
+      console.error('[szamlaAgent] HIBA: adoalany: 6 (van adószám) de nincs adoszam mező az XML-ben!');
+    }
+    
+    // Teljes XML logolása (debugging)
+    console.log('[szamlaAgent] TELJES XML TARTALOM:');
+    console.log(xmlContent);
+    console.log('[szamlaAgent] ===========================');
     
     // Multipart form-data készítése
     const formData = new FormData();
@@ -165,9 +182,16 @@ function buildInvoiceXml(invoiceData) {
       elado: invoiceData.seller || {},
       vevo: (() => {
         // Adószám és adóalany kezelése ELŐRE
-        const taxNumber = invoiceData.buyer.taxNumber ? invoiceData.buyer.taxNumber.trim() : '';
-        const hasTaxNumber = taxNumber !== '';
-        const requestedTaxPayer = invoiceData.buyer.taxPayer || '7';
+        // FONTOS: Ha nincs taxNumber az invoiceData.buyer-ben, akkor undefined legyen, ne üres string
+        const taxNumber = invoiceData.buyer.taxNumber && invoiceData.buyer.taxNumber.trim() !== '' 
+          ? invoiceData.buyer.taxNumber.trim() 
+          : undefined;
+        const hasTaxNumber = taxNumber !== undefined && taxNumber !== '';
+        const requestedTaxPayer = invoiceData.buyer.taxPayer || '-1'; // Alapértelmezett: lakossági (nincs adószám)
+        
+        // BIZTONSÁGI ELLENŐRZÉS: Ha nincs taxNumber az invoiceData.buyer-ben, akkor biztosan ne legyen
+        console.log('[szamlaAgent] invoiceData.buyer.taxNumber értéke:', invoiceData.buyer.taxNumber);
+        console.log('[szamlaAgent] invoiceData.buyer.taxNumber jelen van:', 'taxNumber' in invoiceData.buyer);
         
         // Logoljuk a bejövő adatokat
         console.log('[szamlaAgent] Buyer tax data:', {
@@ -177,7 +201,7 @@ function buildInvoiceXml(invoiceData) {
         });
         
         // Számlázz.hu logika: ha adoalany: '6', akkor KÖTELEZŐ az adoszam mező
-        // Ha nincs adószám, akkor adoalany: '7' kell legyen
+        // Ha nincs adószám, akkor adoalany: '-1' kell legyen (lakossági, nincs magyar adószáma)
         let adoalanyValue;
         let adoszamValue;
         
@@ -186,20 +210,22 @@ function buildInvoiceXml(invoiceData) {
           adoalanyValue = '6';
           adoszamValue = taxNumber;
         } else {
-          // Nincs adószám -> adoalany: '7', nincs adoszam mező
-          adoalanyValue = '7';
+          // Nincs adószám -> adoalany: '-1' (lakossági, nincs magyar adószáma)
+          adoalanyValue = '-1';
           adoszamValue = undefined; // NEM adjuk hozzá az adoszam mezőt, ha nincs érték
         }
         
         // VÉGLEGES BIZTONSÁGI ELLENŐRZÉS: ha adoalany: '6', akkor KÖTELEZŐ az adoszam
         if (adoalanyValue === '6' && !adoszamValue) {
-          console.error('[szamlaAgent] HIBA: adoalany: 6 de nincs adoszam! Magánszemélyként kezeljük.');
-          adoalanyValue = '7';
+          console.error('[szamlaAgent] HIBA: adoalany: 6 de nincs adoszam! Lakosságiként kezeljük.');
+          adoalanyValue = '-1';
           adoszamValue = undefined; // Biztos, hogy nincs adoszam mező
         }
         
         // Vevő objektum összeállítása - SORREND FONTOS!
         // A dokumentáció szerint: nev -> orszag -> irsz -> telepules -> cim -> email -> sendEmail -> adoalany -> adoszam -> telefonszam
+        // FONTOS: Az adoszam mezőt MINDIG küldeni kell, még akkor is, ha üres
+        // Ha adoalany: '-1' (lakossági, nincs magyar adószáma), akkor üres stringet küldünk
         const vevoObj = {
           nev: invoiceData.buyer.name,
           orszag: invoiceData.buyer.country || 'Magyarország',
@@ -211,13 +237,16 @@ function buildInvoiceXml(invoiceData) {
           adoalany: adoalanyValue
         };
         
-        // MEGJEGYZÉS: A Számlázz.hu API valószínűleg mindig várja az adoszam mezőt, még akkor is, ha üres
-        // Ezért mindig hozzáadjuk, akár üres stringgel is
-        if (adoszamValue) {
+        // Számlázz.hu API követelmény: az adoszam mezőt MINDIG küldeni kell, még akkor is, ha üres
+        // Ha adoalany: '-1' (lakossági, nincs magyar adószáma), akkor üres stringet küldünk
+        // Ha adoalany: '6' (van adószám), akkor az adószámot küldjük
+        if (adoszamValue !== undefined && adoszamValue !== null && adoszamValue.toString().trim() !== '') {
           vevoObj.adoszam = adoszamValue;
+          console.log('[szamlaAgent] adoszam mező HOZZÁADVA az objektumhoz:', adoszamValue);
         } else {
-          // Ha nincs adószám, üres stringet küldünk (a Számlázz.hu API követelménye)
+          // Lakossági vásárló esetén üres stringet küldünk (API követelmény)
           vevoObj.adoszam = '';
+          console.log('[szamlaAgent] adoszam mező ÜRES STRINGGEL hozzáadva (lakossági vásárló, adoalany: -1)');
         }
         
         // telefonszam opcionális
@@ -225,11 +254,22 @@ function buildInvoiceXml(invoiceData) {
           vevoObj.telefonszam = invoiceData.buyer.phone;
         }
         
-        console.log('[szamlaAgent] Final vevo tax data:', {
-          adoalany: vevoObj.adoalany,
-          hasAdoszam: !!vevoObj.adoszam,
-          adoszamValue: vevoObj.adoszam ? `${vevoObj.adoszam.substring(0, 3)}***` : 'nincs'
-        });
+        // RÉSZLETES LOGOLÁS: vevo objektum teljes tartalma
+        console.log('[szamlaAgent] ===== VEVO OBJEKTUM TELJES TARTALMA =====');
+        console.log('[szamlaAgent] vevoObj (JSON):', JSON.stringify(vevoObj, null, 2));
+        console.log('[szamlaAgent] adoalany értéke:', vevoObj.adoalany);
+        console.log('[szamlaAgent] adoszam mező jelen van az objektumban:', 'adoszam' in vevoObj);
+        console.log('[szamlaAgent] adoszam értéke:', vevoObj.adoszam !== undefined ? vevoObj.adoszam : 'UNDEFINED (nem kerül az XML-be)');
+        console.log('[szamlaAgent] vevo objektum kulcsai:', Object.keys(vevoObj));
+        console.log('[szamlaAgent] vevo objektum értékei:', Object.values(vevoObj));
+        
+        // VÉGLEGES ELLENŐRZÉS: Ha adoalany: '-1', akkor üres adoszam mező lehet
+        if (vevoObj.adoalany === '-1' && vevoObj.adoszam !== '') {
+          console.warn('[szamlaAgent] Figyelmeztetés: adoalany: -1 de adoszam nem üres! Üresre állítjuk.');
+          vevoObj.adoszam = '';
+        }
+        
+        console.log('[szamlaAgent] ===========================================');
         
         return vevoObj;
       })(),
@@ -264,7 +304,26 @@ function buildInvoiceXml(invoiceData) {
     xmlObj.xmlszamla.tetelek[`item${index}`] = itemObj;
   });
 
+  // RÉSZLETES LOGOLÁS: XML objektum a generálás előtt
+  console.log('[szamlaAgent] ===== XML OBJEKTUM GENERÁLÁS ELŐTT =====');
+  console.log('[szamlaAgent] xmlObj.xmlszamla.vevo (JSON):', JSON.stringify(xmlObj.xmlszamla.vevo, null, 2));
+  console.log('[szamlaAgent] xmlObj.xmlszamla.vevo kulcsai:', Object.keys(xmlObj.xmlszamla.vevo));
+  console.log('[szamlaAgent] xmlObj.xmlszamla.vevo.adoalany:', xmlObj.xmlszamla.vevo.adoalany);
+  console.log('[szamlaAgent] xmlObj.xmlszamla.vevo.adoszam jelen van:', 'adoszam' in xmlObj.xmlszamla.vevo);
+  console.log('[szamlaAgent] =========================================');
+  
   let xmlContent = builder.build(xmlObj);
+  
+  // RÉSZLETES LOGOLÁS: XML tartalom a replace előtt
+  console.log('[szamlaAgent] ===== XML TARTALOM REPLACE ELŐTT =====');
+  const vevoStartBefore = xmlContent.indexOf('<vevo>');
+  const vevoEndBefore = xmlContent.indexOf('</vevo>');
+  if (vevoStartBefore !== -1 && vevoEndBefore !== -1) {
+    const vevoXmlBefore = xmlContent.substring(vevoStartBefore, vevoEndBefore + 7);
+    console.log('[szamlaAgent] vevo XML (replace előtt):', vevoXmlBefore);
+    console.log('[szamlaAgent] vevo XML contains <adoszam> (replace előtt):', vevoXmlBefore.includes('<adoszam>'));
+  }
+  console.log('[szamlaAgent] =========================================');
   
   // A PHP könyvtár item0, item1 stb. kulcsokat használ, de XML-ben tetel elemeket generál
   // A fast-xml-parser nem csinál ilyen átnevezést, ezért manuálisan cseréljük
@@ -273,14 +332,32 @@ function buildInvoiceXml(invoiceData) {
   xmlContent = xmlContent.replace(/<item\d+>/g, '<tetel>');
   xmlContent = xmlContent.replace(/<\/item\d+>/g, '</tetel>');
   
-  // Debug: logoljuk a vevo részt az XML-ből
+  // RÉSZLETES LOGOLÁS: vevo rész az XML-ből
   const vevoStart = xmlContent.indexOf('<vevo>');
   const vevoEnd = xmlContent.indexOf('</vevo>');
   if (vevoStart !== -1 && vevoEnd !== -1) {
     const vevoXml = xmlContent.substring(vevoStart, vevoEnd + 7);
+    console.log('[szamlaAgent] ===== VEVO XML RÉSZ =====');
     console.log('[szamlaAgent] Generated vevo XML:', vevoXml);
-    console.log('[szamlaAgent] vevo XML contains adoalany:', vevoXml.includes('<adoalany>'));
-    console.log('[szamlaAgent] vevo XML contains adoszam:', vevoXml.includes('<adoszam>'));
+    console.log('[szamlaAgent] vevo XML contains <adoalany>:', vevoXml.includes('<adoalany>'));
+    console.log('[szamlaAgent] vevo XML contains <adoszam>:', vevoXml.includes('<adoszam>'));
+    
+    // Adoalany érték kinyerése
+    const adoalanyMatch = vevoXml.match(/<adoalany>(\d+)<\/adoalany>/);
+    if (adoalanyMatch) {
+      console.log('[szamlaAgent] adoalany értéke az XML-ben:', adoalanyMatch[1]);
+    } else {
+      console.log('[szamlaAgent] adoalany NEM található az XML-ben!');
+    }
+    
+    // Adoszam érték kinyerése
+    const adoszamMatch = vevoXml.match(/<adoszam>(.*?)<\/adoszam>/);
+    if (adoszamMatch) {
+      console.log('[szamlaAgent] adoszam értéke az XML-ben:', adoszamMatch[1] || '(üres)');
+    } else {
+      console.log('[szamlaAgent] adoszam NEM található az XML-ben (ez jó, ha lakossági vásárló)');
+    }
+    console.log('[szamlaAgent] ===========================');
   }
   
   // Debug: logoljuk, ha még mindig van item0

@@ -1595,9 +1595,18 @@ exports.generateInvoiceManually = onCall({
         error: invoiceError.message, 
         stack: invoiceError.stack,
         userId,
-        orderRef
+        orderRef,
+        errorName: invoiceError.name,
+        errorCode: invoiceError.code
       });
-      throw invoiceError;
+      
+      // Ha már HttpsError, akkor továbbdobjuk
+      if (invoiceError instanceof HttpsError) {
+        throw invoiceError;
+      }
+      
+      // Egyéb hibákat HttpsError-ra konvertáljuk
+      throw new HttpsError('internal', `Számla generálási hiba: ${invoiceError.message || 'Ismeretlen hiba'}`);
     }
   } catch (error) {
     console.error('[generateInvoiceManually] Error', { 
@@ -1606,10 +1615,147 @@ exports.generateInvoiceManually = onCall({
       errorName: error.name,
       errorCode: error.code
     });
+    
+    // Ha már HttpsError, akkor továbbdobjuk
     if (error instanceof HttpsError) {
       throw error;
     }
-    throw new HttpsError('internal', error.message || 'Számla generálási hiba');
+    
+    // Egyéb hibákat HttpsError-ra konvertáljuk
+    throw new HttpsError('internal', `Számla generálási hiba: ${error.message || 'Ismeretlen hiba'}`);
+  }
+});
+
+// Lakossági vásárló számla generálása (teszteléshez)
+exports.generateInvoiceManuallyPrivate = onCall({
+  secrets: ['SIMPLEPAY_MERCHANT_ID', 'SIMPLEPAY_SECRET_KEY', 'SIMPLEPAY_ENV']
+}, async (request) => {
+  try {
+    const { userId: targetUserId } = request.data || {};
+    const auth = request.auth;
+    
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Hitelesítés szükséges');
+    }
+    
+    const callerUserId = auth.uid;
+    
+    // Admin ellenőrzés
+    const callerDoc = await db.collection('users').doc(callerUserId).get();
+    if (!callerDoc.exists) {
+      throw new HttpsError('permission-denied', 'Felhasználó nem található');
+    }
+    
+    const callerData = callerDoc.data();
+    const isAdmin = callerData.isAdmin === true || 
+                    callerData.email === 'tattila.ninox@gmail.com';
+    
+    if (!isAdmin) {
+      throw new HttpsError('permission-denied', 'Csak admin felhasználók használhatják ezt a funkciót');
+    }
+    
+    // Cél felhasználó meghatározása
+    const userId = targetUserId || callerUserId;
+    
+    // Felhasználó adatok lekérése
+    const userDoc = await db.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+      throw new HttpsError('not-found', 'Felhasználó nem található');
+    }
+    const userData = userDoc.data();
+    
+    // Teszt adatok lakossági vásárlóhoz (NINCS adószám)
+    const orderRef = `TEST_PRIVATE_${userId}_${Date.now()}`;
+    const paymentInfo = {
+      transactionId: 'TEST_TRANSACTION_PRIVATE_' + Date.now(),
+      orderId: null,
+      amount: 4350, // 30 napos előfizetés ára
+      planId: 'monthly_premium_prepaid'
+    };
+    
+    // Fiktív szállítási cím lakossági vásárlóhoz (NINCS adószám)
+    // FONTOS: Ez egy teszt funkció, CSAK lakossági vásárlót kezel, NEM céges ügyeket!
+    const paymentData = {
+      shippingAddress: {
+        name: userData.firstName && userData.lastName 
+          ? `${userData.firstName} ${userData.lastName}` 
+          : userData.displayName || userData.email || 'Teszt Magánszemély',
+        zipCode: '2030',
+        city: 'Érd',
+        address: 'Teszt utca 123.',
+        isCompany: 'false', // MINDIG false - csak lakossági vásárló
+        // NINCS taxNumber - lakossági vásárló, adoalany: '-1'
+        // Explicit módon NEM engedjük meg a céges adatokat
+      },
+      amount: 4350,
+      planId: 'monthly_premium_prepaid'
+    };
+    
+    // Biztonsági ellenőrzés: biztosítjuk, hogy csak lakossági vásárló legyen
+    if (paymentData.shippingAddress.isCompany === 'true' || paymentData.shippingAddress.taxNumber) {
+      throw new HttpsError('invalid-argument', 'Ez a funkció csak lakossági vásárlót kezel. Céges ügyekhez használd a generateInvoiceManually funkciót.');
+    }
+    
+    console.log('[generateInvoiceManuallyPrivate] Lakossági vásárló számla generálása', { 
+      userId, 
+      orderRef, 
+      callerUserId,
+      buyerType: 'lakossági (nincs magyar adószáma, adoalany: -1)'
+    });
+    
+    try {
+      // Számla generálása lakossági vásárló teszt adatokkal
+      const result = await generateAndSendInvoice(
+        userId, 
+        orderRef, 
+        paymentInfo,
+        paymentData // Lakossági vásárló teszt adatok
+      );
+      
+      console.log('[generateInvoiceManuallyPrivate] Lakossági vásárló számla generálása sikeres', { 
+        invoiceId: result.invoiceId, 
+        invoiceNumber: result.invoiceNumber 
+      });
+      
+      return {
+        success: true,
+        invoiceId: result.invoiceId,
+        invoiceNumber: result.invoiceNumber,
+        message: 'Lakossági vásárló számla sikeresen generálva és elküldve (nincs adószám)'
+      };
+    } catch (invoiceError) {
+      console.error('[generateInvoiceManuallyPrivate] Lakossági vásárló számla generálása sikertelen', { 
+        error: invoiceError.message, 
+        stack: invoiceError.stack,
+        userId,
+        orderRef,
+        errorName: invoiceError.name,
+        errorCode: invoiceError.code
+      });
+      
+      // Ha már HttpsError, akkor továbbdobjuk
+      if (invoiceError instanceof HttpsError) {
+        throw invoiceError;
+      }
+      
+      // Egyéb hibákat HttpsError-ra konvertáljuk
+      throw new HttpsError('internal', `Lakossági vásárló számla generálási hiba: ${invoiceError.message || 'Ismeretlen hiba'}`);
+    }
+  } catch (error) {
+    console.error('[generateInvoiceManuallyPrivate] Hiba', { 
+      error: error.message, 
+      stack: error.stack,
+      errorName: error.name,
+      errorCode: error.code
+    });
+    
+    // Ha már HttpsError, akkor továbbdobjuk
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    
+    // Egyéb hibákat HttpsError-ra konvertáljuk
+    throw new HttpsError('internal', `Lakossági vásárló számla generálási hiba: ${error.message || 'Ismeretlen hiba'}`);
   }
 });
 
