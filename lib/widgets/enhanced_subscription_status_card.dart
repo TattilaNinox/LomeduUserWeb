@@ -68,7 +68,9 @@ class _EnhancedSubscriptionStatusCardState
 
     try {
       final String subscriptionStatus = data['subscriptionStatus'] ?? 'free';
-      final bool isSubscriptionActive = data['isSubscriptionActive'] ?? false;
+      // Biztonságos típusellenőrzés - IdentityMap esetén is működik
+      final isActiveValue = data['isSubscriptionActive'];
+      final bool isSubscriptionActive = isActiveValue is bool && isActiveValue == true;
       final dynamic subscriptionEndDate = data['subscriptionEndDate'];
 
       int? daysUntilExpiry;
@@ -348,6 +350,20 @@ class _EnhancedSubscriptionStatusCardState
   }
 
   Widget _buildPriceInfo() {
+    // Admin árkedvezmény ellenőrzése - biztonságos típusellenőrzés
+    bool isAdmin = false;
+    if (widget.userData != null) {
+      final userData = widget.userData!;
+      final isAdminValue = userData['isAdmin'];
+      final isAdminBool = isAdminValue is bool && isAdminValue == true;
+      final email = userData['email'];
+      final isAdminEmail = email == 'tattila.ninox@gmail.com';
+      isAdmin = isAdminBool || isAdminEmail;
+    }
+    
+    final displayPrice = isAdmin ? 10 : 4350;
+    final formattedPrice = '${displayPrice.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')} Ft';
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(16),
@@ -383,7 +399,7 @@ class _EnhancedSubscriptionStatusCardState
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '4,350 Ft / 30 nap',
+                  '$formattedPrice / 30 nap',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,

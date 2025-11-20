@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/hybrid_payment_service.dart';
 import '../services/subscription_reminder_service.dart';
 import 'data_transfer_consent_dialog.dart';
+import 'shipping_address_dialog.dart';
 import 'simplepay_logo.dart';
 
 /// Előfizetés megújítási gomb widget
@@ -75,7 +76,9 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
   }
 
   SubscriptionStatusColor _calculateStatusColor(Map<String, dynamic> data) {
-    final isActive = data['isSubscriptionActive'] ?? false;
+    // Biztonságos típusellenőrzés - IdentityMap esetén is működik
+    final isActiveValue = data['isSubscriptionActive'];
+    final isActive = isActiveValue is bool && isActiveValue == true;
     final status = data['subscriptionStatus'] ?? 'free';
     final endDateField = data['subscriptionEndDate'];
 
@@ -107,7 +110,9 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
   }
 
   bool _checkCanRenew(Map<String, dynamic> data) {
-    final isActive = data['isSubscriptionActive'] ?? false;
+    // Biztonságos típusellenőrzés - IdentityMap esetén is működik
+    final isActiveValue = data['isSubscriptionActive'];
+    final isActive = isActiveValue is bool && isActiveValue == true;
     final endDateField = data['subscriptionEndDate'];
 
     if (!isActive) {
@@ -132,7 +137,9 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
   }
 
   String? _getBlockReason(Map<String, dynamic> data) {
-    final isActive = data['isSubscriptionActive'] ?? false;
+    // Biztonságos típusellenőrzés - IdentityMap esetén is működik
+    final isActiveValue = data['isSubscriptionActive'];
+    final isActive = isActiveValue is bool && isActiveValue == true;
     final endDateField = data['subscriptionEndDate'];
 
     if (!isActive) {
@@ -270,29 +277,56 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
 
   Future<void> _handleButtonPress() async {
     if (_isLoading) return;
-
-    setState(() {
-      _isLoading = true;
-    });
+    if (!mounted) return;
 
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        _showError('Nincs bejelentkezett felhasználó');
+        if (mounted) {
+          _showError('Nincs bejelentkezett felhasználó');
+        }
         return;
+      }
+
+      // WEB esetén: Először szállítási cím megadása (számlázáshoz)
+      Map<String, String>? shippingAddress;
+      if (HybridPaymentService.isWeb) {
+        if (!mounted) return;
+        
+        try {
+          shippingAddress = await ShippingAddressDialog.show(context);
+        } catch (e) {
+          // Dialog bezárásakor hiba történt, kilépünk
+          return;
+        }
+        
+        // Ha a felhasználó megszakítja a cím megadását (Mégse gomb),
+        // akkor kilépünk, és a gomb marad aktív állapotban.
+        if (shippingAddress == null || !mounted) {
+          return;
+        }
       }
 
       // WEB esetén: KÖTELEZŐ adattovábbítási nyilatkozat elfogadása
       if (HybridPaymentService.isWeb) {
-        final consentAccepted = await DataTransferConsentDialog.show(context);
-        if (!consentAccepted) {
-          // Felhasználó nem fogadta el a nyilatkozatot
-          _showError(
-              'A fizetés folytatásához el kell fogadnia az adattovábbítási nyilatkozatot.');
+        if (!mounted) return;
+        
+        bool? consentAccepted;
+        try {
+          consentAccepted = await DataTransferConsentDialog.show(context);
+        } catch (e) {
+          // Dialog bezárásakor hiba történt, kilépünk
+          return;
+        }
+        
+        // Ha a felhasználó nem fogadja el (Mégse gomb vagy kívülre kattint),
+        // akkor egyszerűen kilépünk, és a gomb marad aktív állapotban.
+        if (consentAccepted != true || !mounted) {
           return;
         }
 
         // Firestore frissítése: consent elfogadás dátumának rögzítése
+        // Ez gyors, nem kell loading állapot hozzá
         await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
@@ -304,10 +338,17 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
       // Ha van egyedi csomag ID, használjuk azt
       String planId = widget.customPlanId ?? _getDefaultPlanId();
 
-      // Fizetés indítása
+      // 2. Most már minden adat megvan, indíthatjuk a tényleges folyamatot.
+      // CSAK ITT állítjuk be az _isLoading-et true-ra!
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Fizetés indítása (szállítási címmel)
       final result = await HybridPaymentService.initiatePayment(
         planId: planId,
         userId: user.uid,
+        shippingAddress: shippingAddress,
       );
 
       if (result.success && result.paymentUrl != null) {
@@ -332,11 +373,17 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
         _showError(result.error ?? 'Fizetés indítása sikertelen');
       }
     } catch (e) {
-      _showError('Hiba történt: $e');
+      if (mounted) {
+        _showError('Hiba történt: $e');
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      // A végén, ha volt loading, kikapcsoljuk
+      // Fontos: csak akkor állítjuk vissza, ha tényleg be volt állítva
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
