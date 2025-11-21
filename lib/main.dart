@@ -72,6 +72,7 @@ final _router = GoRouter(
       // Payment callback esetén MINDIG engedélyezzük az account oldalt,
       // még akkor is, ha nincs currentUser (mert lehet, hogy még betöltődik)
       // Az account_screen StreamBuilder-rel várja a user-t
+      // FONTOS: Ne nézzük meg a device access-t, mert az loading állapotban lehet
       if (loc == '/account') {
         return null; // Engedélyezzük az account oldalt
       } else {
@@ -131,7 +132,9 @@ final _router = GoRouter(
       return publicRoutes.contains(loc) ? null : '/login';
     }
 
-    if (device == DeviceAccess.loading) {
+    // Payment callback esetén ne nézzük meg a device access-t (már fent kezelve)
+    // Csak akkor nézzük meg, ha NEM payment callback
+    if (paymentParam == null && device == DeviceAccess.loading) {
       return loc == '/guard' ? null : '/guard';
     }
 

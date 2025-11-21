@@ -406,6 +406,7 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
     try {
       // WEB esetén: KÖTELEZŐ adattovábbítási nyilatkozat elfogadása
       if (HybridPaymentService.isWeb) {
+        if (!mounted) return;
         final consentAccepted = await DataTransferConsentDialog.show(context);
         if (!consentAccepted) {
           // Felhasználó nem fogadta el a nyilatkozatot vagy megszakította

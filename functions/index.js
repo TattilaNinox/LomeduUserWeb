@@ -52,8 +52,8 @@ function getSimplePayConfig() {
   };
 }
 
-// Biztonság kedvéért definiálunk egy globális, hogy régi revíziók/async hivatkozások se dobjanak ReferenceError-t
-const SIMPLEPAY_CONFIG = getSimplePayConfig();
+// Megjegyzés: A SIMPLEPAY_CONFIG-ot mindig a függvényen belül kell inicializálni,
+// mert a secrets csak a függvény invokációkor érhetők el
 
 // SimplePay hibakódok emberi nyelvű magyarázatai
 const SIMPLEPAY_ERROR_MESSAGES = {
@@ -811,9 +811,22 @@ exports.processWebPaymentWebhook = onCall({ secrets: ['SIMPLEPAY_SECRET_KEY','NE
 /**
  * HTTP webhook endpoint SimplePay számára
  */
-exports.simplepayWebhook = onRequest({ secrets: ['SIMPLEPAY_SECRET_KEY','NEXTAUTH_URL','SIMPLEPAY_ENV'] }, async (req, res) => {
+exports.simplepayWebhook = onRequest({ 
+  secrets: ['SIMPLEPAY_SECRET_KEY','NEXTAUTH_URL','SIMPLEPAY_ENV'],
+  timeoutSeconds: 60,
+  memory: '256MiB',
+  maxInstances: 10
+}, async (req, res) => {
   try {
-    const SIMPLEPAY_CONFIG = getSimplePayConfig();
+    // Konfiguráció betöltése - ha hiba van, azonnal jelezzük
+    let SIMPLEPAY_CONFIG;
+    try {
+      SIMPLEPAY_CONFIG = getSimplePayConfig();
+    } catch (configError) {
+      console.error('[simplepayWebhook] Config initialization failed', { error: configError.message });
+      res.status(500).send('Configuration error');
+      return;
+    }
     // CORS headers
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -1175,6 +1188,57 @@ exports.onWebPaymentWrite = onDocumentWritten({
     });
 
     console.log('[onWebPaymentWrite] user updated from web_payments', { userId, orderRef: event.params.orderRef, status });
+
+    // SZÁMLA GENERÁLÁS: Ha van shippingAddress és sikeres fizetés, generáljuk a számlát
+    const shippingAddress = after.shippingAddress || null;
+    if (shippingAddress && (status === 'COMPLETED' || status === 'SUCCESS')) {
+      try {
+        const paymentInfo = {
+          planId: rawPlanId,
+          amount: after.amount || plan.price,
+          transactionId: after.transactionId || after.simplePayTransactionId || null,
+          orderId: after.orderId || null,
+        };
+
+        console.log('[onWebPaymentWrite] Starting invoice generation', { userId, orderRef: event.params.orderRef });
+        
+        const invoiceResult = await generateAndSendInvoice(
+          userId,
+          event.params.orderRef,
+          paymentInfo,
+          null // Nem teszt adatok
+        );
+
+        console.log('[onWebPaymentWrite] Invoice generated successfully', { 
+          userId, 
+          orderRef: event.params.orderRef,
+          invoiceNumber: invoiceResult.invoiceNumber,
+          invoiceId: invoiceResult.invoiceId
+        });
+
+        // Számlaszám tárolása a web_payments rekordban, hogy a frontend elérje
+        await event.data.after.ref.update({
+          invoiceNumber: invoiceResult.invoiceNumber,
+          invoiceId: invoiceResult.invoiceId,
+          invoiceGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+      } catch (invoiceError) {
+        // Számla generálási hiba nem állítja meg az előfizetés aktiválást
+        console.error('[onWebPaymentWrite] Invoice generation failed', { 
+          userId, 
+          orderRef: event.params.orderRef,
+          error: invoiceError.message,
+          stack: invoiceError.stack
+        });
+      }
+    } else {
+      console.log('[onWebPaymentWrite] Invoice generation skipped', { 
+        orderRef: event.params.orderRef,
+        hasShippingAddress: !!shippingAddress,
+        status
+      });
+    }
   } catch (err) {
     console.error('[onWebPaymentWrite] error', { message: err?.message, stack: err?.stack });
   }
