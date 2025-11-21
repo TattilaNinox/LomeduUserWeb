@@ -28,6 +28,24 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
   String? _selectedPlan;
   bool _isProcessing = false;
 
+  /// Admin ellenőrzés
+  bool _isAdmin() {
+    if (widget.userData == null) return false;
+    final userData = widget.userData!;
+    final isAdminValue = userData['isAdmin'];
+    final isAdminBool = isAdminValue is bool && isAdminValue == true;
+    final email = userData['email'];
+    final isAdminEmail = email == 'tattila.ninox@gmail.com';
+    return isAdminBool || isAdminEmail;
+  }
+
+  /// Admin ár számítása
+  String _getFormattedPrice(PaymentPlan plan) {
+    final isAdmin = _isAdmin();
+    final price = isAdmin ? 5 : plan.price;
+    return '${price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')} Ft';
+  }
+
   @override
   Widget build(BuildContext context) {
     // Ha a felhasználó már prémium, ne jelenítsük meg a csomagokat
@@ -261,7 +279,7 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          plan.formattedPrice,
+                          _getFormattedPrice(plan),
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -341,7 +359,7 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
                             ],
                           )
                         : Text(
-                            'Választás - ${plan.formattedPrice}${plan.periodText}',
+                            'Választás - ${_getFormattedPrice(plan)}${plan.periodText}',
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
                             ),
@@ -387,7 +405,7 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
           .get();
       
       if (!userDoc.exists) {
-        _showError('Kerjuk, toltsd ki a szallitasi adatokat az Account kepernyon!');
+        _showError('Kerjuk, toltsd ki a szallitasi adatokat!');
         return;
       }
 
@@ -416,7 +434,7 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
 
       // HA NEM ÉRVÉNYES → BLOKKOLJUK A FIZETÉST
       if (!isValid) {
-        _showError('Kerjuk, toltsd ki a szallitasi adatokat az Account kepernyon!');
+        _showError('Kerjuk, toltsd ki a szallitasi adatokat!');
         return;
       }
 

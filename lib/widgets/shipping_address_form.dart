@@ -52,6 +52,15 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
   }
 
   @override
+  void didUpdateWidget(ShippingAddressForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Ha a userData változott, frissítjük az adatokat
+    if (oldWidget.userData['shippingAddress'] != widget.userData['shippingAddress']) {
+      _loadUserData();
+    }
+  }
+
+  @override
   void dispose() {
     _zipCodeController.removeListener(_onZipCodeChanged);
     _nameController.dispose();
@@ -86,7 +95,7 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
         });
       }
     } catch (e) {
-      debugPrint('Hiba az iranyitoszam adatok betoltesekor: $e');
+      debugPrint('Hiba az irányítószám adatok betöltésekor: $e');
       if (mounted) {
         setState(() {
           _isLoadingPostalCodes = false;
@@ -103,9 +112,11 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
     // Admin ellenőrzés
     final isAdmin = widget.userData['isAdmin'] == true ||
         user.email == 'tattila.ninox@gmail.com';
-    setState(() {
-      _isAdmin = isAdmin;
-    });
+    if (mounted) {
+      setState(() {
+        _isAdmin = isAdmin;
+      });
+    }
 
     // Szállítási cím betöltése - TESZTELÉSHEZ KIKOMMENTEZVE
     // A form mindig üresen indul, hogy tesztelni lehessen
@@ -125,6 +136,8 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
 
   /// Irányítószám változás figyelése
   void _onZipCodeChanged() {
+    if (!mounted) return;
+    
     final zipCode = _zipCodeController.text.trim();
 
     // Csak akkor keresünk, ha pontosan 4 számjegy van
@@ -132,7 +145,7 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
       _lookupCity(zipCode);
     } else {
       // Ha nem 4 számjegy, eltávolítjuk a település mezőt és a dropdown-t
-      if (_availableCities != null) {
+      if (_availableCities != null && mounted) {
         setState(() {
           _availableCities = null;
         });
@@ -142,35 +155,43 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
 
   /// Település keresés irányítószám alapján
   void _lookupCity(String zipCode) {
-    if (_postalCodes == null) return;
+    if (!mounted || _postalCodes == null) return;
 
     final cities = _postalCodes![zipCode];
 
+    if (!mounted) return;
+    
     if (cities != null && cities.isNotEmpty) {
       if (cities.length == 1) {
         // Egy település: automatikusan kitöltjük
-        setState(() {
-          _cityController.text = cities[0];
-          _availableCities = null;
-        });
+        if (mounted) {
+          setState(() {
+            _cityController.text = cities[0];
+            _availableCities = null;
+          });
+        }
       } else {
         // Több település: lista megjelenítése
-        setState(() {
-          _availableCities = cities;
-          _cityController.clear(); // Töröljük, hogy válasszon
-        });
+        if (mounted) {
+          setState(() {
+            _availableCities = cities;
+            _cityController.clear(); // Töröljük, hogy válasszon
+          });
+        }
       }
     } else {
       // Nincs találat
-      setState(() {
-        _availableCities = null;
-      });
+      if (mounted) {
+        setState(() {
+          _availableCities = null;
+        });
+      }
     }
   }
 
   /// Település választó megjelenítése bottom sheet-ben
   Future<void> _showCitySelector() async {
-    if (_availableCities == null || _availableCities!.isEmpty) return;
+    if (!mounted || _availableCities == null || _availableCities!.isEmpty) return;
 
     final selected = await showModalBottomSheet<String>(
       context: context,
@@ -183,7 +204,7 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                '${_availableCities!.length} telepules talalhato, valassz egyet:',
+                            '${_availableCities!.length} település található, válassz egyet:',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -209,7 +230,7 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
       ),
     );
 
-    if (selected != null) {
+    if (selected != null && mounted) {
       setState(() {
         _cityController.text = selected;
         _availableCities = null;
@@ -219,15 +240,53 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
 
   /// Szerkesztés indítása
   void _startEditing() {
-    setState(() {
-      _isEditing = true;
-    });
+    if (!mounted) return;
+    
+    // Ha a név mező üres, automatikusan kitöltjük a felhasználó adataiból
+    if (_nameController.text.trim().isEmpty) {
+      final firstName = widget.userData['firstName']?.toString() ?? '';
+      final lastName = widget.userData['lastName']?.toString() ?? '';
+      final displayName = widget.userData['displayName']?.toString() ?? '';
+      
+      String fullName = '';
+      if (firstName.isNotEmpty && lastName.isNotEmpty) {
+        fullName = '$lastName $firstName';
+      } else if (displayName.isNotEmpty) {
+        fullName = displayName;
+      } else {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user?.displayName != null && user!.displayName!.isNotEmpty) {
+          fullName = user.displayName!;
+        } else if (user?.email != null) {
+          fullName = user!.email!.split('@')[0];
+        }
+      }
+      
+      if (fullName.isNotEmpty) {
+        _nameController.text = fullName;
+      }
+    }
+    
+    if (mounted) {
+      setState(() {
+        _isEditing = true;
+      });
+    }
   }
 
   /// Szerkesztés megszakítása
   void _cancelEditing() {
-    _loadUserData(); // Visszaállítjuk az eredeti adatokat
+    if (!mounted) return;
+    
+    // Mezők törlése és szerkesztés mód kilépése
     setState(() {
+      _nameController.clear();
+      _zipCodeController.clear();
+      _cityController.clear();
+      _addressController.clear();
+      _taxNumberController.clear();
+      _isCompany = false;
+      _availableCities = null;
       _isEditing = false;
     });
   }
@@ -249,7 +308,7 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Kerjuk, toltsd ki az osszes kotelezo mezot!'),
+            content: Text('Kérjük, töltsd ki az összes kötelező mezőt!'),
             backgroundColor: Colors.red,
           ),
         );
@@ -262,7 +321,7 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Jogi szemely eseten az adoszam megadasa kotelezo!'),
+            content: Text('Jogi személy esetén az adószám megadása kötelező!'),
             backgroundColor: Colors.red,
           ),
         );
@@ -270,6 +329,7 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
       return;
     }
 
+    if (!mounted) return;
     setState(() {
       _isSaving = true;
     });
@@ -296,20 +356,20 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Szallitasi cim sikeresen mentve!'),
+            content: Text('Szállítási cím sikeresen mentve!'),
             backgroundColor: Colors.green,
           ),
         );
+        
+        setState(() {
+          _isEditing = false;
+        });
       }
-
-      setState(() {
-        _isEditing = false;
-      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Hiba tortent: $e'),
+            content: Text('Hiba történt: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -331,23 +391,28 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
     // Megerősítés
     final confirmed = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Szallitasi cim torlese'),
+        title: const Text('Szállítási cím törlése'),
         content: const Text(
-          'Biztosan torolni szeretned a mentett szallitasi cimet?',
+          'Biztosan törölni szeretnéd a mentett szállítási címet?',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Megse'),
+            onPressed: () {
+              Navigator.of(context).pop(false);
+            },
+            child: const Text('Mégse'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () {
+              Navigator.of(context).pop(true);
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Torles'),
+            child: const Text('Törlés'),
           ),
         ],
       ),
@@ -365,30 +430,31 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
       });
 
       // Mezők törlése
-      _nameController.clear();
-      _zipCodeController.clear();
-      _cityController.clear();
-      _addressController.clear();
-      _taxNumberController.clear();
-      _isCompany = false;
-
       if (mounted) {
+        setState(() {
+          _nameController.clear();
+          _zipCodeController.clear();
+          _cityController.clear();
+          _addressController.clear();
+          _taxNumberController.clear();
+          _isCompany = false;
+          _availableCities = null;
+          _isEditing = false;
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Szallitasi cim sikeresen torolve!'),
+            content: Text('Szállítási cím sikeresen törölve!'),
             backgroundColor: Colors.green,
           ),
         );
       }
-
-      setState(() {
-        _isEditing = false;
-      });
     } catch (e) {
+      debugPrint('Hiba a szállítási cím törlése során: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Hiba tortent: $e'),
+          const SnackBar(
+            content: Text('Hiba történt a törlés során'),
             backgroundColor: Colors.red,
           ),
         );
@@ -460,11 +526,11 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
         }
       }
     } catch (e) {
-      debugPrint('Hiba a teszt szamla generalasakor: $e');
+      debugPrint('Hiba a teszt számla generálásakor: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Hiba tortent: $e'),
+            content: Text('Hiba történt: $e'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 5),
           ),
@@ -507,7 +573,7 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
                       ),
                       SizedBox(width: 8),
                       Text(
-                        'Szallitasi cim',
+                        'Szállítási cím',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -539,7 +605,7 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
                   child: CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text(
-                      'Jogi szemelykent vasarlok',
+                      'Jogi személyként vásárolok',
                       style: TextStyle(fontSize: 14),
                     ),
                     value: _isCompany,
@@ -561,7 +627,7 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
                 enabled: isFormEditable,
                 style: const TextStyle(fontSize: 14),
                 decoration: InputDecoration(
-                  labelText: _isCompany ? 'Cegnev *' : 'Nev *',
+                  labelText: _isCompany ? 'Cégnév *' : 'Név *',
                   prefixIcon: const Icon(Icons.person, size: 20),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -574,7 +640,7 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'A ${_isCompany ? "cegnev" : "nev"} megadasa kotelezo';
+                    return 'A ${_isCompany ? "cégnév" : "név"} megadása kötelező';
                   }
                   return null;
                 },
@@ -592,7 +658,7 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
                       enabled: isFormEditable,
                       style: const TextStyle(fontSize: 14),
                       decoration: InputDecoration(
-                        labelText: 'Iranyitoszam *',
+                        labelText: 'Irányítószám *',
                         prefixIcon: const Icon(Icons.markunread_mailbox, size: 20),
                         suffixIcon: _isLoadingPostalCodes
                             ? const Padding(
@@ -623,7 +689,7 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
                       maxLength: 4,
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Kotelezo';
+                          return 'Kötelező';
                         }
                         if (!RegExp(r'^\d{4}$').hasMatch(value.trim())) {
                           return '4 szamjegy';
@@ -641,7 +707,7 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
                       readOnly: _availableCities != null,
                       style: const TextStyle(fontSize: 14),
                       decoration: InputDecoration(
-                        labelText: 'Telepules *',
+                        labelText: 'Település *',
                         prefixIcon: const Icon(Icons.location_city, size: 20),
                         suffixIcon: _availableCities != null
                             ? IconButton(
@@ -664,7 +730,7 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Kotelezo';
+                          return 'Kötelező';
                         }
                         return null;
                       },
@@ -726,7 +792,7 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
                 enabled: isFormEditable,
                 style: const TextStyle(fontSize: 14),
                 decoration: InputDecoration(
-                  labelText: 'Utca, hazszam *',
+                  labelText: 'Utca, házszám *',
                   prefixIcon: const Icon(Icons.home, size: 20),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -753,7 +819,7 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
                   enabled: isFormEditable,
                   style: const TextStyle(fontSize: 14),
                   decoration: InputDecoration(
-                    labelText: _isCompany ? 'Adoszam *' : 'Adoszam',
+                    labelText: _isCompany ? 'Adószám *' : 'Adószám',
                     prefixIcon: const Icon(Icons.badge, size: 20),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -767,7 +833,7 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
                   validator: _isCompany
                       ? (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Jogi szemely eseten az adoszam megadasa kotelezo';
+                            return 'Jogi személy esetén az adószám megadása kötelező';
                           }
                           return null;
                         }
@@ -783,13 +849,16 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: _isSaving ? null : _cancelEditing,
+                      onPressed: _isSaving ? null : () {
+                        _formKey.currentState?.reset();
+                        _cancelEditing();
+                      },
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: const Text('Megse', style: TextStyle(fontSize: 14)),
+                      child: const Text('Mégse', style: TextStyle(fontSize: 14)),
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton(
@@ -814,63 +883,71 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
                                     AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             )
-                          : const Text('Mentes', style: TextStyle(fontSize: 14)),
+                          : const Text('Mentés', style: TextStyle(fontSize: 14)),
                     ),
                   ],
                 ),
+
+              // Szállítási adatok törlése gomb - minden felhasználónak elérhető
+              Builder(
+                builder: (context) {
+                  final shippingAddress = widget.userData['shippingAddress'] as Map<String, dynamic>?;
+                  final hasShippingAddress = shippingAddress != null && shippingAddress.isNotEmpty;
+                  
+                  if (hasShippingAddress && !_isEditing) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: ElevatedButton.icon(
+                        onPressed: _deleteShippingAddress,
+                        icon: const Icon(Icons.delete, size: 18),
+                        label: const Text(
+                          'Szállítási adatok törlése',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red[600],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          minimumSize: const Size(double.infinity, 0),
+                        ),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
 
               // Admin gombok
               if (_isAdmin && !_isEditing) ...[
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _deleteShippingAddress,
-                          icon: const Icon(Icons.delete, size: 18),
-                          label: const Text(
-                            'Szallitasi cim torlese',
-                            style: TextStyle(fontSize: 14),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red[600],
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
+                  child: ElevatedButton.icon(
+                    onPressed: _isGeneratingInvoice ? null : _generateTestInvoice,
+                    icon: _isGeneratingInvoice
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
                             ),
-                          ),
-                        ),
+                          )
+                        : const Icon(Icons.receipt, size: 18),
+                    label: const Text(
+                      'Teszt számla',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange[600],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _isGeneratingInvoice ? null : _generateTestInvoice,
-                          icon: _isGeneratingInvoice
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.receipt, size: 18),
-                          label: const Text(
-                            'Teszt szamla',
-                            style: TextStyle(fontSize: 14),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange[600],
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                      minimumSize: const Size(double.infinity, 0),
+                    ),
                   ),
                 ),
               ],

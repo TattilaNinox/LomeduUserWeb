@@ -361,7 +361,7 @@ class _EnhancedSubscriptionStatusCardState
       isAdmin = isAdminBool || isAdminEmail;
     }
     
-    final displayPrice = isAdmin ? 10 : 4350;
+    final displayPrice = isAdmin ? 5 : 4350;
     final formattedPrice = '${displayPrice.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')} Ft';
     
     return Container(

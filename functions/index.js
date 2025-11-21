@@ -309,6 +309,9 @@ exports.initiateWebPayment = onCall({
 
     const userData = userDoc.data();
     
+    // Admin ellenőrzés
+    const isAdmin = userData.isAdmin === true || userData.email === 'tattila.ninox@gmail.com';
+    
     // SZERVER OLDALI ELLENŐRZÉS: Adattovábbítási nyilatkozat elfogadása
     if (!userData.dataTransferConsentLastAcceptedDate) {
       console.log('[initiateWebPayment] HIBA: Adattovábbítási nyilatkozat nincs elfogadva', { userId });
@@ -329,6 +332,10 @@ exports.initiateWebPayment = onCall({
     if (!email) {
       throw new HttpsError('failed-precondition', 'A felhasználóhoz nem tartozik email cím');
     }
+    
+    // Admin felhasználók számára bruttó 5 forint
+    const finalPrice = isAdmin ? 5 : plan.price;
+    console.log('[initiateWebPayment] Price calculation:', { isAdmin, originalPrice: plan.price, finalPrice });
 
     const orderRef = `WEB_${userId}_${Date.now()}`;
     // Visszairányítási bázis validálása (ne ugorjon loginra ismeretlen domain miatt)
@@ -368,7 +375,7 @@ exports.initiateWebPayment = onCall({
         title: plan.name,
         description: plan.description,
         amount: 1,
-        price: plan.price,
+        price: finalPrice,
       }],
     };
     

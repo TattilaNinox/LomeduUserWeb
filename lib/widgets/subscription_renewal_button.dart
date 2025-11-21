@@ -300,7 +300,7 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Kerjuk, toltsd ki a szallitasi adatokat az Account kepernyon!'),
+                content: Text('Kerjuk, toltsd ki a szallitasi adatokat!'),
               ),
             );
           }
@@ -347,11 +347,11 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text(
-                  'Kerjuk, toltsd ki a szallitasi adatokat az Account kepernyon!',
+                  'Kerjuk, toltsd ki a szallitasi adatokat!',
                 ),
                 backgroundColor: Colors.red,
                 action: SnackBarAction(
-                  label: 'Ugras',
+                  label: 'Szallitasi cim',
                   textColor: Colors.white,
                   onPressed: () {
                     if (mounted) {
@@ -363,33 +363,35 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
               ),
             );
           }
-          // KIVÉTEL DOBÁSA, hogy biztosan blokkoljuk
-          throw Exception('Szallitasi cim nem toltve ki vagy ervenytelen');
+          // KILÉPÜNK - NEM ENGEDJÜK A FIZETÉST
+          return;
         }
         
         debugPrint('[SubscriptionRenewalButton] ✅ Shipping address validation PASSED');
       } catch (e) {
         debugPrint('[SubscriptionRenewalButton] Error checking shipping address: $e');
-        // MINDEN esetben blokkoljuk a fizetést, ha hiba van
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
-                'Kerjuk, toltsd ki a szallitasi adatokat az Account kepernyon!',
+        // Csak akkor jelenítjük meg a figyelmeztetést, ha nem validation hiba volt
+        if (!e.toString().contains('Szallitasi cim nem toltve ki')) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text(
+                  'Kerjuk, toltsd ki a szallitasi adatokat!',
+                ),
+                backgroundColor: Colors.red,
+                action: SnackBarAction(
+                  label: 'Szallitasi cim',
+                  textColor: Colors.white,
+                  onPressed: () {
+                    if (mounted) {
+                      context.go('/account');
+                    }
+                  },
+                ),
+                duration: const Duration(seconds: 4),
               ),
-              backgroundColor: Colors.red,
-              action: SnackBarAction(
-                label: 'Ugras',
-                textColor: Colors.white,
-                onPressed: () {
-                  if (mounted) {
-                    context.go('/account');
-                  }
-                },
-              ),
-              duration: const Duration(seconds: 4),
-            ),
-          );
+            );
+          }
         }
         // MINDIG KILÉPÜNK - NEM ENGEDJÜK A FIZETÉST
         return;
