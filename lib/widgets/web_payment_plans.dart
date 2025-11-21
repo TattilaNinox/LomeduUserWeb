@@ -386,30 +386,31 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
       return;
     }
 
-    setState(() {
-      _selectedPlan = plan.id;
-      _isProcessing = true;
-    });
+    // ELŐSZÖR: Szállítási cím ellenőrzése (MINDEN MÁS ELŐTT!)
+    final authUser = FirebaseAuth.instance.currentUser;
+    if (authUser == null) {
+      _showError('Nincs bejelentkezett felhasználó');
+      return;
+    }
+    final uid = authUser.uid;
 
+    DocumentSnapshot<Map<String, dynamic>>? userDoc;
     try {
-      final authUser = FirebaseAuth.instance.currentUser;
-      if (authUser == null) {
-        throw Exception('Nincs bejelentkezett felhasználó');
-      }
-      final uid = authUser.uid;
-
-      // 1. ELŐSZÖR: Szállítási cím ellenőrzése
-      final userDoc = await FirebaseFirestore.instance
+      userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(uid)
           .get();
       
       if (!userDoc.exists) {
+        debugPrint('[WebPaymentPlans] ❌ User document does not exist');
         _showError('Kerjuk, toltsd ki a szallitasi adatokat!');
         return;
       }
 
       final shippingAddress = userDoc.data()?['shippingAddress'] as Map<String, dynamic>?;
+      
+      debugPrint('[WebPaymentPlans] Shipping address check: ${shippingAddress != null ? 'exists' : 'null'}');
+      debugPrint('[WebPaymentPlans] Shipping address content: $shippingAddress');
       
       // SZIGORÚ ELLENŐRZÉS: Minden kötelező mező ki kell legyen töltve
       bool isValid = false;
@@ -421,6 +422,8 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
         final city = (shippingAddress['city']?.toString() ?? '').trim();
         final address = (shippingAddress['address']?.toString() ?? '').trim();
         
+        debugPrint('[WebPaymentPlans] Address fields - name: "$name", zipCode: "$zipCode", city: "$city", address: "$address"');
+        
         // MINDEN kötelező mező NEM ÜRES kell legyen ÉS érvényes formátumú
         final nameValid = name.isNotEmpty && name.length >= 2;
         final zipCodeValid = zipCode.isNotEmpty && 
@@ -429,19 +432,47 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
         final cityValid = city.isNotEmpty && city.length >= 2;
         final addressValid = address.isNotEmpty && address.length >= 5;
         
+        debugPrint('[WebPaymentPlans] Validation - name: $nameValid, zipCode: $zipCodeValid, city: $cityValid, address: $addressValid');
+        
         isValid = nameValid && zipCodeValid && cityValid && addressValid;
+        
+        debugPrint('[WebPaymentPlans] Final validation result: $isValid');
+      } else {
+        debugPrint('[WebPaymentPlans] ❌ Shipping address is null or empty');
       }
 
       // HA NEM ÉRVÉNYES → BLOKKOLJUK A FIZETÉST
       if (!isValid) {
+        debugPrint('[WebPaymentPlans] ❌❌❌ BLOCKING PAYMENT - Shipping address invalid or missing');
         _showError('Kerjuk, toltsd ki a szallitasi adatokat!');
         return;
       }
+      
+      debugPrint('[WebPaymentPlans] ✅ Shipping address validation PASSED');
+    } catch (e) {
+      debugPrint('[WebPaymentPlans] ❌ Error checking shipping address: $e');
+      _showError('Kerjuk, toltsd ki a szallitasi adatokat!');
+      return;
+    }
 
+    // Most már beállítjuk a loading állapotot, mert minden ellenőrzésen túl vagyunk
+    if (!mounted) return;
+    setState(() {
+      _selectedPlan = plan.id;
+      _isProcessing = true;
+    });
+
+    try {
       // 2. KÖTELEZŐ: Adattovábbítási nyilatkozat elfogadása
       final consentAccepted = await DataTransferConsentDialog.show(context);
       if (!consentAccepted) {
         // Felhasználó nem fogadta el a nyilatkozatot
+        if (mounted) {
+          setState(() {
+            _isProcessing = false;
+            _selectedPlan = null;
+          });
+        }
         _showError(
             'A fizetés folytatásához el kell fogadnia az adattovábbítási nyilatkozatot.');
         return;
@@ -452,7 +483,8 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
         'dataTransferConsentLastAcceptedDate': FieldValue.serverTimestamp(),
       });
 
-      // 4. Szállítási cím lekérése
+      // 4. Szállítási cím lekérése (már validálva van)
+      // userDoc biztosan nem null és létezik, mert ha nem, akkor már a validáció során return-öltünk volna
       final addressData = userDoc.data()?['shippingAddress'] as Map<String, dynamic>?;
       Map<String, String>? shippingAddressMap;
       if (addressData != null && addressData.isNotEmpty) {

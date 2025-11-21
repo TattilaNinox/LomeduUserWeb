@@ -121,6 +121,11 @@ class _AccountScreenState extends State<AccountScreen> {
             .doc(user.uid)
             .snapshots(),
         builder: (context, userSnapshot) {
+          // Ellenőrizzük, hogy a widget még mounted-e
+          if (!mounted) {
+            return const SizedBox.shrink();
+          }
+          
           if (userSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -129,6 +134,14 @@ class _AccountScreenState extends State<AccountScreen> {
                 child: Text('Nincsenek adataink a felhasználóról.'));
           }
           final data = userSnapshot.data!.data()!;
+          
+          // Admin ellenőrzés
+          final isAdminValue = data['isAdmin'];
+          final isAdminBool = isAdminValue is bool && isAdminValue == true;
+          final isAdminEmail = user.email == 'tattila.ninox@gmail.com';
+          final isAdmin = isAdminBool || isAdminEmail;
+          
+          debugPrint('[AccountScreen] Admin check - email: ${user.email}, isAdmin field: $isAdminValue, isAdminBool: $isAdminBool, isAdminEmail: $isAdminEmail, final isAdmin: $isAdmin');
 
           return Padding(
             padding: const EdgeInsets.all(16.0),
@@ -350,25 +363,41 @@ class _AccountScreenState extends State<AccountScreen> {
 
                 const SizedBox(height: 20),
 
-                // Teszt eszközök (SimplePay teszteléshez)
-                // Csak a lomeduteszt@gmail.com felhasználónak látható (release build-ben is)
-                if (user.email == 'lomeduteszt@gmail.com') ...[
-                  const Divider(),
-                  const Text(
-                    'Teszt eszközök',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
+                // Admin eszközök - Előfizetés lejárat vezérlő
+                // Admin felhasználóknak és lomeduteszt@gmail.com felhasználónak látható
+                if (isAdmin || user.email == 'lomeduteszt@gmail.com') ...[
+                  Card(
+                    color: Colors.orange[50],
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.admin_panel_settings, color: Colors.orange[800]),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Admin eszközök - Előfizetés lejárat vezérlő',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () async {
+                            if (!mounted) return;
+                            
                             final confirmed = await showDialog<bool>(
                                   context: context,
+                                  barrierDismissible: false,
                                   builder: (ctx) {
                                     return AlertDialog(
                                       title: const Text(
@@ -377,13 +406,15 @@ class _AccountScreenState extends State<AccountScreen> {
                                           'Ez beállítja az előfizetést 3 napos lejáratra, hogy tesztelhessük a lejárat előtti email értesítéseket.'),
                                       actions: [
                                         TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(ctx).pop(false),
+                                          onPressed: () {
+                                            Navigator.of(ctx).pop(false);
+                                          },
                                           child: const Text('Mégse'),
                                         ),
                                         ElevatedButton(
-                                          onPressed: () =>
-                                              Navigator.of(ctx).pop(true),
+                                          onPressed: () {
+                                            Navigator.of(ctx).pop(true);
+                                          },
                                           child: const Text('Beállítás'),
                                         ),
                                       ],
@@ -391,7 +422,7 @@ class _AccountScreenState extends State<AccountScreen> {
                                   },
                                 ) ??
                                 false;
-                            if (!confirmed) return;
+                            if (!mounted || !confirmed) return;
 
                             final now = DateTime.now();
                             final expiry = now.add(const Duration(days: 3));
@@ -421,21 +452,31 @@ class _AccountScreenState extends State<AccountScreen> {
                                 },
                                 SetOptions(merge: true),
                               );
-                              // Email küldése
-                              final emailSent =
-                                  await EmailNotificationService.sendTestEmail(
+                              
+                              if (!mounted) return;
+                              
+                              // Azonnal mutatjuk a sikeres üzenetet
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                                    content: Text('Előfizetés beállítva 3 napos lejáratra!'))); 
+                              }
+                              
+                              // Email küldése (nem blokkoljuk, ha dispose-olódik)
+                              EmailNotificationService.sendTestEmail(
                                 testType: 'expiry_warning',
                                 daysLeft: 3,
-                              );
-
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                    content: Text(emailSent
-                                        ? 'Előfizetés beállítva 3 napos lejáratra és email elküldve!'
-                                        : 'Előfizetés beállítva 3 napos lejáratra, de email küldése sikertelen!')));
-                              }
+                              ).then((emailSent) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                      content: Text(emailSent
+                                          ? 'Email elküldve!'
+                                          : 'Email küldése sikertelen!'))); 
+                                }
+                              }).catchError((e) {
+                                debugPrint('Email küldés hiba: $e');
+                              });
                             } catch (e) {
-                              if (context.mounted) {
+                              if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(content: Text('Hiba: $e')));
                               }
@@ -452,8 +493,11 @@ class _AccountScreenState extends State<AccountScreen> {
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () async {
+                            if (!mounted) return;
+                            
                             final confirmed = await showDialog<bool>(
                                   context: context,
+                                  barrierDismissible: false,
                                   builder: (ctx) {
                                     return AlertDialog(
                                       title: const Text(
@@ -462,13 +506,15 @@ class _AccountScreenState extends State<AccountScreen> {
                                           'Ez beállítja az előfizetést lejárt állapotra, hogy tesztelhessük a lejárat utáni email értesítéseket.'),
                                       actions: [
                                         TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(ctx).pop(false),
+                                          onPressed: () {
+                                            Navigator.of(ctx, rootNavigator: true).pop(false);
+                                          },
                                           child: const Text('Mégse'),
                                         ),
                                         ElevatedButton(
-                                          onPressed: () =>
-                                              Navigator.of(ctx).pop(true),
+                                          onPressed: () {
+                                            Navigator.of(ctx, rootNavigator: true).pop(true);
+                                          },
                                           child: const Text('Beállítás'),
                                         ),
                                       ],
@@ -476,7 +522,7 @@ class _AccountScreenState extends State<AccountScreen> {
                                   },
                                 ) ??
                                 false;
-                            if (!confirmed) return;
+                            if (!mounted || !confirmed) return;
 
                             final now = DateTime.now();
                             final expiredDate =
@@ -507,20 +553,30 @@ class _AccountScreenState extends State<AccountScreen> {
                                 },
                                 SetOptions(merge: true),
                               );
-                              // Email küldése
-                              final emailSent =
-                                  await EmailNotificationService.sendTestEmail(
-                                testType: 'expired',
-                              );
-
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                    content: Text(emailSent
-                                        ? 'Előfizetés beállítva lejárt állapotra és email elküldve!'
-                                        : 'Előfizetés beállítva lejárt állapotra, de email küldése sikertelen!')));
+                              
+                              if (!mounted) return;
+                              
+                              // Azonnal mutatjuk a sikeres üzenetet
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                                    content: Text('Előfizetés beállítva lejárt állapotra!'))); 
                               }
+                              
+                              // Email küldése (nem blokkoljuk, ha dispose-olódik)
+                              EmailNotificationService.sendTestEmail(
+                                testType: 'expired',
+                              ).then((emailSent) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                      content: Text(emailSent
+                                          ? 'Email elküldve!'
+                                          : 'Email küldése sikertelen!'))); 
+                                }
+                              }).catchError((e) {
+                                debugPrint('Email küldés hiba: $e');
+                              });
                             } catch (e) {
-                              if (context.mounted) {
+                              if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(content: Text('Hiba: $e')));
                               }
@@ -535,14 +591,22 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
                     ],
                   ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
 
-                  const SizedBox(height: 12),
-
-                  // Reset gomb
+                // Reset gomb (csak adminnak)
+                if (isAdmin || user.email == 'lomeduteszt@gmail.com') ...[
                   ElevatedButton(
                     onPressed: () async {
+                      if (!mounted) return;
+                      
                       final confirmed = await showDialog<bool>(
                             context: context,
+                            barrierDismissible: false,
                             builder: (ctx) {
                               return AlertDialog(
                                 title:
@@ -551,13 +615,15 @@ class _AccountScreenState extends State<AccountScreen> {
                                     'Ez visszaállítja az előfizetést ingyenes állapotra.'),
                                 actions: [
                                   TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(ctx).pop(false),
+                                    onPressed: () {
+                                      Navigator.of(ctx, rootNavigator: true).pop(false);
+                                    },
                                     child: const Text('Mégse'),
                                   ),
                                   ElevatedButton(
-                                    onPressed: () =>
-                                        Navigator.of(ctx).pop(true),
+                                    onPressed: () {
+                                      Navigator.of(ctx, rootNavigator: true).pop(true);
+                                    },
                                     child: const Text('Visszaállítás'),
                                   ),
                                 ],
@@ -565,7 +631,7 @@ class _AccountScreenState extends State<AccountScreen> {
                             },
                           ) ??
                           false;
-                      if (!confirmed) return;
+                      if (!mounted || !confirmed) return;
 
                       try {
                         final now = DateTime.now();
@@ -588,13 +654,13 @@ class _AccountScreenState extends State<AccountScreen> {
                           },
                           SetOptions(merge: true),
                         );
-                        if (context.mounted) {
+                        if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                               content: Text(
                                   'Előfizetés visszaállítva ingyenes állapotra! (5 napos próbaidőszak)')));
                         }
                       } catch (e) {
-                        if (context.mounted) {
+                        if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text('Hiba: $e')));
                         }
