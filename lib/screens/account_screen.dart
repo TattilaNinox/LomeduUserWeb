@@ -11,6 +11,7 @@ import '../services/account_deletion_service.dart';
 import '../widgets/trial_period_banner.dart';
 import '../widgets/simplepay_logo.dart';
 import '../widgets/web_payment_history.dart';
+import '../widgets/shipping_address_form.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 /// Egyszerű fiókadatok képernyő, előfizetési státusszal.
@@ -250,13 +251,58 @@ class _AccountScreenState extends State<AccountScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Fejlesztett előfizetési státusz kártya
-                EnhancedSubscriptionStatusCard(
-                  userData: data,
-                  onRenewPressed: () => context.go('/account'),
-                ),
+                // Kétoszlopos elrendezés: Szállítási cím (bal) és Előfizetési állapot (jobb)
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isSmallScreen = constraints.maxWidth < 1000;
 
-                const SizedBox(height: 20),
+                    if (isSmallScreen) {
+                      // Kis képernyőn: egymás alatt
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Szállítási cím űrlap
+                          ShippingAddressForm(
+                            userData: data,
+                            canEdit: _canEditShippingAddress(data),
+                          ),
+                          const SizedBox(height: 16),
+                          // Fejlesztett előfizetési státusz kártya
+                          EnhancedSubscriptionStatusCard(
+                            userData: data,
+                            onRenewPressed: () => context.go('/account'),
+                          ),
+                        ],
+                      );
+                    }
+
+                    // Nagy képernyőn: kétoszlopos elrendezés
+                    return IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Bal oldali oszlop: Szállítási cím
+                          Expanded(
+                            flex: 1,
+                            child: ShippingAddressForm(
+                              userData: data,
+                              canEdit: _canEditShippingAddress(data),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          // Jobb oldali oszlop: Előfizetési állapot
+                          Expanded(
+                            flex: 1,
+                            child: EnhancedSubscriptionStatusCard(
+                              userData: data,
+                              onRenewPressed: () => context.go('/account'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
 
                 const SizedBox(height: 20),
 
@@ -567,6 +613,32 @@ class _AccountScreenState extends State<AccountScreen> {
         },
       ),
     );
+  }
+
+  /// Meghatározza, hogy szerkeszthető-e a szállítási cím form
+  bool _canEditShippingAddress(Map<String, dynamic> data) {
+    final isActive = data['isSubscriptionActive'] == true;
+    final endDate = data['subscriptionEndDate'];
+
+    if (!isActive) {
+      return true; // Lejárt előfizetés → szerkeszthető
+    }
+
+    if (endDate != null) {
+      DateTime? endDateTime;
+      if (endDate is Timestamp) {
+        endDateTime = endDate.toDate();
+      } else if (endDate is String) {
+        endDateTime = DateTime.tryParse(endDate);
+      }
+
+      if (endDateTime != null) {
+        final daysUntilExpiry = endDateTime.difference(DateTime.now()).inDays;
+        return daysUntilExpiry <= 3; // 3 napon belül lejár → szerkeszthető
+      }
+    }
+
+    return false; // Aktív előfizetés → NEM szerkeszthető
   }
 
   Future<void> _confirmAndDelete(BuildContext context) async {

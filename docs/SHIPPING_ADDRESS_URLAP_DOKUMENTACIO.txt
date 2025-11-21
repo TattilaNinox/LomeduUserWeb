@@ -1,0 +1,676 @@
+================================================================================
+                  SZÁLLÍTÁSI CÍM ŰRLAP - RÉSZLETES DOKUMENTÁCIÓ
+                         Lomedu Web - Shipping Address System
+================================================================================
+
+TARTALOMJEGYZÉK
+----------------
+1. ÁTTEKINTÉS
+2. KOMPONENS STRUKTÚRA
+3. ŰRLAP MEZŐK ÉS VALIDÁCIÓ
+4. MŰKÖDÉSI FOLYAMAT
+5. ADATKEZELÉS ÉS BIZTONSÁG
+6. UI/UX JELLEMZŐK
+7. INTEGRÁCIÓ A FIZETÉSI FOLYAMATTAL
+8. TERVEZETT FOLYAMAT RÉSZLETES LEÍRÁSA
+9. JELENLEGI ÁLLAPOT ÉS IMPLEMENTÁCIÓ
+
+================================================================================
+1. ÁTTEKINTÉS
+================================================================================
+
+A szállítási cím űrlap az Account képernyőn megjelenő form komponens, amely
+a számlázáshoz szükséges szállítási adatok kezelését végzi.
+
+**ShippingAddressForm** (lib/widgets/shipping_address_form.dart)
+- Account képernyőn megjelenő form (nem felugró dialógus!)
+- Feltételes szerkeszthetőség: csak akkor szerkeszthető, ha:
+  * Az előfizetés lejárt VAGY
+  * Az előfizetés 3 nap múlva lejár VAGY
+  * Admin felhasználó (mindig szerkeszthető)
+- Ideiglenes tárolás a users kollekcióban (számla után törlődik)
+- Admin funkciók teszt számla generáláshoz
+
+FONTOS: A komponens jelenleg működik, de a fizetési folyamatban még nincs 
+teljesen integrálva. A tervezett folyamat szerint a fizetés indításakor 
+ellenőrzi, hogy van-e kitöltve a szállítási cím, és ha nincs, akkor kéri 
+a kitöltést.
+
+================================================================================
+2. KOMPONENS STRUKTÚRA
+================================================================================
+
+2.1 SHIPPINGADDRESSFORM
+------------------------
+Fájl: lib/widgets/shipping_address_form.dart
+Méret: 900+ sor
+Elhelyezkedés: Account képernyő (lib/screens/account_screen.dart)
+
+Komponens struktúra:
+┌─────────────────────────────────────────────────────────────┐
+│ ShippingAddressForm (StatefulWidget)                       │
+├─────────────────────────────────────────────────────────────┤
+│ Props:                                                     │
+│ - userData: Map<String, dynamic>                           │
+│ - canEdit: bool (előfizetés állapota alapján)             │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│ _ShippingAddressFormState                                   │
+├─────────────────────────────────────────────────────────────┤
+│ State változók:                                             │
+│ - _formKey: GlobalKey<FormState>                            │
+│ - _nameController: TextEditingController                    │
+│ - _zipCodeController: TextEditingController                 │
+│ - _cityController: TextEditingController                    │
+│ - _addressController: TextEditingController                 │
+│ - _isEditing: bool                                          │
+│ - _isSaving: bool                                           │
+│ - _isAdmin: bool                                            │
+│ - _isGeneratingInvoice: bool                                │
+│ - _postalCodes: Map<String, List<String>>                  │
+│ - _availableCities: List<String>?                          │
+│ - _selectedTestStatus: String (admin teszt)                │
+└─────────────────────────────────────────────────────────────┘
+
+Főbb funkciók:
+- Szállítási cím megjelenítése és szerkesztése
+- Feltételes szerkeszthetőség (előfizetés állapota alapján)
+- Admin teszt számla generálás
+- Ideiglenes mentés Firestore-ba (users kollekció, számla után törlődik)
+- Irányítószám-település automatikus keresés
+
+================================================================================
+3. ŰRLAP MEZŐK ÉS VALIDÁCIÓ
+================================================================================
+
+3.1 ADATMEZŐK
+-------------
+┌──────────────────┬─────────────┬─────────────────────────────────────┐
+│ Mező             │ Kötelező    │ Leírás                              │
+├──────────────────┼─────────────┼─────────────────────────────────────┤
+│ Név/Cégnév       │ IGEN        │ Magánszemély neve vagy cégnév      │
+│ Irányítószám     │ IGEN        │ 4 számjegy, automatikus település  │
+│ Település        │ IGEN        │ Auto-fill vagy választás listából  │
+│ Utca, házszám    │ IGEN        │ Pontos cím                          │
+│ Adószám          │ FELTÉTELES  │ Cég: kötelező, Magán: opcionális   │
+└──────────────────┴─────────────┴─────────────────────────────────────┘
+
+3.2 VALIDÁCIÓS SZABÁLYOK
+-------------------------
+```dart
+// Név validáció
+validator: (value) {
+  if (value == null || value.trim().isEmpty) {
+    return 'A ${_isCompany ? "cégnév" : "név"} megadása kötelező';
+  }
+  return null;
+}
+
+// Irányítószám validáció
+validator: (value) {
+  if (value == null || value.trim().isEmpty) {
+    return 'Kötelező';
+  }
+  if (!RegExp(r'^\d{4}$').hasMatch(value.trim())) {
+    return '4 számjegy';
+  }
+  return null;
+}
+
+// Adószám validáció (cég esetén)
+validator: _isCompany
+  ? (value) {
+      if (value == null || value.trim().isEmpty) {
+        return 'Jogi személy esetén az adószám megadása kötelező';
+      }
+      return null;
+    }
+  : null
+```
+
+3.3 MAGÁNSZEMÉLY VS CÉG LOGIKA
+-------------------------------
+MEGJEGYZÉS: A jelenlegi ShippingAddressForm-ban NINCS cég/magánszemély 
+választó és adószám mező. Ezeket hozzá kell adni a tervezett folyamat 
+szerint.
+
+Tervezett logika:
+- Checkbox: "Jogi személyként vásárolok"
+- Ha bejelölve → Cégnév és adószám kötelező
+- Ha nincs bejelölve → Név kötelező, adószám opcionális
+- Adószám mező csak akkor jelenik meg, ha cég vagy opcionális magánszemély
+
+================================================================================
+4. MŰKÖDÉSI FOLYAMAT
+================================================================================
+
+4.1 SZERKESZTHETŐSÉGI FELTÉTELEK
+---------------------------------
+A form szerkeszthetőségét az előfizetés állapota határozza meg:
+
+```dart
+bool _canEditShippingAddress(Map<String, dynamic> data) {
+  final isActive = data['isSubscriptionActive'] == true;
+  final endDate = data['subscriptionEndDate'];
+  
+  if (!isActive) {
+    return true; // Lejárt előfizetés → szerkeszthető
+  }
+  
+  if (endDate != null) {
+    final daysUntilExpiry = endDate.difference(DateTime.now()).inDays;
+    return daysUntilExpiry <= 3; // 3 napon belül lejár → szerkeszthető
+  }
+  
+  return false; // Aktív előfizetés → NEM szerkeszthető
+}
+```
+
+Szerkeszthető, ha:
+✅ Előfizetés lejárt (isSubscriptionActive: false)
+✅ Előfizetés 3 nap múlva lejár (daysUntilExpiry ≤ 3)
+✅ Admin felhasználó (mindig szerkeszthető)
+
+4.2 AUTOMATIKUS ADATBETÖLTÉS
+-----------------------------
+1. Felhasználó név betöltése Firestore-ból:
+   - users kollekcióból: firstName + lastName
+   - VAGY displayName
+   - VAGY email prefix
+
+2. Mentett szállítási cím betöltése:
+   - users.shippingAddress mezőből
+   - Ha nincs, akkor név alapján kitöltés
+
+3. Irányítószám → Település automatikus kitöltés:
+   - assets/postal_codes.json fájlból
+   - 4 számjegy beírása után
+   - Ha több település: bottom sheet választólista
+
+4.3 ADATMENTÉS
+--------------
+```dart
+// Firestore-ba mentés (users kollekció)
+await FirebaseFirestore.instance
+    .collection('users')
+    .doc(user.uid)
+    .update({
+  'shippingAddress': {
+    'name': _nameController.text.trim(),
+    'zipCode': _zipCodeController.text.trim(),
+    'city': _cityController.text.trim(),
+    'address': _addressController.text.trim(),
+  },
+  'updatedAt': FieldValue.serverTimestamp(),
+});
+```
+
+4.4 FIZETÉSI FOLYAMAT INTEGRÁCIÓJA
+-----------------------------------
+TERVEZETT FOLYAMAT:
+
+1. Felhasználó el akarja indítani az előfizetést
+   ↓
+2. Ellenőrzés: Van-e kitöltve shippingAddress?
+   ↓
+3a. HA NINCS → Kéri a kitöltést (Account képernyőre irányítás)
+   ↓
+3b. HA VAN → Fizetés indítása
+   ↓
+4. Sikeres fizetés visszatérés
+   ↓
+5. Automatikus számla generálás (shippingAddress alapján)
+   ↓
+6. Számla generálás után shippingAddress törlése a web_payments rekordból
+
+================================================================================
+5. ADATKEZELÉS ÉS BIZTONSÁG
+================================================================================
+
+5.1 IDEIGLENES TÁROLÁS
+-----------------------
+A szállítási cím IDEIGLENESEN tárolódik, számla generálás után TÖRLŐDIK:
+
+1. **Users kollekció** (ideiglenes tárolás):
+   - users/{userId}/shippingAddress
+   - Szerkeszthető az Account képernyőn
+   - A "Mentés" gombbal mentve
+   - Számla generálás után AUTOMATIKUS TÖRLÉS
+   - Cél: csak a számla generáláshoz szükséges
+
+2. **Web_payments kollekció** (ideiglenes tárolás):
+   - web_payments/{orderRef}/shippingAddress
+   - Fizetés indításakor másolódik ide a users kollekcióból
+   - Számla generálás után AUTOMATIKUS TÖRLÉS
+   - Cél: csak a számla generáláshoz szükséges, utána nem kell
+
+FONTOS: Mindkét helyen törlődik a számla generálás után! Nincs tartós mentés.
+
+5.2 BIZTONSÁGI INTÉZKEDÉSEK
+----------------------------
+- Szerkeszthetőség csak bizonyos feltételek mellett
+- Adatok csak a számlázáshoz szükségesek
+- GDPR megfelelőség: minimális adattárolás
+- web_payments shippingAddress automatikus törlése
+
+5.3 FIRESTORE STRUKTÚRA
+------------------------
+```javascript
+// 1. IDEIGLENES TÁROLÁS - users kollekció
+// Számla generálás után TÖRLŐDIK!
+{
+  userId: "...",
+  shippingAddress: {
+    name: "Kovács János",
+    zipCode: "2030",
+    city: "Érd",
+    address: "Tárnoki út 23."
+  },
+  updatedAt: timestamp
+  // shippingAddress törlődik számla generálás után
+}
+
+// 2. IDEIGLENES TÁROLÁS - web_payments kollekció
+// Számla generálás után TÖRLŐDIK!
+{
+  userId: "...",
+  planId: "...",
+  amount: 4350,
+  shippingAddress: {
+    name: "Kovács János",
+    zipCode: "2030",
+    city: "Érd",
+    address: "Tárnoki út 23.",
+    isCompany: "false",
+    taxNumber: ""  // opcionális
+  },
+  status: "COMPLETED",
+  createdAt: timestamp
+  // shippingAddress törlődik számla generálás után
+}
+```
+
+5.4 ADATTÖRLÉS FOLYAMATA
+-------------------------
+```javascript
+// functions/index.js - generateAndSendInvoice után
+if (!testPaymentData) {
+  // 1. Szállítási cím törlése a payment record-ból
+  await paymentRef.update({
+    shippingAddress: admin.firestore.FieldValue.delete()
+  });
+  
+  // 2. Szállítási cím törlése a users kollekcióból is
+  await db.collection('users').doc(userId).update({
+    shippingAddress: admin.firestore.FieldValue.delete()
+  });
+}
+```
+
+PÉLDA:
+------
+1. Felhasználó kitölti a formot → users/{userId}/shippingAddress = "Kovács János, 2030 Érd..."
+2. Fizetés indítása → web_payments/{orderRef}/shippingAddress = "Kovács János, 2030 Érd..." (másolat)
+3. Számla generálás → sikeres
+4. Adattörlés:
+   - web_payments/{orderRef}/shippingAddress = TÖRÖLVE ✅
+   - users/{userId}/shippingAddress = TÖRÖLVE ✅
+
+Következő vásárlásnál:
+- Újra ki kell tölteni a formot
+- Nincs előre kitöltés
+
+================================================================================
+6. UI/UX JELLEMZŐK
+================================================================================
+
+6.1 VIZUÁLIS DESIGN
+-------------------
+- Card komponens az Account képernyőn
+- Modern, kerekített sarkok (BorderRadius: 12px)
+- Kék színséma (#1E3A8A)
+- Ikonok minden mezőnél
+- Reszponzív elrendezés (kis képernyőn: egymás alatt, nagy képernyőn: egymás mellett)
+- Előfizetési állapot kártya mellett jelenik meg
+
+6.2 FELHASZNÁLÓI ÉLMÉNY
+------------------------
+- Loading indikátor irányítószám keresésnél
+- Automatikus mezőkitöltés
+- Tiszta hibaüzenetek
+- Vizuális visszajelzés (színek, keretek)
+
+6.3 TELEPÜLÉS VÁLASZTÓ
+-----------------------
+Ha több település tartozik az irányítószámhoz:
+┌─────────────────────────────────────────┐
+│ ℹ️ 3 település található, válassz egyet: │
+├─────────────────────────────────────────┤
+│ 🏢 Budapest III. kerület                │
+│ 🏢 Budapest XIII. kerület               │
+│ 🏢 Budapest XIV. kerület                │
+└─────────────────────────────────────────┘
+
+6.4 SZERKESZTÉS GOMB
+---------------------
+- Csak akkor jelenik meg, ha canEdit: true
+- Kék "Szerkesztés" gomb ceruza ikonnal
+- Kattintásra az összes mező szerkeszthetővé válik
+- Menti/Mégse gombok megjelennek
+
+================================================================================
+7. INTEGRÁCIÓ A FIZETÉSI FOLYAMATTAL
+================================================================================
+
+7.1 TERVEZETT FOLYAMAT
+-----------------------
+```dart
+// subscription_renewal_button.dart vagy web_payment_plans.dart
+
+// 1. Adattovábbítási nyilatkozat
+final consentAccepted = await DataTransferConsentDialog.show(context);
+if (!consentAccepted) return;
+
+// 2. Ellenőrzés: Van-e shippingAddress a users kollekcióban?
+final userDoc = await FirebaseFirestore.instance
+    .collection('users')
+    .doc(userId)
+    .get();
+    
+final shippingAddress = userDoc.data()?['shippingAddress'];
+
+if (shippingAddress == null || shippingAddress.isEmpty) {
+  // 3a. HA NINCS → Kéri a kitöltést
+  // Account képernyőre irányítás üzenettel
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Kérjük, töltse ki a szállítási adatokat az Account képernyőn!'),
+        action: SnackBarAction(
+          label: 'Ugrás',
+          onPressed: () => context.go('/account'),
+        ),
+      ),
+    );
+  }
+  return;
+}
+
+// 3b. HA VAN → Fizetés indítása címmel
+final result = await HybridPaymentService.initiatePayment(
+  planId: planId,
+  userId: user.uid,
+  shippingAddress: Map<String, String>.from(shippingAddress),
+);
+```
+
+7.2 BACKEND FOLYAMAT
+---------------------
+```javascript
+// functions/index.js - initiateWebPayment
+// Shipping address másolása users-ből web_payments-be
+if (data.shippingAddress) {
+  paymentData.shippingAddress = data.shippingAddress;
+} else {
+  // Ha nincs a kérésben, próbáljuk a users kollekcióból
+  const userDoc = await db.collection('users').doc(userId).get();
+  const userShippingAddress = userDoc.data()?.shippingAddress;
+  if (userShippingAddress) {
+    paymentData.shippingAddress = userShippingAddress;
+  }
+}
+
+// functions/index.js - onWebPaymentWrite trigger
+// Sikeres fizetés után számla generálás
+if (after.status === 'COMPLETED' && after.shippingAddress) {
+  await generateAndSendInvoice(userId, orderRef, paymentInfo);
+  
+  // Számla generálás után shippingAddress törlése MINDKÉT HELYEN
+  // 1. web_payments rekordból
+  await paymentRef.update({
+    shippingAddress: admin.firestore.FieldValue.delete()
+  });
+  
+  // 2. users kollekcióból is
+  await db.collection('users').doc(userId).update({
+    shippingAddress: admin.firestore.FieldValue.delete()
+  });
+}
+```
+
+7.3 FOLYAMATÁBRA
+----------------
+```
+┌─────────────────────────────────────────────────────────┐
+│ Felhasználó: Előfizetés indítása                        │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│ 1. Adattovábbítási nyilatkozat elfogadása               │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│ 2. Ellenőrzés: Van-e shippingAddress?                   │
+└──────┬───────────────────────────────┬──────────────────┘
+       │                               │
+       │ NINCS                          │ VAN
+       ▼                               ▼
+┌──────────────────────┐    ┌──────────────────────────────┐
+│ Account képernyőre   │    │ 3. Fizetés indítása           │
+│ irányítás üzenettel  │    │    shippingAddress-szal       │
+└──────────────────────┘    └──────────┬───────────────────┘
+                                       │
+                                       ▼
+                          ┌──────────────────────────────┐
+                          │ 4. SimplePay fizetés          │
+                          └──────────┬───────────────────┘
+                                     │
+                                     ▼
+                          ┌──────────────────────────────┐
+                          │ 5. Sikeres fizetés visszatérés │
+                          └──────────┬───────────────────┘
+                                     │
+                                     ▼
+                          ┌──────────────────────────────┐
+                          │ 6. Számla generálás           │
+                          │    (shippingAddress alapján)  │
+                          └──────────┬───────────────────┘
+                                     │
+                                     ▼
+                          ┌──────────────────────────────┐
+                          │ 7. shippingAddress törlése   │
+                          │    web_payments rekordból     │
+                          └──────────────────────────────┘
+```
+
+================================================================================
+8. TERVEZETT FOLYAMAT RÉSZLETES LEÍRÁSA
+================================================================================
+
+8.0 TELJES FOLYAMAT LÉPÉSRŐL LÉPÉSRE
+-------------------------------------
+
+1. FELHASZNÁLÓ EL AKARJA INDÍTANI AZ ELŐFIZETÉST
+   - Rákattint az "Előfizetés" vagy "Megújítás" gombra
+   - subscription_renewal_button.dart vagy web_payment_plans.dart
+
+2. ADATTOVÁBBÍTÁSI NYILATKOZAT
+   - DataTransferConsentDialog megjelenítése
+   - Elfogadás kötelező a folytatáshoz
+   - Firestore frissítés: dataTransferConsentLastAcceptedDate
+
+3. SZÁLLÍTÁSI CÍM ELLENŐRZÉS
+   ```dart
+   final userDoc = await FirebaseFirestore.instance
+       .collection('users')
+       .doc(userId)
+       .get();
+   final shippingAddress = userDoc.data()?['shippingAddress'];
+   ```
+
+4a. HA NINCS SZÁLLÍTÁSI CÍM
+   - SnackBar üzenet megjelenítése
+   - "Kérjük, töltse ki a szállítási adatokat az Account képernyőn!"
+   - "Ugrás" gomb → context.go('/account')
+   - FOLYAMAT MEGSZAKAD
+
+4b. HA VAN SZÁLLÍTÁSI CÍM
+   - Fizetés indítása shippingAddress-szal
+   - HybridPaymentService.initiatePayment()
+   - shippingAddress átadása a Cloud Function-nek
+
+5. BACKEND: FIZETÉSI REKORD LÉTREHOZÁSA
+   ```javascript
+   // functions/index.js - initiateWebPayment
+   paymentData.shippingAddress = data.shippingAddress;
+   // vagy users kollekcióból másolás
+   ```
+
+6. SIMPLEPAY FIZETÉS
+   - Átirányítás SimplePay fizetési oldalra
+   - Felhasználó fizetés végrehajtása
+
+7. SIKERES FIZETÉS VISSZATÉRÉS
+   - SimplePay callback/webhook
+   - web_payments státusz frissítése: 'COMPLETED'
+
+8. AUTOMATIKUS SZÁMLA GENERÁLÁS
+   ```javascript
+   // functions/index.js - onWebPaymentWrite trigger
+   if (after.status === 'COMPLETED' && after.shippingAddress) {
+     await generateAndSendInvoice(userId, orderRef, paymentInfo);
+   }
+   ```
+
+9. SZÁMLA GENERÁLÁS UTÁN ADATTÖRLÉS
+   ```javascript
+   // 1. shippingAddress törlése web_payments rekordból
+   await paymentRef.update({
+     shippingAddress: admin.firestore.FieldValue.delete()
+   });
+   
+   // 2. shippingAddress törlése users kollekcióból is
+   await db.collection('users').doc(userId).update({
+     shippingAddress: admin.firestore.FieldValue.delete()
+   });
+   ```
+   
+   MEGJEGYZÉS: Mindkét helyen törlődik! Nincs tartós mentés.
+
+================================================================================
+9. JELENLEGI ÁLLAPOT ÉS IMPLEMENTÁCIÓ
+================================================================================
+
+9.1 JELENLEGI ÁLLAPOT
+---------------------
+✅ ShippingAddressForm komponens elkészült és működőképes
+✅ Validációk implementálva
+✅ Irányítószám-település automatizmus működik
+✅ Feltételes szerkeszthetőség implementálva
+✅ Admin teszt számla funkció működik
+✅ Backend támogatás kész (initiateWebPayment, generateAndSendInvoice)
+✅ Adattörlés logika implementálva
+⚠️ Fizetési folyamatban még nincs teljes integráció
+
+9.2 IMPLEMENTÁLÁSHOZ SZÜKSÉGES LÉPÉSEK
+---------------------------------------
+1. subscription_renewal_button.dart módosítása:
+   ```dart
+   // Shipping address ellenőrzés hozzáadása
+   final userDoc = await FirebaseFirestore.instance
+       .collection('users')
+       .doc(user.uid)
+       .get();
+   final shippingAddress = userDoc.data()?['shippingAddress'];
+   
+   if (shippingAddress == null || shippingAddress.isEmpty) {
+     // Account képernyőre irányítás
+     ScaffoldMessenger.of(context).showSnackBar(...);
+     context.go('/account');
+     return;
+   }
+   ```
+
+2. web_payment_plans.dart módosítása:
+   - Ugyanaz mint fent
+
+3. Backend ellenőrzés:
+   - initiateWebPayment automatikus shippingAddress másolás
+   - generateAndSendInvoice shippingAddress ellenőrzés
+   - Adattörlés működésének ellenőrzése
+
+4. Tesztelés:
+   - Shipping address kitöltés → Fizetés indítás
+   - Shipping address hiány → Account irányítás
+   - Számla generálás shippingAddress-szal
+   - Shipping address törlés számla után
+
+9.3 ADMIN FUNKCIÓK
+-------------------
+A ShippingAddressForm tartalmaz admin-specifikus funkciókat:
+
+1. **Teszt számlázás**:
+   - Fizetési státusz választó (COMPLETED, FAILED, stb.)
+   - Teszt számla generálás gomb
+   - Teszt adatokkal számla létrehozása
+
+2. **Mindig szerkeszthető**:
+   - Admin felhasználók számára nincs korlátozás
+   - Aktív előfizetés esetén is szerkeszthető
+
+9.4 FEJLESZTÉSI JAVASLATOK
+---------------------------
+1. ⚠️ KÖTELEZŐ: Cég/magánszemély választó hozzáadása:
+   - Checkbox: "Jogi személyként vásárolok"
+   - Cégnév mező (név helyett, ha cég)
+   - Adószám mező feltételes megjelenítés
+   - Validáció: cég esetén adószám kötelező
+
+2. Cím validáció bővítése:
+   - Adószám formátum ellenőrzés (8 számjegy-1-2 számjegy)
+   - Nemzetközi címek támogatása
+
+3. Előre kitöltés javítás:
+   - Korábbi vásárlás címének automatikus betöltése
+   - Google Autocomplete integráció
+
+4. Többnyelvűség:
+   - Angol nyelv támogatása
+   - Dinamikus nyelváltás
+
+================================================================================
+ÖSSZEFOGLALÁS
+================================================================================
+
+A szállítási cím űrlap (ShippingAddressForm) egy teljes funkcionalitású, 
+jól megtervezett komponens, amely az Account képernyőn jelenik meg.
+
+TERVEZETT FOLYAMAT:
+1. Felhasználó el akarja indítani az előfizetést
+2. Ellenőrzés: Van-e kitöltve shippingAddress?
+3. Ha nincs → Kéri a kitöltést (Account képernyőre irányítás)
+4. Ha van → Fizetés indítása shippingAddress-szal
+5. Sikeres fizetés után automatikus számla generálás
+6. Számla generálás után shippingAddress törlése web_payments-ből
+
+Főbb jellemzők:
+✅ Account képernyőn megjelenő form (nem dialógus)
+✅ Feltételes szerkeszthetőség (lejárt/3 nap múlva lejár előfizetés)
+✅ Admin funkciók (teszt számla, mindig szerkeszthető)
+✅ Automatikus irányítószám-település keresés
+✅ Ideiglenes tárolás users kollekcióban (számla után törlődik)
+✅ Ideiglenes másolat web_payments-ben (számla után törlődik)
+✅ Backend teljes támogatás
+✅ Adattörlés mindkét helyen számla generálás után
+
+A komponens készen áll a használatra, csak a fizetési folyamatban kell 
+implementálni az ellenőrzést és az irányítást.
+
+================================================================================
+                              DOKUMENTUM VÉGE
+================================================================================
+

@@ -28,9 +28,10 @@ class HybridPaymentService {
   static Future<PaymentInitiationResult> initiatePayment({
     required String planId,
     required String userId,
+    Map<String, String>? shippingAddress,
   }) async {
     if (isWeb) {
-      return await _initiateWebPayment(planId, userId);
+      return await _initiateWebPayment(planId, userId, shippingAddress);
     } else {
       return await _initiateMobilePayment(planId, userId);
     }
@@ -153,7 +154,7 @@ class HybridPaymentService {
 
   /// Webes fizetés indítása
   static Future<PaymentInitiationResult> _initiateWebPayment(
-      String planId, String userId) async {
+      String planId, String userId, Map<String, String>? shippingAddress) async {
     if (!isWeb) {
       return const PaymentInitiationResult(
         success: false,
@@ -164,6 +165,7 @@ class HybridPaymentService {
     return await WebPaymentService.initiatePaymentViaCloudFunction(
       planId: planId,
       userId: userId,
+      shippingAddress: shippingAddress,
     );
   }
 

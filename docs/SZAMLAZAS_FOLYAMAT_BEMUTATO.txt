@@ -1,0 +1,433 @@
+================================================================================
+                    SZÁMLÁZÁSI FOLYAMAT RÉSZLETES BEMUTATÓJA
+                         Lomedu Web - Számlázz.hu Integráció
+================================================================================
+
+TARTALOMJEGYZÉK
+----------------
+1. ÁTTEKINTÉS
+2. RENDSZER ARCHITEKTÚRA
+3. FOLYAMAT LÉPÉSEI
+4. TECHNIKAI IMPLEMENTÁCIÓ
+5. ADATSTRUKTÚRÁK
+6. HIBAKEZELÉS ÉS BIZTONSÁG
+7. TESZTELÉS ÉS DEBUG
+8. KONFIGURÁCIÓS BEÁLLÍTÁSOK
+
+================================================================================
+1. ÁTTEKINTÉS
+================================================================================
+
+A Lomedu webalkalmazás automatikus számlázási rendszert használ, amely a 
+SimplePay fizetési rendszerrel integrálva működik. Sikeres fizetés után 
+automatikusan generál és küld számlát a Számlázz.hu API segítségével.
+
+Főbb jellemzők:
+- Automatikus számla generálás sikeres fizetés után
+- Szállítási cím alapú számlázás
+- Cég és magánszemély megkülönböztetése
+- Adószám kezelés
+- PDF számla email küldés
+- Biztonsági adattörlés
+
+================================================================================
+2. RENDSZER ARCHITEKTÚRA
+================================================================================
+
+A számlázási rendszer komponensei:
+
+┌─────────────────────────────────────────────────────────────┐
+│                        FRONTEND (Flutter)                    │
+├─────────────────────────────────────────────────────────────┤
+│  - Szállítási cím bekérése (ShippingAddressDialog)          │
+│  - Cég/magánszemély választás                               │
+│  - Adószám validáció                                        │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   FIREBASE FUNCTIONS                         │
+├─────────────────────────────────────────────────────────────┤
+│  functions/index.js                                         │
+│    └── generateAndSendInvoice()     [Fő vezérlő]           │
+│                                                              │
+│  functions/invoiceBuilder.js                                │
+│    └── buildInvoiceData()           [Adat összeállítás]    │
+│                                                              │
+│  functions/szamlaAgent.js                                   │
+│    └── createInvoice()              [API kommunikáció]     │
+│    └── buildInvoiceXml()            [XML generálás]        │
+│    └── parseInvoiceResponse()       [Válasz feldolgozás]   │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    SZÁMLÁZZ.HU API                           │
+├─────────────────────────────────────────────────────────────┤
+│  URL: https://www.szamlazz.hu/szamla/                      │
+│  Metódus: POST (multipart/form-data)                        │
+│  Formátum: XML                                              │
+└─────────────────────────────────────────────────────────────┘
+
+================================================================================
+3. FOLYAMAT LÉPÉSEI
+================================================================================
+
+3.1. FIZETÉS ELŐKÉSZÍTÉSE
+-------------------------
+1. Felhasználó kiválasztja az előfizetési csomagot
+2. Megadja a szállítási címet:
+   - Név
+   - Irányítószám, város, cím
+   - Cég esetén: cégnév és adószám (kötelező)
+   - Magánszemély esetén: adószám (opcionális)
+3. Adatok mentése a web_payments kollekcióba
+
+3.2. FIZETÉS FELDOLGOZÁSA
+--------------------------
+1. SimplePay fizetés indítása
+2. Sikeres fizetés visszajelzése (webhook/callback)
+3. web_payments státusz frissítése: 'COMPLETED'
+
+3.3. SZÁMLA GENERÁLÁS TRIGGER
+------------------------------
+Firestore trigger: onWebPaymentWrite
+- Figyeli a web_payments kollekció változásait
+- Ha status === 'COMPLETED' és van shippingAddress
+- Meghívja: generateAndSendInvoice()
+
+3.4. SZÁMLA ADAT ÖSSZEÁLLÍTÁS
+------------------------------
+invoiceBuilder.buildInvoiceData():
+
+a) Dátumok számítása:
+   - Kiállítás dátuma: aktuális nap
+   - Teljesítés dátuma: aktuális nap
+   - Fizetési határidő: +8 nap
+
+b) Vevő adatok (buildBuyerData):
+   - Elsődleges forrás: shippingAddress
+   - Másodlagos forrás: userData (fallback)
+   
+   Adóalany logika:
+   ┌──────────────┬──────────────┬─────────────┬──────────────┐
+   │ Típus        │ Adószám      │ adoalany    │ adoszam mező │
+   ├──────────────┼──────────────┼─────────────┼──────────────┤
+   │ Cég          │ Van (köt.)   │ '6'         │ érték        │
+   │ Magánszemély │ Van          │ '6'         │ érték        │
+   │ Magánszemély │ Nincs        │ '-1'        │ üres string  │
+   └──────────────┴──────────────┴─────────────┴──────────────┘
+
+c) Számla tételek:
+   - ÁFA számítás (27%)
+   - Nettó ár = Bruttó / 1.27
+   - ÁFA érték = Bruttó - Nettó
+
+3.5. XML GENERÁLÁS
+------------------
+szamlaAgent.buildInvoiceXml():
+
+XML struktúra:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<xmlszamla xmlns="http://www.szamlazz.hu/xmlszamla">
+  <beallitasok>
+    <felhasznalo>[API_KEY]</felhasznalo>
+    <szamlaagentkulcs>[API_KEY]</szamlaagentkulcs>
+    <eszamla>true</eszamla>
+    <szamlaLetoltes>true</szamlaLetoltes>
+    <valaszVerzio>2</valaszVerzio>
+  </beallitasok>
+  
+  <fejlec>
+    <keltDatum>YYYY-MM-DD</keltDatum>
+    <teljesitesDatum>YYYY-MM-DD</teljesitesDatum>
+    <fizetesiHataridoDatum>YYYY-MM-DD</fizetesiHataridoDatum>
+    <fizmod>bankkartya</fizmod>
+    <penznem>HUF</penznem>
+    <szamlaNyelve>hu</szamlaNyelve>
+    <rendelesSzam>WEB_[userId]_[timestamp]</rendelesSzam>
+    <fizetve>true</fizetve>
+  </fejlec>
+  
+  <vevo>
+    <nev>...</nev>
+    <orszag>Magyarország</orszag>
+    <irsz>...</irsz>
+    <telepules>...</telepules>
+    <cim>...</cim>
+    <email>...</email>
+    <sendEmail>true</sendEmail>
+    <adoalany>6/-1</adoalany>
+    <adoszam>...</adoszam>
+  </vevo>
+  
+  <tetelek>
+    <tetel>
+      <megnevezes>30 napos előfizetés</megnevezes>
+      <mennyiseg>1.0</mennyiseg>
+      <mennyisegiEgyseg>db</mennyisegiEgyseg>
+      <nettoEgysegar>3425.20</nettoEgysegar>
+      <afakulcs>27</afakulcs>
+      <nettoErtek>3425.20</nettoErtek>
+      <afaErtek>924.80</afaErtek>
+      <bruttoErtek>4350.00</bruttoErtek>
+    </tetel>
+  </tetelek>
+</xmlszamla>
+```
+
+3.6. API KOMMUNIKÁCIÓ
+---------------------
+szamlaAgent.createInvoice():
+
+1. Multipart form-data készítés
+2. HTTP POST küldés
+3. Válasz feldolgozás:
+   - HTTP fejlécek ellenőrzése
+   - XML válasz parse
+   - PDF kinyerése
+
+3.7. VÁLASZ FELDOLGOZÁS
+------------------------
+Sikeres válasz:
+- HTTP fejlécben: szlahu_szamlaszam
+- XML-ben: <sikeres><szamlaszam>...</szamlaszam></sikeres>
+- PDF: base64 vagy binary formátum
+
+Hibás válasz:
+- HTTP fejlécben: szlahu_error, szlahu_error_code
+- XML-ben: <hibauzenet><hibakod>...</hibakod></hibauzenet>
+
+3.8. SZÁMLA TÁROLÁS
+-------------------
+Firestore - invoices kollekció:
+```javascript
+{
+  userId: "...",
+  orderRef: "WEB_...",
+  invoiceNumber: "TEST-2025-001",
+  amount: 4350,
+  pdfBase64: "...",
+  status: "sent",
+  createdAt: timestamp,
+  sentAt: timestamp
+}
+```
+
+3.9. EMAIL KÜLDÉS
+-----------------
+Két lehetőség:
+1. Számlázz.hu automatikus email (sendEmail: true)
+2. Saját email rendszer PDF melléklettel
+
+3.10. BIZTONSÁGI TISZTÍTÁS
+---------------------------
+Számla sikeres generálása után:
+- shippingAddress törlése a web_payments rekordból
+- Csak a számla referencia marad meg
+
+================================================================================
+4. TECHNIKAI IMPLEMENTÁCIÓ
+================================================================================
+
+4.1. HASZNÁLT TECHNOLÓGIÁK
+---------------------------
+- Node.js (Firebase Functions)
+- fast-xml-parser (XML generálás és parse)
+- form-data (Multipart HTTP)
+- node-fetch (HTTP kliens)
+
+4.2. API HITELESÍTÉS
+--------------------
+API kulcs: 5676yj6uzzaec8bftuny5eaec8bfiv
+Használat: felhasznalo és szamlaagentkulcs mezőkben
+
+4.3. KARAKTER KÓDOLÁS
+---------------------
+- XML: UTF-8
+- HTTP: multipart/form-data
+- PDF: base64 vagy binary
+
+4.4. FÜGGŐSÉGEK
+---------------
+package.json:
+```json
+{
+  "dependencies": {
+    "fast-xml-parser": "^4.x.x",
+    "form-data": "^4.x.x",
+    "node-fetch": "^2.x.x"
+  }
+}
+```
+
+================================================================================
+5. ADATSTRUKTÚRÁK
+================================================================================
+
+5.1. WEB_PAYMENTS DOKUMENTUM
+-----------------------------
+```javascript
+{
+  userId: string,
+  planId: string,
+  amount: number,
+  status: 'INITIATED' | 'COMPLETED' | 'FAILED',
+  shippingAddress: {
+    name: string,
+    zipCode: string,
+    city: string,
+    address: string,
+    isCompany: 'true' | 'false',
+    companyName?: string,
+    taxNumber?: string
+  },
+  transactionId?: string,
+  orderId?: string,
+  createdAt: timestamp,
+  completedAt?: timestamp
+}
+```
+
+5.2. INVOICE DOKUMENTUM
+-----------------------
+```javascript
+{
+  userId: string,
+  orderRef: string,
+  invoiceNumber: string,
+  amount: number,
+  pdfBase64?: string,
+  status: 'pending' | 'sent' | 'failed',
+  error?: string,
+  createdAt: timestamp,
+  sentAt?: timestamp,
+  isTest?: boolean
+}
+```
+
+5.3. PAYMENT PLANS
+------------------
+```javascript
+{
+  monthly_premium_prepaid: {
+    id: 'monthly_premium_prepaid',
+    name: '30 napos előfizetés - Prémium hozzáférés',
+    price: 4350,
+    subscriptionDays: 30,
+    description: 'Teljes hozzáférés minden tartalomhoz'
+  }
+}
+```
+
+================================================================================
+6. HIBAKEZELÉS ÉS BIZTONSÁG
+================================================================================
+
+6.1. HIBAKEZELÉSI STRATÉGIA
+----------------------------
+- Minden hiba logolása console.error()-ral
+- Számla generálási hiba nem állítja meg az előfizetés aktiválást
+- Email küldési hiba nem állítja meg a folyamatot
+- Részletes hibaüzenetek tárolása
+
+6.2. BIZTONSÁGI INTÉZKEDÉSEK
+-----------------------------
+- Szállítási cím törlése használat után
+- API kulcs környezeti változóban (production)
+- Adószám maszkolása logokban (első 3 karakter + ***)
+- GDPR megfelelőség: minimális adattárolás
+
+6.3. VALIDÁCIÓK
+---------------
+Frontend:
+- Cég esetén kötelező adószám
+- Irányítószám formátum ellenőrzés
+- Email formátum validáció
+
+Backend:
+- Plan ID ellenőrzés
+- Fizetési státusz ellenőrzés
+- XML séma validáció
+
+================================================================================
+7. TESZTELÉS ÉS DEBUG
+================================================================================
+
+7.1. DEBUG LOGOK
+----------------
+Minden kritikus pontnál részletes logolás:
+- [szamlaAgent] - API kommunikáció
+- [buildBuyerData] - Vevő adat összeállítás
+- [generateAndSendInvoice] - Fő folyamat
+- [onWebPaymentWrite] - Trigger események
+
+7.2. TESZTELÉSI LEHETŐSÉGEK
+----------------------------
+1. generateTestInvoice Cloud Function:
+   - Teszt számla generálás valós fizetés nélkül
+   - Teszt adatokkal működik
+
+2. Log ellenőrzés:
+   ```bash
+   firebase functions:log --only generateAndSendInvoice
+   ```
+
+3. XML validáció:
+   - Generált XML logolása
+   - Számlázz.hu XSD séma ellenőrzés
+
+7.3. GYAKORI HIBÁK
+------------------
+1. "Hibás adatok" - XML formátum hiba
+2. "Nincs jogosultság" - API kulcs probléma
+3. "Adószám hiányzik" - Cég esetén kötelező
+4. "PDF nem érkezett" - Válasz feldolgozási hiba
+
+================================================================================
+8. KONFIGURÁCIÓS BEÁLLÍTÁSOK
+================================================================================
+
+8.1. KÖRNYEZETI VÁLTOZÓK
+-------------------------
+Firebase Functions config:
+```bash
+firebase functions:config:set \
+  szamlazz.api_key="..." \
+  szamlazz.api_url="https://www.szamlazz.hu/szamla/"
+```
+
+8.2. SZÁMLÁZZ.HU BEÁLLÍTÁSOK
+-----------------------------
+Számlázz.hu fiókban szükséges:
+- Számla Agent engedélyezése
+- API kulcs generálása
+- Számla sablon beállítása (SzlaMost)
+- Email sablon konfigurálása
+
+8.3. IDŐZÓNÁK
+-------------
+- Minden dátum UTC-ben tárolva
+- Számla generáláskor magyar időzóna (CET/CEST)
+- Formátum: YYYY-MM-DD
+
+================================================================================
+ÖSSZEFOGLALÁS
+================================================================================
+
+A számlázási rendszer egy robusztus, automatizált megoldás, amely:
+- Zökkenőmentesen integrálódik a SimplePay fizetési folyamattal
+- Automatikusan generál és küld számlákat
+- Biztonságosan kezeli az ügyféladatokat
+- Részletes hibakezelést és logolást biztosít
+- Megfelel a magyar számviteli előírásoknak
+
+A rendszer teljesen automatizált, emberi beavatkozást csak hibaelhárítás 
+esetén igényel.
+
+================================================================================
+                              DOKUMENTUM VÉGE
+================================================================================
+
+

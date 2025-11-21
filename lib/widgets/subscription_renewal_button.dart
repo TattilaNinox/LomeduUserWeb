@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
 import '../services/hybrid_payment_service.dart';
 import '../services/subscription_reminder_service.dart';
 import 'data_transfer_consent_dialog.dart';
-import 'shipping_address_dialog.dart';
 import 'simplepay_logo.dart';
 
 /// Előfizetés megújítási gomb widget
@@ -277,56 +277,146 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
 
   Future<void> _handleButtonPress() async {
     if (_isLoading) return;
-    if (!mounted) return;
 
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        if (mounted) {
-          _showError('Nincs bejelentkezett felhasználó');
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      _showError('Nincs bejelentkezett felhasználó');
+      return;
+    }
+
+    // WEB esetén: ELŐSZÖR szállítási cím ellenőrzése (még mielőtt bármi mást csinálunk)
+    debugPrint('[SubscriptionRenewalButton] Starting payment - isWeb: ${HybridPaymentService.isWeb}');
+    
+    if (HybridPaymentService.isWeb) {
+      debugPrint('[SubscriptionRenewalButton] Web platform detected - checking shipping address');
+      try {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        
+        if (!userDoc.exists) {
+          debugPrint('[SubscriptionRenewalButton] User document does not exist');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Kerjuk, toltsd ki a szallitasi adatokat az Account kepernyon!'),
+              ),
+            );
+          }
+          return;
         }
+
+        final shippingAddress = userDoc.data()?['shippingAddress'] as Map<String, dynamic>?;
+        
+        debugPrint('[SubscriptionRenewalButton] Shipping address check: ${shippingAddress != null ? 'exists' : 'null'}');
+        
+        // SZIGORÚ ELLENŐRZÉS: Minden kötelező mező ki kell legyen töltve
+        bool isValid = false;
+        
+        if (shippingAddress != null && 
+            shippingAddress.isNotEmpty) {
+          
+          final name = (shippingAddress['name']?.toString() ?? '').trim();
+          final zipCode = (shippingAddress['zipCode']?.toString() ?? '').trim();
+          final city = (shippingAddress['city']?.toString() ?? '').trim();
+          final address = (shippingAddress['address']?.toString() ?? '').trim();
+          
+          debugPrint('[SubscriptionRenewalButton] Address fields - name: "$name", zipCode: "$zipCode", city: "$city", address: "$address"');
+          
+          // MINDEN kötelező mező NEM ÜRES kell legyen ÉS érvényes formátumú
+          final nameValid = name.isNotEmpty && name.length >= 2;
+          final zipCodeValid = zipCode.isNotEmpty && 
+                              zipCode.length == 4 && 
+                              RegExp(r'^\d{4}$').hasMatch(zipCode);
+          final cityValid = city.isNotEmpty && city.length >= 2;
+          final addressValid = address.isNotEmpty && address.length >= 5;
+          
+          isValid = nameValid && zipCodeValid && cityValid && addressValid;
+          
+          debugPrint('[SubscriptionRenewalButton] Validation - name: $nameValid, zipCode: $zipCodeValid, city: $cityValid, address: $addressValid');
+          debugPrint('[SubscriptionRenewalButton] Final validation result: $isValid');
+        } else {
+          debugPrint('[SubscriptionRenewalButton] Shipping address is null, empty, or not a Map');
+        }
+
+        // HA NEM ÉRVÉNYES → BLOKKOLJUK A FIZETÉST
+        if (!isValid) {
+          debugPrint('[SubscriptionRenewalButton] ❌ BLOCKING PAYMENT - Shipping address invalid or missing');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text(
+                  'Kerjuk, toltsd ki a szallitasi adatokat az Account kepernyon!',
+                ),
+                backgroundColor: Colors.red,
+                action: SnackBarAction(
+                  label: 'Ugras',
+                  textColor: Colors.white,
+                  onPressed: () {
+                    if (mounted) {
+                      context.go('/account');
+                    }
+                  },
+                ),
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+          // KIVÉTEL DOBÁSA, hogy biztosan blokkoljuk
+          throw Exception('Szallitasi cim nem toltve ki vagy ervenytelen');
+        }
+        
+        debugPrint('[SubscriptionRenewalButton] ✅ Shipping address validation PASSED');
+      } catch (e) {
+        debugPrint('[SubscriptionRenewalButton] Error checking shipping address: $e');
+        // MINDEN esetben blokkoljuk a fizetést, ha hiba van
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'Kerjuk, toltsd ki a szallitasi adatokat az Account kepernyon!',
+              ),
+              backgroundColor: Colors.red,
+              action: SnackBarAction(
+                label: 'Ugras',
+                textColor: Colors.white,
+                onPressed: () {
+                  if (mounted) {
+                    context.go('/account');
+                  }
+                },
+              ),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+        // MINDIG KILÉPÜNK - NEM ENGEDJÜK A FIZETÉST
         return;
       }
+    }
 
-      // WEB esetén: Először szállítási cím megadása (számlázáshoz)
-      Map<String, String>? shippingAddress;
-      if (HybridPaymentService.isWeb) {
-        if (!mounted) return;
-        
-        try {
-          shippingAddress = await ShippingAddressDialog.show(context);
-        } catch (e) {
-          // Dialog bezárásakor hiba történt, kilépünk
-          return;
-        }
-        
-        // Ha a felhasználó megszakítja a cím megadását (Mégse gomb),
-        // akkor kilépünk, és a gomb marad aktív állapotban.
-        if (shippingAddress == null || !mounted) {
-          return;
-        }
-      }
+    // Most már beállítjuk a loading állapotot, mert minden ellenőrzésen túl vagyunk
+    setState(() {
+      _isLoading = true;
+    });
 
+    try {
       // WEB esetén: KÖTELEZŐ adattovábbítási nyilatkozat elfogadása
       if (HybridPaymentService.isWeb) {
-        if (!mounted) return;
-        
-        bool? consentAccepted;
-        try {
-          consentAccepted = await DataTransferConsentDialog.show(context);
-        } catch (e) {
-          // Dialog bezárásakor hiba történt, kilépünk
-          return;
-        }
-        
-        // Ha a felhasználó nem fogadja el (Mégse gomb vagy kívülre kattint),
-        // akkor egyszerűen kilépünk, és a gomb marad aktív állapotban.
-        if (consentAccepted != true || !mounted) {
+        final consentAccepted = await DataTransferConsentDialog.show(context);
+        if (!consentAccepted) {
+          // Felhasználó nem fogadta el a nyilatkozatot vagy megszakította
+          // Loading állapot visszaállítása
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
           return;
         }
 
         // Firestore frissítése: consent elfogadás dátumának rögzítése
-        // Ez gyors, nem kell loading állapot hozzá
         await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
@@ -338,13 +428,22 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
       // Ha van egyedi csomag ID, használjuk azt
       String planId = widget.customPlanId ?? _getDefaultPlanId();
 
-      // 2. Most már minden adat megvan, indíthatjuk a tényleges folyamatot.
-      // CSAK ITT állítjuk be az _isLoading-et true-ra!
-      setState(() {
-        _isLoading = true;
-      });
+      // Szállítási cím lekérése (ha web és van)
+      Map<String, String>? shippingAddress;
+      if (HybridPaymentService.isWeb) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        final addressData = userDoc.data()?['shippingAddress'] as Map<String, dynamic>?;
+        if (addressData != null && addressData.isNotEmpty) {
+          shippingAddress = Map<String, String>.from(
+            addressData.map((key, value) => MapEntry(key, value.toString())),
+          );
+        }
+      }
 
-      // Fizetés indítása (szállítási címmel)
+      // Fizetés indítása
       final result = await HybridPaymentService.initiatePayment(
         planId: planId,
         userId: user.uid,
@@ -377,8 +476,7 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
         _showError('Hiba történt: $e');
       }
     } finally {
-      // A végén, ha volt loading, kikapcsoljuk
-      // Fontos: csak akkor állítjuk vissza, ha tényleg be volt állítva
+      // Loading állapot visszaállítása
       if (mounted) {
         setState(() {
           _isLoading = false;

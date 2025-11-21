@@ -380,7 +380,47 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
       }
       final uid = authUser.uid;
 
-      // 1. KÖTELEZŐ: Adattovábbítási nyilatkozat elfogadása
+      // 1. ELŐSZÖR: Szállítási cím ellenőrzése
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+      
+      if (!userDoc.exists) {
+        _showError('Kerjuk, toltsd ki a szallitasi adatokat az Account kepernyon!');
+        return;
+      }
+
+      final shippingAddress = userDoc.data()?['shippingAddress'] as Map<String, dynamic>?;
+      
+      // SZIGORÚ ELLENŐRZÉS: Minden kötelező mező ki kell legyen töltve
+      bool isValid = false;
+      
+      if (shippingAddress != null && 
+          shippingAddress.isNotEmpty) {
+        final name = (shippingAddress['name']?.toString() ?? '').trim();
+        final zipCode = (shippingAddress['zipCode']?.toString() ?? '').trim();
+        final city = (shippingAddress['city']?.toString() ?? '').trim();
+        final address = (shippingAddress['address']?.toString() ?? '').trim();
+        
+        // MINDEN kötelező mező NEM ÜRES kell legyen ÉS érvényes formátumú
+        final nameValid = name.isNotEmpty && name.length >= 2;
+        final zipCodeValid = zipCode.isNotEmpty && 
+                            zipCode.length == 4 && 
+                            RegExp(r'^\d{4}$').hasMatch(zipCode);
+        final cityValid = city.isNotEmpty && city.length >= 2;
+        final addressValid = address.isNotEmpty && address.length >= 5;
+        
+        isValid = nameValid && zipCodeValid && cityValid && addressValid;
+      }
+
+      // HA NEM ÉRVÉNYES → BLOKKOLJUK A FIZETÉST
+      if (!isValid) {
+        _showError('Kerjuk, toltsd ki a szallitasi adatokat az Account kepernyon!');
+        return;
+      }
+
+      // 2. KÖTELEZŐ: Adattovábbítási nyilatkozat elfogadása
       final consentAccepted = await DataTransferConsentDialog.show(context);
       if (!consentAccepted) {
         // Felhasználó nem fogadta el a nyilatkozatot
@@ -389,15 +429,25 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
         return;
       }
 
-      // 2. Firestore frissítése: consent elfogadás dátumának rögzítése
+      // 3. Firestore frissítése: consent elfogadás dátumának rögzítése
       await FirebaseFirestore.instance.collection('users').doc(uid).update({
         'dataTransferConsentLastAcceptedDate': FieldValue.serverTimestamp(),
       });
 
-      // 3. Fizetés indítása Cloud Function-nel
+      // 4. Szállítási cím lekérése
+      final addressData = userDoc.data()?['shippingAddress'] as Map<String, dynamic>?;
+      Map<String, String>? shippingAddressMap;
+      if (addressData != null && addressData.isNotEmpty) {
+        shippingAddressMap = Map<String, String>.from(
+          addressData.map((key, value) => MapEntry(key, value.toString())),
+        );
+      }
+
+      // 5. Fizetés indítása Cloud Function-nel
       final result = await WebPaymentService.initiatePaymentViaCloudFunction(
         planId: plan.id,
         userId: uid,
+        shippingAddress: shippingAddressMap,
       );
 
       if (result.success && result.paymentUrl != null) {

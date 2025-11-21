@@ -1,0 +1,504 @@
+================================================================================
+                  IRÁNYÍTÓSZÁM KEZELÉS - RÉSZLETES DOKUMENTÁCIÓ
+                         Lomedu Web - Postal Code System
+================================================================================
+
+TARTALOMJEGYZÉK
+----------------
+1. ÁTTEKINTÉS
+2. ADATFORRÁS ÉS STRUKTÚRA
+3. MŰKÖDÉSI FOLYAMAT
+4. IMPLEMENTÁCIÓ RÉSZLETEI
+5. FELHASZNÁLÓI ÉLMÉNY
+6. HIBAKEZELÉS
+7. TECHNIKAI RÉSZLETEK
+
+================================================================================
+1. ÁTTEKINTÉS
+================================================================================
+
+Az irányítószám kezelés automatikus település keresést és kitöltést biztosít
+a szállítási cím formban. A rendszer egy JSON fájlból dolgozik, amely tartalmazza
+az összes magyarországi irányítószámot és a hozzájuk tartozó településeket.
+
+Főbb funkciók:
+- Automatikus település keresés 4 számjegy beírása után
+- Egy település esetén automatikus kitöltés
+- Több település esetén választólista megjelenítése
+- Validáció: csak 4 számjegy elfogadása
+- Loading indikátor keresés közben
+
+Használat:
+- ShippingAddressDialog komponensben
+- ShippingAddressForm komponensben
+
+================================================================================
+2. ADATFORRÁS ÉS STRUKTÚRA
+================================================================================
+
+2.1 ADATFÁJL
+------------
+Fájl: assets/postal_codes.json
+Formátum: JSON
+Méret: ~9600 sor (összes magyarországi irányítószám)
+
+2.2 JSON STRUKTÚRA
+------------------
+```json
+{
+  "2030": [
+    "Érd"
+  ],
+  "7678": [
+    "Abaliget",
+    "Husztót",
+    "Kovácsszénája"
+  ],
+  "3882": [
+    "Abaújalpár",
+    "Abaújkér"
+  ]
+}
+```
+
+Struktúra:
+- Kulcs: irányítószám (string, 4 karakter)
+- Érték: települések tömbje (string array)
+- Egy irányítószámhoz több település is tartozhat
+
+2.3 ADATFELDOLGOZÁS
+--------------------
+```dart
+// JSON betöltése
+final String jsonString = 
+    await rootBundle.loadString('assets/postal_codes.json');
+final Map<String, dynamic> jsonData = json.decode(jsonString);
+
+// Konvertálás Map<String, List<String>> formátumba
+_postalCodes = jsonData.map(
+  (key, value) => MapEntry(
+    key, 
+    List<String>.from(value as List)
+  )
+);
+```
+
+Eredmény:
+```dart
+Map<String, List<String>> _postalCodes = {
+  "2030": ["Érd"],
+  "7678": ["Abaliget", "Husztót", "Kovácsszénája"],
+  "3882": ["Abaújalpár", "Abaújkér"]
+}
+```
+
+================================================================================
+3. MŰKÖDÉSI FOLYAMAT
+================================================================================
+
+3.1 FOLYAMATÁBRA
+----------------
+```
+┌─────────────────────────────────────────┐
+│ Felhasználó beírja az irányítószámot   │
+└──────────────────┬──────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────┐
+│ Ellenőrzés: 4 számjegy?                 │
+└──┬───────────────────────┬───────────────┘
+   │                       │
+   │ IGEN                  │ NEM
+   ▼                       ▼
+┌──────────────────┐   ┌──────────────────┐
+│ Település keresés│   │ Nincs keresés    │
+│ _lookupCity()    │   │ Lista eltávolítva│
+└────────┬─────────┘   └──────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────┐
+│ Találat?                                 │
+└──┬───────────────────────┬───────────────┘
+   │                       │
+   │ IGEN                  │ NEM
+   ▼                       ▼
+┌──────────────────┐   ┌──────────────────┐
+│ Hány település?  │   │ Nincs találat    │
+└──┬───────────┬───┘   │ Lista eltávolítva│
+   │           │       └──────────────────┘
+   │ 1         │ >1
+   ▼           ▼
+┌─────────┐ ┌──────────────────────────────┐
+│ Auto-   │ │ Választólista megjelenítése │
+│ kitöltés│ │ _availableCities lista       │
+└─────────┘ └──────────────────────────────┘
+```
+
+3.2 RÉSZLETES LÉPÉSEK
+---------------------
+
+1. ADATBETÖLTÉS (initState)
+   - postal_codes.json betöltése assets-ből
+   - Map<String, List<String>> formátumba konvertálás
+   - _postalCodes változóba tárolás
+
+2. IRÁNYÍTÓSZÁM BEÍRÁSA
+   - Felhasználó beírja az irányítószámot
+   - TextEditingController listener figyeli a változást
+   - _onZipCodeChanged() hívódik
+
+3. VALIDÁCIÓ
+   ```dart
+   if (zipCode.length == 4 && RegExp(r'^\d{4}$').hasMatch(zipCode)) {
+     _lookupCity(zipCode);
+   }
+   ```
+   - Csak akkor keres, ha pontosan 4 számjegy
+   - Csak számjegyeket fogad el
+
+4. TELEPÜLÉS KERESÉS
+   ```dart
+   final cities = _postalCodes![zipCode];
+   ```
+   - Keresés a _postalCodes map-ben
+   - Ha találat van, cities lista tartalmazza a településeket
+
+5. EREDMÉNY FELDOLGOZÁSA
+   
+   a) EGY TELEPÜLÉS:
+      ```dart
+      if (cities.length == 1) {
+        _cityController.text = cities[0];  // Automatikus kitöltés
+        _availableCities = null;
+      }
+      ```
+   
+   b) TÖBB TELEPÜLÉS:
+      ```dart
+      else {
+        _availableCities = cities;  // Lista megjelenítése
+        _cityController.clear();    // Mező törlése
+      }
+      ```
+   
+   c) NINCS TALÁLAT:
+      ```dart
+      else {
+        _availableCities = null;  // Lista eltávolítása
+      }
+      ```
+
+6. UI FRISSÍTÉS
+   - setState() hívás
+   - Település mező automatikus kitöltése VAGY
+   - Választólista megjelenítése
+
+================================================================================
+4. IMPLEMENTÁCIÓ RÉSZLETEI
+================================================================================
+
+4.1 STATE VÁLTOZÓK
+------------------
+```dart
+// Irányítószám-település adatok
+Map<String, List<String>>? _postalCodes;
+bool _isLoadingPostalCodes = false;
+List<String>? _availableCities;  // Több település esetén
+```
+
+4.2 CONTROLLEREK
+----------------
+```dart
+final _zipCodeController = TextEditingController();
+final _cityController = TextEditingController();
+```
+
+4.3 LISTENER REGISZTRÁLÁS
+---------------------------
+```dart
+@override
+void initState() {
+  super.initState();
+  _loadPostalCodes();
+  _zipCodeController.addListener(_onZipCodeChanged);
+}
+
+@override
+void dispose() {
+  _zipCodeController.removeListener(_onZipCodeChanged);
+  _zipCodeController.dispose();
+  _cityController.dispose();
+  super.dispose();
+}
+```
+
+4.4 ADATBETÖLTÉS FÜGGVÉNY
+---------------------------
+```dart
+Future<void> _loadPostalCodes() async {
+  try {
+    setState(() {
+      _isLoadingPostalCodes = true;
+    });
+
+    final String jsonString =
+        await rootBundle.loadString('assets/postal_codes.json');
+    final Map<String, dynamic> jsonData = json.decode(jsonString);
+
+    _postalCodes = jsonData.map(
+      (key, value) => MapEntry(
+        key, 
+        List<String>.from(value as List)
+      )
+    );
+
+    if (mounted) {
+      setState(() {
+        _isLoadingPostalCodes = false;
+      });
+    }
+  } catch (e) {
+    debugPrint('Hiba az irányítószám adatok betöltésekor: $e');
+    if (mounted) {
+      setState(() {
+        _isLoadingPostalCodes = false;
+      });
+    }
+  }
+}
+```
+
+4.5 VÁLTOZÁS FIGYELÉS
+----------------------
+```dart
+void _onZipCodeChanged() {
+  final zipCode = _zipCodeController.text.trim();
+
+  // Csak akkor keresünk, ha pontosan 4 számjegy van
+  if (zipCode.length == 4 && RegExp(r'^\d{4}$').hasMatch(zipCode)) {
+    _lookupCity(zipCode);
+  } else {
+    // Ha nem 4 számjegy, eltávolítjuk a település mezőt és a dropdown-t
+    if (_availableCities != null) {
+      setState(() {
+        _availableCities = null;
+      });
+    }
+  }
+}
+```
+
+4.6 TELEPÜLÉS KERESÉS
+----------------------
+```dart
+void _lookupCity(String zipCode) {
+  if (_postalCodes == null) return;
+
+  final cities = _postalCodes![zipCode];
+
+  if (cities != null && cities.isNotEmpty) {
+    if (cities.length == 1) {
+      // Egy település: automatikusan kitöltjük
+      setState(() {
+        _cityController.text = cities[0];
+        _availableCities = null;
+      });
+    } else {
+      // Több település: lista megjelenítése
+      setState(() {
+        _availableCities = cities;
+        _cityController.clear();  // Töröljük, hogy válasszon
+      });
+    }
+  } else {
+    // Nincs találat
+    setState(() {
+      _availableCities = null;
+    });
+  }
+}
+```
+
+================================================================================
+5. FELHASZNÁLÓI ÉLMÉNY
+================================================================================
+
+5.1 EGY TELEPÜLÉS ESETÉN
+-------------------------
+┌─────────────────────────────────────────┐
+│ Irányítószám: [2030]                    │
+│ Település: [Érd] ← Automatikus kitöltés│
+└─────────────────────────────────────────┘
+
+- Felhasználó beírja: "2030"
+- Automatikusan kitöltődik: "Érd"
+- Nincs további akció szükséges
+
+5.2 TÖBB TELEPÜLÉS ESETÉN
+--------------------------
+┌─────────────────────────────────────────┐
+│ Irányítószám: [7678]                    │
+│ Település: [Válassz települést] ▼       │
+└─────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│ ℹ️ 3 település található, válassz egyet:│
+├─────────────────────────────────────────┤
+│ 🏢 Abaliget                             │
+│ 🏢 Husztót                              │
+│ 🏢 Kovácsszénája                        │
+└─────────────────────────────────────────┘
+
+- Felhasználó beírja: "7678"
+- Település mező csak olvashatóvá válik
+- Választólista megjelenik
+- Kattintásra település kiválasztása
+
+5.3 NINCS TALÁLAT
+-----------------
+┌─────────────────────────────────────────┐
+│ Irányítószám: [9999]                    │
+│ Település: [        ]                   │
+└─────────────────────────────────────────┘
+
+- Felhasználó beírja: "9999" (nem létező)
+- Nincs automatikus kitöltés
+- Felhasználó manuálisan írhatja be a települést
+
+5.4 LOADING INDIKÁTOR
+---------------------
+- Adatbetöltés közben: CircularProgressIndicator
+- Suffix icon-ban jelenik meg
+- Vizuális visszajelzés a felhasználónak
+
+================================================================================
+6. HIBAKEZELÉS
+================================================================================
+
+6.1 ADATBETÖLTÉSI HIBA
+-----------------------
+```dart
+catch (e) {
+  debugPrint('Hiba az irányítószám adatok betöltésekor: $e');
+  if (mounted) {
+    setState(() {
+      _isLoadingPostalCodes = false;
+    });
+  }
+}
+```
+
+- JSON fájl nem található → catch blokk
+- Hibás JSON formátum → catch blokk
+- Loading állapot visszaállítása
+- Felhasználó manuálisan írhatja be a települést
+
+6.2 VALIDÁCIÓS HIBAK
+--------------------
+```dart
+validator: (value) {
+  if (value == null || value.trim().isEmpty) {
+    return 'Kötelező';
+  }
+  if (!RegExp(r'^\d{4}$').hasMatch(value.trim())) {
+    return '4 számjegy';
+  }
+  return null;
+}
+```
+
+- Üres mező → "Kötelező" hibaüzenet
+- Nem 4 számjegy → "4 számjegy" hibaüzenet
+- Nem csak számjegyek → inputFormatters blokkolja
+
+6.3 NINCS TALÁLAT
+-----------------
+- Nem létező irányítószám → nincs hiba
+- Felhasználó manuálisan írhatja be
+- Település mező szerkeszthető marad
+
+================================================================================
+7. TECHNIKAI RÉSZLETEK
+================================================================================
+
+7.1 INPUT FORMÁTUM
+------------------
+```dart
+keyboardType: TextInputType.number,
+inputFormatters: [
+  FilteringTextInputFormatter.digitsOnly,
+],
+maxLength: 4,
+```
+
+- Csak számjegyeket fogad el
+- Maximum 4 karakter
+- Numerikus billentyűzet mobil eszközön
+
+7.2 REGEX VALIDÁCIÓ
+-------------------
+```dart
+RegExp(r'^\d{4}$')
+```
+
+- ^ = string eleje
+- \d = számjegy
+- {4} = pontosan 4 darab
+- $ = string vége
+- Csak 4 számjegyet fogad el
+
+7.3 PERFORMANCE
+----------------
+- Adatok memóriában tárolva (Map)
+- O(1) keresési idő (hash map)
+- Nincs hálózati kérés
+- Gyors válaszidő
+
+7.4 MEMÓRIA HASZNÁLAT
+---------------------
+- ~9600 irányítószám
+- Átlagosan 1-3 település/irányítószám
+- Becsült méret: ~500-1000 KB memóriában
+- Egyszeri betöltés, újrahasznosítható
+
+7.5 KÜLÖNBSÉGEK A KOMPONENSEK KÖZÖTT
+------------------------------------
+
+ShippingAddressDialog:
+- Választólista inline megjelenítés (Container)
+- Kattintásra település kiválasztása
+- Lista eltávolítása választás után
+
+ShippingAddressForm:
+- Választólista bottom sheet (ModalBottomSheet)
+- Kattintásra bottom sheet megnyitása
+- Település kiválasztása a bottom sheet-ben
+
+7.6 FUTURE IMPROVEMENTS
+-----------------------
+Lehetséges fejlesztések:
+- Debounce a kereséshez (nem azonnali keresés)
+- Autocomplete javaslatok
+- Offline cache
+- Település részkeresés
+- Irányítószám javaslatok (typo esetén)
+
+================================================================================
+ÖSSZEFOGLALÁS
+================================================================================
+
+Az irányítószám kezelés egy hatékony, felhasználóbarát megoldás, amely:
+✅ Automatikus település keresést biztosít
+✅ Egy település esetén automatikus kitöltés
+✅ Több település esetén választólista
+✅ Gyors működés (memóriában tárolt adatok)
+✅ Robusztus hibakezelés
+✅ Felhasználóbarát UI/UX
+
+A rendszer jól integrálódik a szállítási cím formokba és javítja
+a felhasználói élményt a gyorsabb és pontosabb adatbevitellel.
+
+================================================================================
+                              DOKUMENTUM VÉGE
+================================================================================
+
+

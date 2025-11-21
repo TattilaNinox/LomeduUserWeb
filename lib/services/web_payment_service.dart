@@ -81,15 +81,22 @@ class WebPaymentService {
   static Future<PaymentInitiationResult> initiatePaymentViaCloudFunction({
     required String planId,
     required String userId,
+    Map<String, String>? shippingAddress,
   }) async {
     try {
       final functions = FirebaseFunctions.instanceFor(region: 'europe-west1');
       final callable = functions.httpsCallable('initiateWebPayment');
 
-      final result = await callable.call({
+      final callData = <String, dynamic>{
         'planId': planId,
         'userId': userId,
-      });
+      };
+
+      if (shippingAddress != null && shippingAddress.isNotEmpty) {
+        callData['shippingAddress'] = shippingAddress;
+      }
+
+      final result = await callable.call(callData);
 
       final data = result.data as Map<String, dynamic>;
 
