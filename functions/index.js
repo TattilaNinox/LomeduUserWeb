@@ -14,9 +14,8 @@ const invoiceBuilder = require('./invoiceBuilder');
 
 admin.initializeApp();
 
-// Globális beállítások – régió
-// Megjegyzés: cpu beállítás Cloud Run-on nem szükséges, és problémát okozhat
-setGlobalOptions({ region: 'europe-west1' });
+// Globális beállítások – régió, erőforrások
+setGlobalOptions({ region: 'europe-west1', cpu: 1 });
 
 const db = admin.firestore();
 
@@ -53,8 +52,8 @@ function getSimplePayConfig() {
   };
 }
 
-// Megjegyzés: A SIMPLEPAY_CONFIG-ot mindig a függvényen belül kell inicializálni,
-// mert a secrets csak a függvény invokációkor érhetők el
+// Biztonság kedvéért definiálunk egy globális, hogy régi revíziók/async hivatkozások se dobjanak ReferenceError-t
+const SIMPLEPAY_CONFIG = getSimplePayConfig();
 
 // SimplePay hibakódok emberi nyelvű magyarázatai
 const SIMPLEPAY_ERROR_MESSAGES = {
@@ -812,22 +811,9 @@ exports.processWebPaymentWebhook = onCall({ secrets: ['SIMPLEPAY_SECRET_KEY','NE
 /**
  * HTTP webhook endpoint SimplePay számára
  */
-exports.simplepayWebhook = onRequest({ 
-  secrets: ['SIMPLEPAY_SECRET_KEY','NEXTAUTH_URL','SIMPLEPAY_ENV'],
-  timeoutSeconds: 60,
-  memory: '256MiB',
-  maxInstances: 10
-}, async (req, res) => {
+exports.simplepayWebhook = onRequest({ secrets: ['SIMPLEPAY_SECRET_KEY','NEXTAUTH_URL','SIMPLEPAY_ENV'] }, async (req, res) => {
   try {
-    // Konfiguráció betöltése - ha hiba van, azonnal jelezzük
-    let SIMPLEPAY_CONFIG;
-    try {
-      SIMPLEPAY_CONFIG = getSimplePayConfig();
-    } catch (configError) {
-      console.error('[simplepayWebhook] Config initialization failed', { error: configError.message });
-      res.status(500).send('Configuration error');
-      return;
-    }
+    const SIMPLEPAY_CONFIG = getSimplePayConfig();
     // CORS headers
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
