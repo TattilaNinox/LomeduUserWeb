@@ -53,7 +53,14 @@ function getSimplePayConfig() {
 }
 
 // Biztonság kedvéért definiálunk egy globális, hogy régi revíziók/async hivatkozások se dobjanak ReferenceError-t
-const SIMPLEPAY_CONFIG = getSimplePayConfig();
+// Megjegyzés: A secrets csak a függvény invokációkor érhetők el, ezért try-catch blokkba tesszük
+let SIMPLEPAY_CONFIG;
+try {
+  SIMPLEPAY_CONFIG = getSimplePayConfig();
+} catch (e) {
+  // A secrets még nem érhetők el modul betöltésekor, ez normális
+  SIMPLEPAY_CONFIG = null;
+}
 
 // SimplePay hibakódok emberi nyelvű magyarázatai
 const SIMPLEPAY_ERROR_MESSAGES = {
