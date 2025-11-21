@@ -14,8 +14,9 @@ const invoiceBuilder = require('./invoiceBuilder');
 
 admin.initializeApp();
 
-// Globális beállítások – régió, erőforrások
-setGlobalOptions({ region: 'europe-west1', cpu: 1 });
+// Globális beállítások – régió
+// Megjegyzés: cpu beállítás Cloud Run-on nem szükséges, és problémát okozhat
+setGlobalOptions({ region: 'europe-west1' });
 
 const db = admin.firestore();
 
