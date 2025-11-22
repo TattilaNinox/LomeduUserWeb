@@ -4,6 +4,7 @@ import 'dart:js_interop';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:package_info_plus/package_info_plus.dart';
 
 /// Szolgáltatás az alkalmazás verzió automatikus ellenőrzéséhez és frissítéséhez.
 ///
@@ -13,11 +14,13 @@ import 'dart:convert';
 /// - Automatikusan újratölti az oldalt új verzió esetén, ha a felhasználó inaktív
 /// - Nem frissít kritikus műveletek (kvíz, flashcard tanulás) közben
 class VersionCheckService {
-  /// A jelenlegi alkalmazás verzió (pubspec.yaml-ból)
-  static const String currentVersion = '1.0.1+4';
+  /// A jelenlegi alkalmazás verzió (dinamikusan betöltve)
+  static String _currentVersion = '...';
+
+  /// Publikus getter a verziószámhoz
+  static String get currentVersion => _currentVersion;
 
   // Private getter a backward compatibility miatt
-  static const String _currentVersion = currentVersion;
   static const Duration _checkInterval = Duration(minutes: 5);
   static const Duration _inactivityThreshold = Duration(minutes: 3);
   static const Duration _recentScrollThreshold = Duration(seconds: 10);
@@ -33,9 +36,12 @@ class VersionCheckService {
   VersionCheckService._internal();
 
   /// Elindítja a verzió ellenőrzést és az aktivitás figyelését
-  void start() {
+  Future<void> start() async {
     if (_isActive) return;
     _isActive = true;
+
+    // Verzió inicializálása
+    await _initVersion();
 
     debugPrint('[VersionCheck] Service started with version: $_currentVersion');
 
@@ -44,6 +50,18 @@ class VersionCheckService {
 
     // Verzió ellenőrzés indítása
     _startVersionCheck();
+  }
+
+  /// Inicializálja a verziót a csomagból
+  Future<void> _initVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      _currentVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+    } catch (e) {
+      debugPrint('[VersionCheck] Failed to get package info: $e');
+      // Fallback érték hiba esetén
+      _currentVersion = '1.0.1+10'; 
+    }
   }
 
   /// Leállítja a szolgáltatást

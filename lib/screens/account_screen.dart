@@ -24,6 +24,8 @@ class AccountScreen extends StatefulWidget {
 
 class _AccountScreenState extends State<AccountScreen> {
   bool _dialogShown = false;
+  bool? _isAdmin;
+  bool _isLoadingCheck = true;
 
   @override
   void initState() {
@@ -31,7 +33,51 @@ class _AccountScreenState extends State<AccountScreen> {
     // PostFrameCallback használata - NEM blokkolja a build-et
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _handlePaymentCallback();
+      _checkAdminStatus();
     });
+  }
+
+  Future<void> _checkAdminStatus() async {
+    if (!mounted) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      if (mounted) {
+        setState(() {
+          _isAdmin = false;
+          _isLoadingCheck = false;
+        });
+      }
+      return;
+    }
+
+    try {
+      // Email alapú ellenőrzés
+      final isAdminEmail = user.email == 'tattila.ninox@gmail.com';
+      
+      // Firestore-ban tárolt admin flag ellenőrzése
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      final isAdminValue = userDoc.data()?['isAdmin'];
+      final isAdminBool = isAdminValue is bool && isAdminValue == true;
+
+      if (mounted) {
+        setState(() {
+          _isAdmin = isAdminBool || isAdminEmail;
+          _isLoadingCheck = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('[AccountScreen] Admin check error: $e');
+      if (mounted) {
+        setState(() {
+          _isAdmin = false;
+          _isLoadingCheck = false;
+        });
+      }
+    }
   }
 
   Future<void> _handlePaymentCallback() async {
@@ -100,6 +146,75 @@ class _AccountScreenState extends State<AccountScreen> {
       );
     }
 
+    // Ha fizetési visszatérés van (SimplePay callback), akkor engedjük be a felhasználót,
+    // hogy a tranzakció lezárulhasson és lássa az eredményt.
+    final qp = GoRouterState.of(context).uri.queryParameters;
+    if (qp.containsKey('payment')) {
+      return _buildAccountContent(context, user);
+    }
+
+    // Admin ellenőrzés
+    if (_isLoadingCheck) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Fiók adatok'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.go('/notes'),
+          ),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_isAdmin != true) {
+      // Nem admin felhasználó - hozzáférés megtagadva
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Fiók adatok'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.go('/notes'),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.lock_outline,
+                  size: 64,
+                  color: Colors.red[600],
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Hozzáférés megtagadva',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Ez az oldal csak adminisztrátorok számára érhető el.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () => context.go('/notes'),
+                  child: const Text('Vissza a főoldalra'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Admin felhasználó - megengedjük a hozzáférést
     return _buildAccountContent(context, user);
   }
 

@@ -1,3 +1,4 @@
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -5,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import '../core/session_guard.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../services/version_check_service.dart';
 
 /// A bejelentkezési képernyőt megvalósító widget.
 ///
@@ -359,15 +359,34 @@ class LoginScreenState extends State<LoginScreen> {
                                 const Color(0xFF1E3A8A).withValues(alpha: 0.5),
                           ),
                           const SizedBox(width: 6),
-                          Text(
-                            'v${VersionCheckService.currentVersion}',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 11,
-                              fontWeight: FontWeight.w400,
-                              color: Colors.black.withValues(alpha: 0.4),
-                              letterSpacing: 0.3,
-                            ),
+                          FutureBuilder<PackageInfo>(
+                            future: PackageInfo.fromPlatform(),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return Text(
+                                  'v...',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w400,
+                                    color: Colors.black.withValues(alpha: 0.4),
+                                    letterSpacing: 0.3,
+                                  ),
+                                );
+                              }
+                              final version =
+                                  '${snapshot.data!.version}+${snapshot.data!.buildNumber}';
+                              return Text(
+                                'v$version',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w400,
+                                  color: Colors.black.withValues(alpha: 0.4),
+                                  letterSpacing: 0.3,
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),

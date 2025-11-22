@@ -1,6 +1,6 @@
 name: orlomed_admin_web
 description: Admin web interface for OrLomed
-version: 1.0.1+9
+version: 1.0.1+10
 environment:
   sdk: '>=3.0.0 <4.0.0'
 
@@ -42,7 +42,8 @@ dependencies:
   flutter_svg: ^2.2.1
   intl: ^0.20.2
 
-  device_info_plus: any
+  device_info_plus: ^9.1.2
+  package_info_plus: ^9.0.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
