@@ -45,6 +45,14 @@ class LoginScreenState extends State<LoginScreen> {
   // Ha értéke `null`, nem jelenik meg hibaüzenet.
   String? _errorMessage;
 
+  late Future<PackageInfo> _packageInfoFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _packageInfoFuture = PackageInfo.fromPlatform();
+  }
+
   /// A bejelentkezési folyamatot kezelő aszinkron metódus.
   Future<void> _signIn() async {
     try {
@@ -360,8 +368,20 @@ class LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(width: 6),
                           FutureBuilder<PackageInfo>(
-                            future: PackageInfo.fromPlatform(),
+                            future: _packageInfoFuture,
                             builder: (context, snapshot) {
+                              if (snapshot.hasError) {
+                                return Text(
+                                  'v?',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w400,
+                                    color: Colors.black.withValues(alpha: 0.4),
+                                    letterSpacing: 0.3,
+                                  ),
+                                );
+                              }
                               if (!snapshot.hasData) {
                                 return Text(
                                   'v...',
