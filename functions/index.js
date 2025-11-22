@@ -1313,6 +1313,14 @@ exports.onWebPaymentWrite = onDocumentWritten({
                     invoiceGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
                     vevoifiokurl: result.vevoifiokurl || null
                 });
+
+                // ============================================================
+                // SZÁLLÍTÁSI ADATOK TÖRLÉSE (GDPR / ADATMINIMALIZÁLÁS)
+                // ============================================================
+                console.log('[onWebPaymentWrite] Deleting shipping address for user', { userId });
+                await db.collection('users').doc(userId).update({
+                    shippingAddress: admin.firestore.FieldValue.delete()
+                });
             } else {
                 console.error('[onWebPaymentWrite] Invoice generation failed', { error: result.error });
                 // Hiba mentése

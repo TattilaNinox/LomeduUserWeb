@@ -370,34 +370,20 @@ class LoginScreenState extends State<LoginScreen> {
                           FutureBuilder<PackageInfo>(
                             future: _packageInfoFuture,
                             builder: (context, snapshot) {
-                              if (snapshot.hasError) {
-                                return Text(
-                                  'v?',
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w400,
-                                    color: Colors.black.withValues(alpha: 0.4),
-                                    letterSpacing: 0.3,
-                                  ),
-                                );
+                              String versionText = 'v1.0.1'; // Fallback verzió
+                              
+                              if (snapshot.hasData) {
+                                versionText = 'v${snapshot.data!.version}';
+                                if (snapshot.data!.buildNumber.isNotEmpty) {
+                                  versionText += '+${snapshot.data!.buildNumber}';
+                                }
+                              } else if (snapshot.hasError) {
+                                debugPrint('PackageInfo error: ${snapshot.error}');
+                                // Hiba esetén is a fallback-et használjuk, nem 'v?'-et
                               }
-                              if (!snapshot.hasData) {
-                                return Text(
-                                  'v...',
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w400,
-                                    color: Colors.black.withValues(alpha: 0.4),
-                                    letterSpacing: 0.3,
-                                  ),
-                                );
-                              }
-                              final version =
-                                  '${snapshot.data!.version}+${snapshot.data!.buildNumber}';
+
                               return Text(
-                                'v$version',
+                                versionText,
                                 style: TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 11,
