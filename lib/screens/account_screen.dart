@@ -132,6 +132,50 @@ class _AccountScreenState extends State<AccountScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Ha fizetési visszatérés van (SimplePay callback), akkor engedjük be a felhasználót
+    // és mutatjuk a loading állapotot, amíg a user inicializálódik
+    final qp = GoRouterState.of(context).uri.queryParameters;
+    if (qp.containsKey('payment')) {
+      return StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('Fiók adatok')),
+              body: const Center(child: CircularProgressIndicator()),
+            );
+          }
+          
+          // Ha valamiért nincs user, de payment callback van (pl. session elveszett),
+          // akkor várjunk egy kicsit vagy irányítsuk át loginra
+          if (!snapshot.hasData) {
+             // Itt lehetne egy "Várakozás a bejelentkezésre..." képernyő
+             // vagy egy gomb a bejelentkezéshez
+             return Scaffold(
+                appBar: AppBar(title: const Text('Fiók adatok')),
+                body: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      const Text('Bejelentkezési adatok frissítése...'),
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: () => context.go('/login'), 
+                        child: const Text('Bejelentkezés')
+                      )
+                    ],
+                  ),
+                ),
+             );
+          }
+
+          return _buildAccountContent(context, snapshot.data!);
+        },
+      );
+    }
+
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       return Scaffold(
@@ -144,13 +188,6 @@ class _AccountScreenState extends State<AccountScreen> {
         ),
         body: const Center(child: Text('Nincs bejelentkezett felhasználó.')),
       );
-    }
-
-    // Ha fizetési visszatérés van (SimplePay callback), akkor engedjük be a felhasználót,
-    // hogy a tranzakció lezárulhasson és lássa az eredményt.
-    final qp = GoRouterState.of(context).uri.queryParameters;
-    if (qp.containsKey('payment')) {
-      return _buildAccountContent(context, user);
     }
 
     // Admin ellenőrzés

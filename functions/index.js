@@ -379,6 +379,16 @@ exports.initiateWebPayment = onCall({
 
     const userData = userDoc.data();
     
+    // SZERVER OLDALI ELLENŐRZÉS: Szállítási cím megléte és validitása
+    const shippingAddress = userData.shippingAddress;
+    if (!shippingAddress || !shippingAddress.name || !shippingAddress.zipCode || !shippingAddress.city || !shippingAddress.address) {
+      console.log('[initiateWebPayment] HIBA: Szállítási cím hiányos vagy nincs megadva', { userId });
+      throw new HttpsError(
+        'failed-precondition', 
+        'A fizetéshez érvényes szállítási és számlázási cím szükséges. Kérjük, töltse ki az adatokat a fiók beállításokban.'
+      );
+    }
+    
     // SZERVER OLDALI ELLENŐRZÉS: Adattovábbítási nyilatkozat elfogadása
     if (!userData.dataTransferConsentLastAcceptedDate) {
       console.log('[initiateWebPayment] HIBA: Adattovábbítási nyilatkozat nincs elfogadva', { userId });
@@ -398,6 +408,15 @@ exports.initiateWebPayment = onCall({
 
     if (!email) {
       throw new HttpsError('failed-precondition', 'A felhasználóhoz nem tartozik email cím');
+    }
+
+    // Admin ár felülírása
+    let finalPrice = plan.price;
+    const isAdmin = userData.isAdmin === true || email === 'tattila.ninox@gmail.com';
+    
+    if (isAdmin) {
+        console.log('[initiateWebPayment] Admin user detected, applying discount price');
+        finalPrice = 5;
     }
 
     const orderRef = `WEB_${userId}_${Date.now()}`;
@@ -438,7 +457,7 @@ exports.initiateWebPayment = onCall({
         title: plan.name,
         description: plan.description,
         amount: 1,
-        price: plan.price,
+        price: finalPrice,
       }],
     };
     
@@ -498,13 +517,13 @@ exports.initiateWebPayment = onCall({
       // Audit log - sikertelen fizetés indítás
       await db.collection('payment_audit_logs').add({
         userId,
-        orderRef,
-        action: 'PAYMENT_INITIATION_FAILED',
-        planId: canonicalPlanId,
-        amount: plan.price,
-        environment: SIMPLEPAY_CONFIG.env,
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        metadata: {
+      orderRef,
+      action: 'PAYMENT_INITIATION_FAILED',
+      planId: canonicalPlanId,
+      amount: finalPrice,
+      environment: SIMPLEPAY_CONFIG.env,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      metadata: {
           errorCodes: errorCodes || [],
           simplePayResponse: paymentData,
           errorMessage: getSimplePayErrorMessage(errorCodes),
@@ -523,7 +542,7 @@ exports.initiateWebPayment = onCall({
       planId: canonicalPlanId,
       orderRef,
       simplePayTransactionId: paymentData.transactionId || null,
-      amount: plan.price,
+      amount: finalPrice,
       status: 'INITIATED',
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -535,7 +554,7 @@ exports.initiateWebPayment = onCall({
       orderRef,
       action: 'PAYMENT_INITIATED',
       planId: canonicalPlanId,
-      amount: plan.price,
+      amount: finalPrice,
       environment: SIMPLEPAY_CONFIG.env,
       paymentUrl: paymentData.paymentUrl,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
@@ -1236,6 +1255,77 @@ exports.onWebPaymentWrite = onDocumentWritten({
     });
 
     console.log('[onWebPaymentWrite] user updated from web_payments', { userId, orderRef: event.params.orderRef, status });
+
+    // ============================================================
+    // AUTOMATIKUS SZÁMLA GENERÁLÁS (5. pont)
+    // ============================================================
+    
+    // Csak akkor generálunk számlát, ha sikeres a fizetés ÉS még nincs számlaszám a tranzakción
+    if (status === 'SUCCESS' || status === 'COMPLETED') {
+        // Ellenőrizzük, hogy van-e már számla
+        if (after.invoiceNumber) {
+            console.log('[onWebPaymentWrite] Invoice already exists, skipping generation', { invoiceNumber: after.invoiceNumber });
+            return;
+        }
+
+        try {
+            console.log('[onWebPaymentWrite] Starting automated invoice generation for', { orderRef: event.params.orderRef });
+            
+            // User adatok lekérése (ha még nincs meg)
+            const userDoc = await db.collection('users').doc(userId).get();
+            if (!userDoc.exists) {
+                console.error('[onWebPaymentWrite] User not found for invoice generation', { userId });
+                return;
+            }
+            const userData = userDoc.data();
+            
+            // Szállítási adatok (ami egyben a számlázási cím is)
+            const shippingAddress = userData.shippingAddress;
+            if (!shippingAddress) {
+                console.error('[onWebPaymentWrite] Shipping address missing, cannot generate invoice', { userId });
+                return;
+            }
+
+            // Fizetési adatok előkészítése
+            const paymentData = {
+                orderRef: event.params.orderRef,
+                amount: after.amount || plan.price,
+            };
+
+            // Számla adatok összeállítása
+            const invoiceData = invoiceBuilder.buildInvoiceData({
+                userData,
+                shippingAddress,
+                paymentData,
+                plan
+            });
+
+            // Számla létrehozása a Számlázz.hu-val
+            const result = await szamlaAgent.createInvoice(invoiceData);
+
+            if (result.success) {
+                console.log('[onWebPaymentWrite] Invoice generated successfully', { invoiceNumber: result.invoiceNumber });
+                
+                // Számla adatok mentése a tranzakcióhoz
+                await event.data.after.ref.update({
+                    invoiceNumber: result.invoiceNumber,
+                    invoicePdf: result.pdfBase64 || null,
+                    invoiceGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
+                    vevoifiokurl: result.vevoifiokurl || null
+                });
+            } else {
+                console.error('[onWebPaymentWrite] Invoice generation failed', { error: result.error });
+                // Hiba mentése
+                await event.data.after.ref.update({
+                    invoiceError: result.error,
+                    invoiceGenerationAttemptedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+            }
+
+        } catch (invoiceErr) {
+            console.error('[onWebPaymentWrite] Exception during invoice generation', invoiceErr);
+        }
+    }
   } catch (err) {
     console.error('[onWebPaymentWrite] error', { message: err?.message, stack: err?.stack });
   }
