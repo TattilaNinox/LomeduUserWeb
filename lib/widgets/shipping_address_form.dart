@@ -613,6 +613,9 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
                         ? (value) {
                             setState(() {
                               _isCompany = value ?? false;
+                              if (!_isCompany) {
+                                _taxNumberController.clear();
+                              }
                             });
                           }
                         : null,
@@ -812,7 +815,7 @@ class _ShippingAddressFormState extends State<ShippingAddressForm> {
               ),
 
               // Adószám mező (csak cég esetén vagy szerkesztés módban)
-              if (_isCompany || _isEditing) ...[
+              if (_isCompany) ...[
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _taxNumberController,
