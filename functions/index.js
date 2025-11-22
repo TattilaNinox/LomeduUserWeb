@@ -6,6 +6,8 @@ const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const { buildTemplate, logoAttachment } = require('./emailTemplates');
+const szamlaAgent = require('./szamlaAgent');
+const invoiceBuilder = require('./invoiceBuilder');
 
 // Konfiguráció forrása: 1) Firebase Functions config (firebase functions:config:set smtp.*),
 // 2) környezeti változók, 3) ha emulátor fut, próbáljon meg helyi SMTP-t (opcionális).
@@ -271,6 +273,76 @@ exports.verifyAndChangeDevice = onCall(async (request) => {
 // });
 
 // ---- HTTP (onRequest) változatok, explicit CORS headerekkel ----
+
+// ============================================================================
+// SZÁMLA GENERÁLÁS (MANUÁLIS / TESZT)
+// ============================================================================
+exports.generateInvoiceManually = onCall(async (request) => {
+  // 1. Auth check
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Bejelentkezés szükséges');
+  }
+  const userId = request.auth.uid;
+
+  // 2. Input validation
+  const { shippingAddress, planId, amount } = request.data || {};
+  if (!shippingAddress) {
+    throw new HttpsError('invalid-argument', 'Szállítási cím szükséges');
+  }
+
+  try {
+    // 3. Get user data
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.exists ? userDoc.data() : {};
+
+    // 4. Plan setup
+    const plan = PAYMENT_PLANS[planId] || { 
+        name: 'Teszt Csomag', 
+        price: amount || 0, 
+        description: 'Manuális számla generálás',
+        id: planId 
+    };
+
+    // 5. Payment data placeholder
+    const paymentData = {
+        orderRef: `MANUAL_${userId}_${Date.now()}`,
+        amount: amount || plan.price
+    };
+
+    // 6. Build invoice data
+    const invoiceData = invoiceBuilder.buildInvoiceData({
+        userData,
+        shippingAddress,
+        paymentData,
+        plan
+    });
+
+    console.log('[generateInvoiceManually] Invoice data built:', JSON.stringify(invoiceData, null, 2));
+
+    // 7. Create invoice
+    const result = await szamlaAgent.createInvoice(invoiceData);
+
+    if (!result.success) {
+        console.error('[generateInvoiceManually] Invoice generation failed:', result.error);
+        return {
+            success: false,
+            error: result.error
+        };
+    }
+
+    console.log('[generateInvoiceManually] Invoice generated successfully:', result.invoiceNumber);
+
+    return {
+        success: true,
+        invoiceNumber: result.invoiceNumber,
+        pdf: result.pdfBase64
+    };
+
+  } catch (error) {
+      console.error('[generateInvoiceManually] Error:', error);
+      throw new HttpsError('internal', error.message || 'Ismeretlen hiba');
+  }
+});
 
 // ============================================================================
 // WEBES FIZETÉSI FUNKCIÓK - OTP SIMPLEPAY v2 INTEGRÁCIÓ
