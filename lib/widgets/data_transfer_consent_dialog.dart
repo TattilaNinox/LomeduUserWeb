@@ -29,6 +29,7 @@ class DataTransferConsentDialog extends StatefulWidget {
 
 class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
   bool _accepted = false;
+  bool _withdrawalAccepted = false;
 
   Future<void> _launchSimplePayUrl() async {
     final uri = Uri.parse('https://simplepay.hu/adatkezelesi-tajekoztatok/');
@@ -50,8 +51,8 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
     final screenSize = MediaQuery.of(context).size;
     final isMobile = screenSize.width < 600;
     final dialogHeight = isMobile
-        ? screenSize.height * 0.5 // Mobil: 50%
-        : (screenSize.height * 0.6).clamp(300.0, 500.0);
+        ? screenSize.height * 0.4 // Mobil: 40% (kisebb, hogy kiférjen a 2 checkbox)
+        : (screenSize.height * 0.5).clamp(200.0, 450.0);
     final fontSize = isMobile ? 11.0 : 13.0;
     final titleSize = isMobile ? 13.0 : 15.0;
 
@@ -97,7 +98,7 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
               ),
             ),
             SizedBox(height: isMobile ? 8 : 16),
-            // Checkbox
+            // Checkbox 1 - Adattovábbítás
             CheckboxListTile(
               value: _accepted,
               onChanged: (value) {
@@ -116,6 +117,25 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
               contentPadding: EdgeInsets.zero,
               dense: true,
             ),
+            // Checkbox 2 - Elállási jog
+            CheckboxListTile(
+              value: _withdrawalAccepted,
+              onChanged: (value) {
+                setState(() {
+                  _withdrawalAccepted = value ?? false;
+                });
+              },
+              title: Text(
+                'Kérem a szolgáltatás azonnali megkezdését, és tudomásul veszem, hogy ezzel elveszítem a 14 napos elállási jogomat.',
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: isMobile ? 12 : 14,
+                ),
+              ),
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
           ],
         ),
       ),
@@ -125,7 +145,9 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
           child: Text('Mégse', style: TextStyle(fontSize: isMobile ? 13 : 14)),
         ),
         ElevatedButton(
-          onPressed: _accepted ? () => Navigator.of(context).pop(true) : null,
+          onPressed: (_accepted && _withdrawalAccepted)
+              ? () => Navigator.of(context).pop(true)
+              : null,
           child:
               Text('Elfogadom', style: TextStyle(fontSize: isMobile ? 13 : 14)),
         ),
@@ -205,6 +227,34 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
         _buildDataRow('Cégjegyzékszám:', '13 09 084075', isMobile, fontSize),
         _buildDataRow('Adószám:', '11803010-2-13', isMobile, fontSize),
         _buildDataRow('E-mail:', 'support@lomedu.hu', isMobile, fontSize),
+        SizedBox(height: isMobile ? 8 : 16),
+        Text(
+          '7. Elállási jog és annak elvesztése',
+          style: TextStyle(fontSize: titleSize, fontWeight: FontWeight.bold),
+        ),
+        SizedBox(height: isMobile ? 6 : 12),
+        Text(
+          '7.1. A 14 napos elállási jog alapszabálya',
+          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          'A fogyasztót a 45/2014. (II. 26.) Korm. rendelet 20. §-a alapján főszabály szerint megilletné a 14 napos indokolás nélküli elállási jog.',
+          style: TextStyle(fontSize: fontSize),
+        ),
+        SizedBox(height: isMobile ? 4 : 8),
+        Text(
+          '7.2. Kivétel: Az elállási jog elvesztése',
+          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          'A Korm. rendelet 29. § (1) bekezdés m) pontja alapján a fogyasztó nem gyakorolhatja elállási jogát a nem tárgyi adathordozón nyújtott digitális adattartalom (jelen Webalkalmazás) tekintetében, ha a vállalkozás a fogyasztó kifejezett, előzetes beleegyezésével kezdte meg a teljesítést, és a fogyasztó e beleegyezésével egyidejűleg nyilatkozott annak tudomásulvételéről, hogy a teljesítés megkezdését követően elveszíti elállási jogát.',
+          style: TextStyle(fontSize: fontSize),
+        ),
+        SizedBox(height: isMobile ? 4 : 8),
+        Text(
+          'A Felhasználó a fizetési folyamat során a jelölőnégyzet bepipálásával kifejezetten kéri a szolgáltatás azonnali megkezdését, és tudomásul veszi, hogy ezzel a sikeres fizetés pillanatától kezdve elveszíti a 14 napos elállási (pénzvisszafizetési) jogát.',
+          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
+        ),
       ],
     );
   }
@@ -281,6 +331,34 @@ class _DataTransferConsentDialogState extends State<DataTransferConsentDialog> {
         _buildDataRow('Registration:', '13 09 084075', isMobile, fontSize),
         _buildDataRow('Tax number:', '11803010-2-13', isMobile, fontSize),
         _buildDataRow('Email:', 'support@lomedu.hu', isMobile, fontSize),
+        SizedBox(height: isMobile ? 8 : 16),
+        Text(
+          '7. Right of withdrawal and its loss',
+          style: TextStyle(fontSize: titleSize, fontWeight: FontWeight.bold),
+        ),
+        SizedBox(height: isMobile ? 6 : 12),
+        Text(
+          '7.1. General rule of the 14-day right of withdrawal',
+          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          'Based on Section 20 of Gov. Decree 45/2014 (II. 26.), the consumer is generally entitled to a 14-day right of withdrawal without justification.',
+          style: TextStyle(fontSize: fontSize),
+        ),
+        SizedBox(height: isMobile ? 4 : 8),
+        Text(
+          '7.2. Exception: Loss of right of withdrawal',
+          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          'Based on Section 29 (1) m) of the Gov. Decree, the consumer may not exercise their right of withdrawal with respect to digital content provided on a non-tangible medium (this Web Application) if the business has commenced performance with the consumer\'s express, prior consent, and the consumer has acknowledged, simultaneously with this consent, that they will lose their right of withdrawal after the commencement of performance.',
+          style: TextStyle(fontSize: fontSize),
+        ),
+        SizedBox(height: isMobile ? 4 : 8),
+        Text(
+          'By checking the checkbox during the payment process, the User expressly requests the immediate commencement of the service and acknowledges that they lose their 14-day right of withdrawal (refund) from the moment of successful payment.',
+          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
+        ),
       ],
     );
   }
