@@ -36,16 +36,30 @@ function buildInvoiceData({ userData, shippingAddress, paymentData, plan }) {
   const buyer = buildBuyerData(userData, shippingAddress);
 
   // Számla fejléc
-  let comment = `Előfizetés: ${plan.name}`;
+  // Megjegyzés összeállítása
+  let commentParts = [];
   
   // SimplePay tranzakció azonosító hozzáadása - HA VAN
   if (paymentData.transactionId) {
-    comment += ` | SimplePay azonosító: ${paymentData.transactionId}`;
+    commentParts.push(`SimplePay azonosító: ${paymentData.transactionId}`);
   }
   
   // Elállási jog lemondásának visszaigazolása - MINDIG BELEKERÜL
-  // Eredeti, egy soros verzió (sortörés nélkül)
-  comment += `\n\nVisszaigazoljuk, hogy Ön kifejezetten kérte a teljesítés azonnali megkezdését, és tudomásul vette az elállási jog ezzel járó elvesztését.`;
+  commentParts.push(`Visszaigazoljuk, hogy Ön kifejezetten kérte a teljesítés azonnali megkezdését, és tudomásul vette az elállási jog ezzel járó elvesztését.`);
+
+  // Összefűzés
+  const comment = commentParts.join('\n\n');
+
+  // Rendelésszám tisztítása a számlához (csak a timestamp/egyedi azonosító a végéről)
+  // Formátum: WEB_userId_timestamp -> timestamp
+  let displayOrderRef = paymentData.orderRef;
+  if (displayOrderRef && displayOrderRef.includes('_')) {
+    const parts = displayOrderRef.split('_');
+    // Ha legalább 3 részből áll (WEB, userId, timestamp), akkor az utolsót vesszük
+    if (parts.length >= 3) {
+      displayOrderRef = parts[parts.length - 1];
+    }
+  }
 
   const header = {
     issueDate,
@@ -54,7 +68,7 @@ function buildInvoiceData({ userData, shippingAddress, paymentData, plan }) {
     paymentMethod: 'bankkartya',
     currency: 'HUF',
     language: 'hu',
-    orderRef: paymentData.orderRef,
+    orderRef: displayOrderRef,
     paid: true,
     template: 'SzlaMost',
     // Megjegyzés: a Számlázz.hu API-ban a fejléc comment nem mindig jelenik meg jól,
