@@ -106,14 +106,14 @@ const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'https://lomedu-user-web.web.ap
 const PAYMENT_PLANS = {
   // Kanonikus azonosító
   monthly_premium_prepaid: {
-    name: 'Havi előfizetés',
+    name: '30 napos előfizetés',
     price: 4350,
     description: 'Teljes hozzáférés minden funkcióhoz',
     subscriptionDays: 30,
   },
   // Régi alias a visszafelé kompatibilitásért
   monthly_web: {
-    name: 'Havi előfizetés',
+    name: '30 napos előfizetés',
     price: 4350,
     description: 'Teljes hozzáférés minden funkcióhoz',
     subscriptionDays: 30,

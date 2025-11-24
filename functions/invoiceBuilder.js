@@ -38,12 +38,13 @@ function buildInvoiceData({ userData, shippingAddress, paymentData, plan }) {
   // Számla fejléc
   let comment = `Előfizetés: ${plan.name}`;
   
-  // SimplePay tranzakció azonosító hozzáadása
+  // SimplePay tranzakció azonosító hozzáadása - HA VAN
   if (paymentData.transactionId) {
     comment += ` | SimplePay azonosító: ${paymentData.transactionId}`;
   }
   
-  // Elállási jog lemondásának visszaigazolása
+  // Elállási jog lemondásának visszaigazolása - MINDIG BELEKERÜL
+  // Eredeti, egy soros verzió (sortörés nélkül)
   comment += `\n\nVisszaigazoljuk, hogy Ön kifejezetten kérte a teljesítés azonnali megkezdését, és tudomásul vette az elállási jog ezzel járó elvesztését.`;
 
   const header = {
@@ -56,6 +57,10 @@ function buildInvoiceData({ userData, shippingAddress, paymentData, plan }) {
     orderRef: paymentData.orderRef,
     paid: true,
     template: 'SzlaMost',
+    // Megjegyzés: a Számlázz.hu API-ban a fejléc comment nem mindig jelenik meg jól,
+    // ezért a tételsorba is beillesztjük, ha kell, de a jelenlegi logika szerint
+    // az invoiceBuilder-ben a comment mező a fejlécben van.
+    // Az xml generálásnál (szamlaAgent.js) a fejléc commentet át kell adni.
     comment: comment
   };
 
