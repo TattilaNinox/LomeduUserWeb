@@ -173,11 +173,10 @@ function buildInvoiceXml(invoiceData) {
         fizmod: invoiceData.header.paymentMethod || 'bankkartya',
         penznem: invoiceData.header.currency || 'HUF',
         szamlaNyelve: invoiceData.header.language || 'hu',
+        megjegyzes: invoiceData.header.comment || '',
         rendelesSzam: invoiceData.header.orderRef || '',
         fizetve: invoiceData.header.paid !== undefined ? invoiceData.header.paid : true,
         szamlaSablon: invoiceData.header.template || 'SzlaMost'
-        // Megjegyzés: megjegyzes elem eltávolítva a fejlec részről XML séma hiba miatt
-        // A megjegyzés a tételekben szerepel, ha szükséges (item.comment)
       },
       elado: invoiceData.seller || {},
       vevo: (() => {
@@ -296,7 +295,8 @@ function buildInvoiceXml(invoiceData) {
     };
 
     // megjegyzes csak a bruttoErtek után lehet (XML séma követelmény)
-    const comment = item.comment || (index === 0 && invoiceData.header.comment ? invoiceData.header.comment : null);
+    const comment = item.comment;
+        
     if (comment) {
       itemObj.megjegyzes = comment;
     }
