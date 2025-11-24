@@ -36,6 +36,16 @@ function buildInvoiceData({ userData, shippingAddress, paymentData, plan }) {
   const buyer = buildBuyerData(userData, shippingAddress);
 
   // Számla fejléc
+  let comment = `Előfizetés: ${plan.name}`;
+  
+  // SimplePay tranzakció azonosító hozzáadása
+  if (paymentData.transactionId) {
+    comment += ` | SimplePay azonosító: ${paymentData.transactionId}`;
+  }
+  
+  // Elállási jog lemondásának visszaigazolása
+  comment += `\n\nVisszaigazoljuk, hogy Ön kifejezetten kérte a teljesítés azonnali megkezdését, és tudomásul vette az elállási jog ezzel járó elvesztését.`;
+
   const header = {
     issueDate,
     fulfillmentDate,
@@ -46,7 +56,7 @@ function buildInvoiceData({ userData, shippingAddress, paymentData, plan }) {
     orderRef: paymentData.orderRef,
     paid: true,
     template: 'SzlaMost',
-    comment: `Előfizetés: ${plan.name}`
+    comment: comment
   };
 
   // Számla tétel

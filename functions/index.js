@@ -1289,6 +1289,7 @@ exports.onWebPaymentWrite = onDocumentWritten({
             // Fizetési adatok előkészítése
             const paymentData = {
                 orderRef: event.params.orderRef,
+                transactionId: after.transactionId || after.simplePayTransactionId,
                 amount: after.amount || plan.price,
             };
 
