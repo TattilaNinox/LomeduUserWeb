@@ -147,24 +147,29 @@ class _AccountScreenState extends State<AccountScreen> {
           }
           
           // Ha valamiért nincs user, de payment callback van (pl. session elveszett),
-          // akkor várjunk egy kicsit vagy irányítsuk át loginra
+          // akkor automatikusan átirányítjuk a bejelentkezésre
           if (!snapshot.hasData) {
-             // Itt lehetne egy "Várakozás a bejelentkezésre..." képernyő
-             // vagy egy gomb a bejelentkezéshez
+             // PostFrameCallback használata az átirányításhoz (build közben nem lehet)
+             WidgetsBinding.instance.addPostFrameCallback((_) {
+               if (context.mounted) {
+                 final uri = GoRouterState.of(context).uri;
+                 final qp = uri.queryParameters;
+                 final queryString = Uri(queryParameters: qp).query;
+                 // Átirányítás a loginra, redirect paraméterrel
+                 context.go('/login?redirect=/account?$queryString');
+               }
+             });
+             
+             // Amíg az átirányítás megtörténik, egy töltőképernyőt mutatunk
              return Scaffold(
                 appBar: AppBar(title: const Text('Fiók adatok')),
-                body: Center(
+                body: const Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const CircularProgressIndicator(),
-                      const SizedBox(height: 16),
-                      const Text('Bejelentkezési adatok frissítése...'),
-                      const SizedBox(height: 16),
-                      TextButton(
-                        onPressed: () => context.go('/login'), 
-                        child: const Text('Bejelentkezés')
-                      )
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Átirányítás a bejelentkezéshez...'),
                     ],
                   ),
                 ),
