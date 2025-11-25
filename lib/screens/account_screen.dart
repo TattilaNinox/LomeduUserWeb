@@ -183,6 +183,13 @@ class _AccountScreenState extends State<AccountScreen> {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
+      // Ha nincs bejelentkezve, irányítsuk át a loginra
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.go('/login');
+        }
+      });
+
       return Scaffold(
         appBar: AppBar(
           title: const Text('Fiók adatok'),
@@ -191,7 +198,7 @@ class _AccountScreenState extends State<AccountScreen> {
             onPressed: () => context.go('/notes'),
           ),
         ),
-        body: const Center(child: Text('Nincs bejelentkezett felhasználó.')),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 

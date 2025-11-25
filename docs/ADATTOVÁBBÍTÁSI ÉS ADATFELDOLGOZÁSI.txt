@@ -1,0 +1,111 @@
+ADATTOVÁBBÍTÁSI ÉS ADATFELDOLGOZÁSI TÁJÉKOZTATÓ (TERVEZET)
+
+Jelen dokumentum a Lomedu webes alkalmazás (továbbiakban: Szolgáltatás) működése során megvalósuló adattovábbításokat, valamint az igénybe vett adatfeldolgozók körét és az általuk kezelt adatok típusát részletezi közérthető, hivatalos formában.
+
+1. IGÉNYBE VETT ADATFELDOLGOZÓK ÉS KÜLSŐ SZOLGÁLTATÓK
+
+A Szolgáltatás üzemeltetése során az Adatkezelő az alábbi partnereket veszi igénybe a szolgáltatás nyújtásához, a fizetések lebonyolításához, valamint a törvényi kötelezettségek (számlázás) teljesítéséhez.
+
+1.1. Tárhelyszolgáltatás és Felhasználói Azonosítás
+
+Szolgáltató neve: Google LLC
+
+Szolgáltatás: Firebase (Authentication, Firestore, Cloud Functions, Storage)
+
+Székhely: Mountain View, California, USA
+
+Tevékenység: A Szolgáltatás teljes informatikai hátterének, adatbázisának és fájltárolásának biztosítása, valamint a felhasználók biztonságos beléptetése.
+
+Továbbított és kezelt adatok köre:
+
+Azonosítási adatok: E-mail cím, jelszó (kizárólag titkosított, visszafejthetetlen formában), egyedi felhasználói azonosító (User ID).
+
+Profiladatok: Név, regisztráció dátuma, fiók státusza.
+
+Előfizetési és tranzakciós adatok: Előfizetés típusa, érvényessége, fizetési tranzakciók azonosítói.
+
+Tanulási adatok: A felhasználó tanulási előzményei, statisztikái, eredményei.
+
+Biztonsági adatok: Eszközazonosító adatok (csalásmegelőzés céljából).
+
+Adattárolás helye: Európai Unió (elsődlegesen: europe-west1 régió).
+
+1.2. Online Fizetési Szolgáltatás
+
+Szolgáltató neve: OTP Mobil Kft.
+
+Szolgáltatás: SimplePay Online Fizetési Rendszer
+
+Székhely: 1143 Budapest, Hungária krt. 17-19.
+
+Tevékenység: Bankkártyás fizetések biztonságos lebonyolítása.
+
+Az adattovábbítás célja: A felhasználó által kezdeményezett online fizetési tranzakció végrehajtása, a tranzakció visszaigazolása és a felhasználók védelme érdekében végzett csalásmonitorozás.
+
+Továbbított adatok köre:
+
+Felhasználó e-mail címe.
+
+Egyedi megrendelési azonosító.
+
+A megvásárolt szolgáltatás megnevezése és leírása (pl. "Havi prémium előfizetés").
+
+Fizetendő végösszeg és pénznem.
+
+Tranzakció nyelve.
+
+Fontos tájékoztatás: A bankkártya adatait (kártyaszám, lejárati dátum, CVC kód) a Szolgáltató nem ismeri meg és nem tárolja. Azokat a felhasználó közvetlenül az OTP Mobil Kft. titkosított felületén adja meg.
+
+1.3. Számlázási Szolgáltatás
+
+Szolgáltató neve: KBOSS.hu Kft.
+
+Szolgáltatás: Számlázz.hu
+
+Székhely: 1031 Budapest, Záhony utca 7.
+
+Tevékenység: Elektronikus számla automatikus kiállítása és megküldése.
+
+Az adattovábbítás célja: A számviteli törvényben foglalt bizonylat-kiállítási kötelezettség teljesítése.
+
+Továbbított adatok köre:
+
+Vevő adatok: Név (vagy cégnév), Számlázási cím (Ország, Irányítószám, Település, Utca, Házszám), E-mail cím.
+
+Adózási adatok: Adószám (kizárólag céges vásárlás esetén), adóalanyiság státusza.
+
+Tranzakció adatok: Számla tételei, összegek (nettó, ÁFA, bruttó), teljesítés dátuma, fizetési mód.
+
+2. ADATOK KEZELÉSE A FIZETÉSI ÉS SZÁMLÁZÁSI FOLYAMATBAN
+
+A Szolgáltatás használata során az adatkezelés az adatminimalizálás elvét követi:
+
+Számlázási cím: A fizetéshez szükséges számlázási adatokat a rendszer a számla kiállításáig ideiglenesen tárolja. A sikeres számlázást követően ezek az adatok a felhasználói profilból automatikusan törlésre kerülnek, azok kizárólag a jogszabály által előírt számlamásolaton (a Számlázz.hu rendszerében) maradnak meg.
+
+Bankkártya adatok: A Szolgáltató semmilyen formában nem fér hozzá a felhasználó banki adataihoz.
+
+3. BIZTONSÁGI ADATGYŰJTÉS (DEVICE FINGERPRINTING)
+
+A fiókok biztonsága és a szerződési feltételek betartása (különösen a jogosulatlan fiókmegosztás kiszűrése) érdekében a rendszer technikai adatokat gyűjt a felhasználó eszközéről.
+
+Gyűjtött adatok: Böngésző típusa, operációs rendszer, képernyő felbontása, beállított nyelv és időzóna.
+
+Cél: Csalásmegelőzés és biztonsági hitelesítés.
+
+Korlátozás: Ezek az adatok nem kerülnek felhasználásra marketing célokra vagy harmadik fél általi profilalkotásra.
+
+4. NEMZETKÖZI ADATTOVÁBBÍTÁS
+
+Egyes adatok (különösen a technikai infrastruktúrát biztosító Google LLC esetében) az Európai Gazdasági Térségen (EGT) kívülre kerülhetnek.
+
+A Google LLC részese az EU-USA Adatvédelmi Keretrendszernek (Data Privacy Framework - DPF), amely az Európai Bizottság döntése értelmében megfelelő védelmi szintet biztosít a személyes adatoknak.
+
+Amennyiben a DPF nem alkalmazható, az adattovábbítás a Google által biztosított Általános Szerződési Feltételek (Standard Contractual Clauses - SCC) alapján történik, amely garanciát nyújt az európai adatvédelmi normák betartására.
+
+5. ADATMEGŐRZÉSI IDŐK
+
+Felhasználói fiók adatok: A fiók törléséig, vagy a felhasználó törlési kérelméig.
+
+Számlázási adatok: A számvitelről szóló 2000. évi C. törvény 169. § (2) bekezdése alapján 8 évig.
+
+Ideiglenes tranzakciós adatok: A tranzakció lezárásáig.

@@ -1,0 +1,257 @@
+LOMEDU WEBES ALKALMAZÁS - ADATTOVÁBBÍTÁS RÉSZLETES LISTÁJA
+================================================================
+
+Ez a dokumentum részletesen felsorolja, hogy milyen személyes adatokat adunk tovább különböző szolgáltatóknak a Lomedu webes alkalmazás használata során. A dokumentum az Adatvédelmi Irányelvek megfogalmazásához szükséges információkat tartalmazza.
+
+================================================================
+1. REGISZTRÁCIÓ SORÁN GYŰJTÖTT ADATOK
+================================================================
+
+1.1. Firebase Authentication (Google LLC)
+   - E-mail cím: Felhasználói azonosításra és bejelentkezésre
+   - Jelszó: Biztonságosan, titkosított formában (hash) tárolva
+   - Firebase User ID (UID): Egyedi felhasználói azonosító
+
+1.2. Firebase Firestore (Google LLC)
+   - E-mail cím
+   - Keresztnév (opcionális)
+   - Vezetéknév (opcionális)
+   - Display name / Megjelenítési név (opcionális)
+   - Fiók létrehozás dátuma
+   - Fiók frissítés dátuma
+   - Aktív fiók státusz
+
+================================================================
+2. FIZETÉSI FOLYAMAT SORÁN TOVÁBBÍTOTT ADATOK
+================================================================
+
+2.1. SimplePay Zrt. (OTP SimplePay v2 fizetési szolgáltató)
+
+A fizetés indításakor (initiateWebPayment) a következő adatokat továbbítjuk:
+
+   - customerEmail: Felhasználó e-mail címe
+   - orderRef: Egyedi megrendelési hivatkozási szám (formátum: WEB_{userId}_{timestamp})
+   - items (termék/szolgáltatás adatok):
+     * ref: Előfizetési csomag azonosítója (pl. "monthly_premium_prepaid")
+     * title: Előfizetési csomag neve (pl. "Havi előfizetés")
+     * description: Előfizetési csomag leírása (pl. "Teljes hozzáférés minden funkcióhoz")
+     * amount: Mennyiség (mindig 1)
+     * price: Előfizetési csomag ára (HUF-ban, normál felhasználóknak 4350 Ft, admin felhasználóknak 5 Ft)
+   - currency: "HUF" (magyar forint)
+   - language: "HU" (magyar nyelv)
+   - timeout: Fizetési időkorlát (30 perc ISO formátumban)
+   - methods: ["CARD"] (bankkártyás fizetés)
+   - urls: Visszairányítási URL-ek (sikeres, sikertelen, időtúllépés, megszakítás esetén)
+
+MEGJEGYZÉS: A SimplePay nem kapja meg a bankkártya adatokat közvetlenül tőlünk. 
+A felhasználó a SimplePay biztonságos fizetési oldalán adja meg a bankkártya adatokat.
+
+2.2. Számlázz.hu (Számlázási szolgáltató)
+
+A sikeres fizetés után automatikusan generált számla létrehozásakor a következő adatokat továbbítjuk:
+
+   VEVŐ ADATOK:
+   - nev: Név vagy cégnév (szállítási címből vagy felhasználói adatokból)
+   - orszag: "Magyarország"
+   - irsz: Irányítószám (szállítási címből)
+   - telepules: Település (szállítási címből)
+   - cim: Utca, házszám (szállítási címből)
+   - email: Felhasználó e-mail címe
+   - adoalany: Adóalany típusa
+     * "-1": Lakossági vásárló (nincs magyar adószáma)
+     * "6": Van magyar adószáma (magánszemély vagy cég)
+   - adoszam: Adószám (csak akkor, ha a felhasználó jogi személyként vásárolt ÉS megadta az adószámot)
+   - telefonszam: Telefonszám (opcionális, ha megadva)
+
+   SZÁMLA FEJLÉC ADATOK:
+   - keltDatum: Számla kelte (dátum)
+   - teljesitesDatum: Teljesítés dátuma
+   - fizetesiHataridoDatum: Fizetési határidő (8 nap a kelte után)
+   - fizmod: Fizetési mód ("bankkartya")
+   - penznem: "HUF"
+   - szamlaNyelve: "hu"
+   - rendelesSzam: Megrendelési hivatkozási szám (orderRef)
+   - fizetve: true (fizetett számla)
+   - szamlaSablon: "SzlaMost"
+
+   SZÁMLA TÉTELEK:
+   - megnevezes: Előfizetési csomag neve
+   - mennyiseg: 1
+   - mennyisegiEgyseg: "db"
+   - nettoEgysegar: Nettó egységár
+   - nettoErtek: Nettó érték
+   - afakulcs: 27% (magyar ÁFA kulcs)
+   - afaErtek: ÁFA érték
+   - bruttoErtek: Bruttó érték (teljes összeg)
+   - megjegyzes: Előfizetési csomag leírása (opcionális)
+
+MEGJEGYZÉS: A számlázás után a szállítási cím adatok (shippingAddress) automatikusan törlődnek 
+a felhasználó dokumentumából az adatminimalizálás elve szerint.
+
+================================================================
+3. SZÁLLÍTÁSI CÍM ADATOK (IDEIGLENES TÁROLÁS)
+================================================================
+
+A fizetés indítása előtt a felhasználó kötelezően meg kell adja a szállítási és számlázási címet:
+
+   - name: Név vagy cégnév
+   - zipCode: Irányítószám (4 számjegy)
+   - city: Település
+   - address: Utca, házszám
+   - isCompany: Jogi személyként vásárol-e (true/false)
+   - taxNumber: Adószám (csak akkor, ha jogi személyként vásárol)
+
+MEGJEGYZÉS: Ezek az adatok ideiglenesen tárolódnak a Firebase Firestore-ban a felhasználó 
+dokumentumában (shippingAddress mező), de a sikeres számlázás után automatikusan törlődnek.
+
+================================================================
+4. FIREBASE SZOLGÁLTATÁSOK (Google LLC)
+================================================================
+
+4.1. Firebase Authentication
+   - E-mail cím
+   - Jelszó (hash, titkosított)
+   - Firebase User ID (UID)
+   - Email verifikáció státusza
+
+4.2. Firebase Firestore (Adatbázis)
+   - Felhasználói profil adatok:
+     * E-mail cím
+     * Keresztnév, vezetéknév
+     * Display name
+     * Fiók létrehozás és frissítés dátuma
+   - Előfizetési adatok:
+     * Előfizetési státusz (ingyenes, prémium, lejárt)
+     * Előfizetés kezdete és vége
+     * Próbaidőszak adatok
+     * Fizetési forrás (otp_simplepay)
+     * Tranzakció azonosítók (transactionId, orderId)
+   - Tanulási adatok (ha van):
+     * Kártyák ismétlési előzményei
+     * Kvíz eredmények
+     * Tanulási statisztikák
+   - Szállítási cím (ideiglenesen, fizetés és számlázás során, majd törlődik)
+   - Adattovábbítási nyilatkozat elfogadásának dátuma
+   - Eszköz regisztráció adatok (device fingerprint)
+
+4.3. Firebase Cloud Functions
+   - Felhasználói azonosító (userId)
+   - Előfizetési csomag azonosítója
+   - Fizetési összeg
+   - Szállítási cím adatok (fizetés és számlázás során)
+
+4.4. Firebase Storage
+   - Médiafájlok (ha vannak)
+
+================================================================
+5. ESZKÖZAZONOSÍTÁS (DEVICE FINGERPRINTING) - WEBES KÖRNYEZET
+================================================================
+
+A webes alkalmazásban az eszközazonosító a következő információk kombinációjából áll:
+
+   - User Agent (böngésző és operációs rendszer információ)
+   - Platform típusa
+   - Nyelv beállítás
+   - Képernyő információ (szélesség x magasság x színmélység)
+   - Időzóna
+   - Hardver információ (CPU magok száma, memória)
+
+Ez az adat a fiók biztonságának ellenőrzésére és a jogosulatlan fiókmegosztás megelőzésére szolgál.
+
+================================================================
+6. EMAIL KÜLDÉS (SMTP SZOLGÁLTATÁS)
+================================================================
+
+A saját SMTP szerverünkön (mail.lomedu.hu) keresztül küldünk emailt:
+
+   - Feladó: info@lomedu.hu
+   - Címzett: Felhasználó e-mail címe
+   - Email típusok:
+     * Eszközváltási kód küldése
+     * Előfizetési emlékeztetők (lejárat előtt/után)
+     * Számla értesítő (ezt a Számlázz.hu is küldi automatikusan)
+
+================================================================
+7. ADATTOVÁBBÍTÁSI NYILATKOZAT
+================================================================
+
+A fizetés indítása előtt a felhasználónak el kell fogadnia az adattovábbítási nyilatkozatot, 
+amely tartalmazza:
+
+   - SimplePay Zrt.-nek továbbított adatok listája
+   - Adatkezelési célok
+   - SimplePay Adatkezelési Tájékoztató linkje
+
+Az elfogadás dátuma a Firebase Firestore-ban tárolódik (dataTransferConsentLastAcceptedDate).
+
+================================================================
+8. AUDIT LOGOK (BELSŐ HASZNÁLAT)
+================================================================
+
+A fizetési folyamatok nyomon követéséhez audit logokat vezetünk a Firebase Firestore-ban:
+
+   - userId: Felhasználói azonosító
+   - orderRef: Megrendelési hivatkozási szám
+   - action: Művelet típusa (pl. PAYMENT_INITIATED, PAYMENT_CONFIRMED, WEBHOOK_RECEIVED)
+   - planId: Előfizetési csomag azonosítója
+   - amount: Fizetési összeg
+   - environment: Környezet (sandbox/production)
+   - timestamp: Időbélyeg
+   - metadata: További technikai információk (transactionId, orderId, stb.)
+
+================================================================
+9. ADATOK MEGŐRZÉSE ÉS TÖRLÉSE
+================================================================
+
+9.1. Szállítási cím adatok:
+   - Tárolás: Ideiglenesen, a fizetés indításától a sikeres számlázásig
+   - Törlés: Automatikusan a sikeres számlázás után
+
+9.2. Fizetési tranzakció adatok:
+   - Tárolás: Firebase Firestore (web_payments kollekció)
+   - Megőrzés: A tranzakció teljes életciklusa alatt
+   - Tartalmazza: orderRef, userId, planId, amount, status, transactionId, invoiceNumber, stb.
+
+9.3. Számla adatok:
+   - Tárolás: Számlázz.hu rendszerében (külső szolgáltató)
+   - Megőrzés: A számviteli törvény által előírt ideig (8 év)
+   - Lokálisan: Csak a számlaszám és PDF hivatkozás tárolódik a tranzakció rekordban
+
+================================================================
+10. ADATFELDOLGOZÓK LISTÁJA
+================================================================
+
+1. Google LLC (Firebase szolgáltatások)
+   - Firebase Authentication
+   - Firebase Firestore
+   - Firebase Cloud Functions (europe-west1 régió)
+   - Firebase Storage
+   - Firebase App Check
+
+2. SimplePay Zrt.
+   - Fizetési tranzakciók lebonyolítása
+   - Bankkártya adatok kezelése (közvetlenül, nem tőlünk)
+
+3. Számlázz.hu
+   - Elektronikus számla generálás és küldés
+   - Számla adatok tárolása
+
+4. SMTP szerver (mail.lomedu.hu)
+   - Email küldés (info@lomedu.hu)
+
+================================================================
+11. ADATTOVÁBBÍTÁSI RÉGIÓK
+================================================================
+
+- Firebase szolgáltatások: Európai régió (europe-west1), de az adatok az EGT-n kívülre is 
+  kerülhetnek (Google szervereire az USA-ban). Az adattovábbítás az Európai Bizottság által 
+  jóváhagyott általános adatvédelmi szerződési feltételek (SCC) alapján történik.
+
+- SimplePay Zrt.: Magyarország (EU)
+
+- Számlázz.hu: Magyarország (EU)
+
+================================================================
+VÉGE
+================================================================
+

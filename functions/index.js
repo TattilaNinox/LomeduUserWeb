@@ -7,6 +7,7 @@ const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const { buildTemplate, logoAttachment } = require('./emailTemplates');
 const szamlaAgent = require('./szamlaAgent');
+const szamlaAgentTest = require('./szamlaAgentTest');
 const invoiceBuilder = require('./invoiceBuilder');
 
 // Konfiguráció forrása: 1) Firebase Functions config (firebase functions:config:set smtp.*),
@@ -320,7 +321,7 @@ exports.generateInvoiceManually = onCall(async (request) => {
     console.log('[generateInvoiceManually] Invoice data built:', JSON.stringify(invoiceData, null, 2));
 
     // 7. Create invoice
-    const result = await szamlaAgent.createInvoice(invoiceData);
+    const result = await szamlaAgentTest.createInvoice(invoiceData);
 
     if (!result.success) {
         console.error('[generateInvoiceManually] Invoice generation failed:', result.error);

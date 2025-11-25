@@ -1,0 +1,191 @@
+LOMEDU WEBES ALKALMAZÁS - ADATVÉDELMI IRÁNYELVEK
+
+Hatálybalépés dátuma: 2025. szeptember 01.
+
+1. BEVEZETÉS
+
+1.1. A dokumentum célja
+
+Jelen Adatvédelmi Irányelvek (a továbbiakban: „Irányelvek”) célja, hogy átlátható és közérthető módon tájékoztassuk Önt arról, hogyan gyűjtjük, használjuk, tároljuk és védjük az Ön személyes adatait a Lomedu Webes Alkalmazás (a továbbiakban: „Szolgáltatás” vagy „Webalkalmazás”) használata során, összhangban az Európai Unió Általános Adatvédelmi Rendeletével (GDPR) és a magyar jogszabályokkal.
+
+1.2. Az adatkezelő adatai
+
+Név: Oak Quality Kft. (a továbbiakban: „Adatkezelő” vagy „mi”)
+
+Székhely: 2113 Erdőkertes, Bocskai utca 13.
+
+Cégjegyzékszám: 13 09 084075
+
+Adószám: 11803010-2-13
+
+E-mail cím: support@lomedu.hu
+
+Adatvédelmi tisztviselő: Tölgyesi Attila
+
+2. KEZELT ADATOK KÖRE
+
+2.1. Regisztráció során megadott adatok
+
+A fiók létrehozásához és a szolgáltatásainkhoz való hozzáféréshez az alábbi, minimálisan szükséges adatokat kérjük el:
+
+E-mail cím: Azonosításra, bejelentkezéshez és kapcsolattartásra szolgál.
+
+Jelszó: Biztonságosan, titkosított formában (hash) tároljuk. A hitelesítést a Google Firebase Authentication szolgáltatása végzi.
+
+Keresztnév és vezetéknév: Opcionális adatok, amelyeket a személyre szabott szolgáltatás nyújtásához használunk.
+
+Tudományág: A felhasználó által választott tudományág (alapértelmezett: „Alap”), amely segít a személyre szabott tartalom kínálásában.
+
+2.2. Használat során keletkező adatok
+
+A Webalkalmazás funkcióinak használata közben az alábbi adatok keletkeznek:
+
+Tanulási előzmények: A spaced repetition (SM-2) algoritmus működéséhez szükséges adatok (pl. kártyák ismétlési időpontjai, kvíz eredmények, tanulási állapot paraméterei).
+
+Használati statisztikák: Anonimizált vagy álnevesített (pseudonymizált) adatok a Webalkalmazás használatáról, amelyek segítenek a szolgáltatás fejlesztésében.
+
+Technikai adatok (logok): Hibanaplók a szolgáltatás stabilitásának fenntartása érdekében.
+
+2.3. Biztonsági adatok (Device Fingerprinting)
+
+A Webalkalmazás biztonsága és a szerződési feltételek betartása (különösen a jogosulatlan fiókmegosztás kiszűrése) érdekében technikai adatokat gyűjtünk a felhasználó eszközéről és böngészőjéről:
+
+Böngésző típusa és verziója (User Agent)
+
+Operációs rendszer
+
+Képernyő felbontása és színmélysége
+
+Beállított nyelv és időzóna
+
+Platform típusa
+
+Cél: Csalásmegelőzés és biztonsági hitelesítés. Ezeket az adatokat nem használjuk fel marketing célokra vagy harmadik fél általi profilalkotásra.
+
+2.4. Fizetési és Számlázási adatok
+
+A Webalkalmazásban elérhető prémium szolgáltatások vásárlása során további adatokat kezelünk:
+
+A) Fizetési tranzakció adatai (OTP SimplePay)
+Az online bankkártyás fizetést az OTP Mobil Kft. biztosítja.
+
+Amit mi kezelünk és továbbítunk: E-mail cím, megrendelés azonosító, vásárolt csomag neve és ára.
+
+Bankkártya adatok: A bankkártya adatait (kártyaszám, lejárati dátum, CVC) nem ismerjük meg és nem tároljuk. Azokat Ön közvetlenül a SimplePay biztonságos felületén adja meg.
+
+B) Számlázási adatok (Számlázz.hu)
+A jogszabályi kötelezettségek teljesítése (számla kiállítása) érdekében az alábbi adatokat kérjük be:
+
+Számlázási név és cím: (Ország, irányítószám, település, utca, házszám).
+
+Adószám: Kizárólag céges vásárlás esetén.
+
+3. ADATKEZELÉS CÉLJA ÉS JOGALAPJA
+
+Személyes adatait az alábbi célokból és jogalapokon kezeljük a GDPR előírásainak megfelelően:
+
+3.1. Szerződés teljesítése (GDPR 6. cikk (1) bekezdés b) pont)
+
+Fiók létrehozása és azonosítás: A belépés biztosítása.
+
+Tanulási szolgáltatás: A spaced repetition algoritmus futtatása.
+
+Fizetés lebonyolítása: A megrendelt prémium szolgáltatás aktiválása.
+
+3.2. Jogi kötelezettség teljesítése (GDPR 6. cikk (1) bekezdés c) pont)
+
+Számlázás: A számvitelről szóló 2000. évi C. törvénynek megfelelő számla kiállítása és megőrzése.
+
+3.3. Jogos érdek (GDPR 6. cikk (1) bekezdés f) pont)
+
+Fiókbiztonság: A 2.3 pontban említett technikai adatok gyűjtése a fiókmegosztás és visszaélések megelőzése érdekében.
+
+Szolgáltatás fejlesztése: Statisztikák elemzése a felhasználói élmény javítása érdekében.
+
+4. ADATOK MEGŐRZÉSI IDEJE
+
+Személyes és tanulási adatok: A felhasználói fiók aktív fennállásáig, illetve a fiók törléséig.
+
+Számlázási adatok: A számviteli törvény előírása alapján a számla kiállításától számított 8 évig (a Számlázz.hu rendszerében és a tranzakciós naplókban).
+
+Ideiglenes számlázási cím: A felhasználói profilból a sikeres számlázást követően automatikusan törlésre kerül (adatminimalizálás elve).
+
+Biztonsági adatok (Fingerprint): A fiók törléséig.
+
+5. ADATTOVÁBBÍTÁS, ADATFELDOLGOZÓK
+
+Az Ön adatait bizalmasan kezeljük. A szolgáltatás működéséhez az alábbi adatfeldolgozókat vesszük igénybe:
+
+5.1. Informatikai háttérszolgáltató
+
+Google LLC (Firebase)
+
+Székhely: USA / EU
+
+Feladata: Felhasználói hitelesítés, adatbázis-szolgáltatás, tárhely.
+
+Adattovábbítás: A Google LLC részese az EU-USA Adatvédelmi Keretrendszernek (DPF), amely biztosítja a megfelelő védelmi szintet.
+
+5.2. Fizetési szolgáltató
+
+OTP Mobil Kft. (SimplePay)
+
+Székhely: Magyarország
+
+Feladata: Online bankkártyás fizetések lebonyolítása.
+
+Továbbított adatok: E-mail cím, rendelési azonosító, összeg.
+
+Bővebb információ: SimplePay Adatkezelési Tájékoztató
+
+5.3. Számlázási szolgáltató
+
+KBOSS.hu Kft. (Számlázz.hu)
+
+Székhely: Magyarország
+
+Feladata: Elektronikus számla kiállítása és megküldése.
+
+Továbbított adatok: Számlázási név, cím, adószám, e-mail cím.
+
+5.4. Email szolgáltató
+
+Saját SMTP szerver (mail.lomedu.hu)
+
+Feladata: Rendszerüzenetek és értesítések küldése.
+
+6. SÜTIK (COOKIES) ÉS HELYI TÁROLÁS
+
+A Webalkalmazás a megfelelő működéshez úgynevezett "sütiket" (cookies) és helyi tárolókat (Local Storage) használ.
+
+Szükséges sütik: Ezek elengedhetetlenek a bejelentkezés fenntartásához (Firebase Auth) és a biztonságos működéshez. Ezek kikapcsolása esetén a szolgáltatás nem használható.
+
+Analitikai sütik: Csak az Ön hozzájárulásával használjuk őket a szolgáltatás fejlesztése érdekében.
+
+7. ADATBIZTONSÁG
+
+Titkosítás: A hálózati kommunikáció minden esetben titkosított csatornán (HTTPS/TLS) zajlik. A jelszavakat visszafejthetetlen hash formában tároljuk.
+
+Hozzáférés: Szigorú jogosultságkezelést alkalmazunk; minden felhasználó csak a saját tanulási adataihoz férhet hozzá.
+
+Adatközpont: Az adatok tárolása elsődlegesen az Európai Unió területén (Google Cloud - europe-west1 régió) történik.
+
+8. FELHASZNÁLÓI JOGOK
+
+Önt megilleti a hozzáférés, helyesbítés, törlés („elfeledtetés”), adatkezelés korlátozása, adathordozhatóság és a tiltakozás joga. Ezen jogait a support@lomedu.hu e-mail címen gyakorolhatja. Fiókját és személyes adatait az alkalmazás beállításaiban bármikor törölheti.
+
+9. KAPCSOLATTARTÁS, JOGORVOSLAT
+
+Adatvédelmi kérdésekkel forduljon hozzánk bizalommal a support@lomedu.hu címen.
+
+Panaszával a Nemzeti Adatvédelmi és Információszabadság Hatósághoz (NAIH) fordulhat:
+
+Cím: 1055 Budapest, Falk Miksa utca 9-11.
+
+Weboldal: http://www.naih.hu
+
+E-mail: ugyfelszolgalat@naih.hu
+
+10. ZÁRÓ RENDELKEZÉSEK
+
+Fenntartjuk a jogot, hogy az Irányelveket módosítsuk. A lényeges változásokról a Webalkalmazáson keresztül vagy e-mailben értesítjük Önt.
