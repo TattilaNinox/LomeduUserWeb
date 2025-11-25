@@ -216,54 +216,7 @@ class _AccountScreenState extends State<AccountScreen> {
       );
     }
 
-    if (_isAdmin != true) {
-      // Nem admin felhasználó - hozzáférés megtagadva
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Fiók adatok'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.go('/notes'),
-          ),
-        ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.lock_outline,
-                  size: 64,
-                  color: Colors.red[600],
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Hozzáférés megtagadva',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Ez az oldal csak adminisztrátorok számára érhető el.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () => context.go('/notes'),
-                  child: const Text('Vissza a főoldalra'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    // Admin felhasználó - megengedjük a hozzáférést
+    // Minden bejelentkezett felhasználónak megengedjük a hozzáférést
     return _buildAccountContent(context, user);
   }
 
