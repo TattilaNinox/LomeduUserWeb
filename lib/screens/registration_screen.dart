@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +20,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _passwordsVisible = false;
+  bool _termsAccepted = false;
   String? _errorMessage;
   bool _isLoading = false;
 
@@ -75,6 +77,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return;
     }
 
+    if (!_termsAccepted) {
+      setState(() => _errorMessage =
+          'A regisztrációhoz el kell fogadni az Általános szerződési feltételeket és az Adatvédelmi irányelveket.');
+      return;
+    }
+
     if (_lastNameController.text.trim().isEmpty) {
       setState(() => _errorMessage = 'Vezetéknév kötelező.');
       return;
@@ -101,11 +109,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       RegistrationStateService.newlyRegisteredUserEmail = emailToRegister;
 
       // 1. Auth fiók létrehozása
-      final userCredential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
         email: emailToRegister,
         password: _passwordController.text.trim(),
-      );
+      )
+          .timeout(const Duration(seconds: 15), onTimeout: () {
+        throw TimeoutException('A regisztráció túllépte az időkorlátot.');
+      });
       final user = userCredential.user!;
 
       // 3. Próbaidőszak kiszámítása (most + 5 nap)
@@ -131,6 +142,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         'deviceRegistrationDate': Timestamp.fromDate(now),
         // 'authorizedDeviceFingerprint': null, // NE állítsuk be itt, az eszközregisztráció során lesz beállítva
         'isActive': true,
+        'termsAccepted': true,
+        'termsAcceptedAt': FieldValue.serverTimestamp(),
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       };
@@ -139,7 +152,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
-          .set(newUserDoc, SetOptions(merge: true));
+          .set(newUserDoc, SetOptions(merge: true))
+          .timeout(const Duration(seconds: 15), onTimeout: () {
+        throw TimeoutException('Az adatmentés túllépte az időkorlátot.');
+      });
 
       // 7. Kijelentkezés, hogy a redirect logika ne kavarjon be
       await FirebaseAuth.instance.signOut();
@@ -295,6 +311,29 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       ),
                       autofillHints: const [AutofillHints.newPassword],
                     ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _termsAccepted,
+                          activeColor: const Color(0xFF1E3A8A),
+                          onChanged: (value) {
+                            setState(() {
+                              _termsAccepted = value ?? false;
+                            });
+                          },
+                        ),
+                        const Expanded(
+                          child: Text(
+                            'Elolvastam, megismertem és elfogadom az Általános szerződési feltételeket és az Adatvédelmi irányelveket',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF374151),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                     if (_errorMessage != null) ...[
                       const SizedBox(height: 16),
                       Text(
@@ -310,7 +349,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       onPressed: _isLoading ? null : _register,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1E3A8A),
+                        disabledBackgroundColor:
+                            const Color(0xFF1E3A8A).withOpacity(0.7),
                         foregroundColor: Colors.white,
+                        disabledForegroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 24, vertical: 12),
                         shape: RoundedRectangleBorder(
