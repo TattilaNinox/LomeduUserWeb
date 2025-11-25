@@ -21,11 +21,13 @@ class SessionGuard extends ChangeNotifier {
 
   AuthStatus _authStatus = AuthStatus.loggedOut;
   DeviceAccess _deviceAccess = DeviceAccess.loading;
+  bool _termsAccepted = true; // Kezdetben true, hogy ne villanjon be
   String? _currentFingerprint;
   bool _initialized = false;
 
   AuthStatus get authStatus => _authStatus;
   DeviceAccess get deviceAccess => _deviceAccess;
+  bool get termsAccepted => _termsAccepted;
 
   /// Egyszeri inicializálás — feliratkozás az auth és user doc változásokra.
   Future<void> ensureInitialized() async {
@@ -38,6 +40,7 @@ class SessionGuard extends ChangeNotifier {
       if (user == null) {
         _authStatus = AuthStatus.loggedOut;
         _deviceAccess = DeviceAccess.loading;
+        _termsAccepted = true;       // Reset
         await _cancelUserDocSubscription();
         debugPrint('[SessionGuard] user == null -> loggedOut, loading');
         notifyListeners();
@@ -47,6 +50,7 @@ class SessionGuard extends ChangeNotifier {
       // Be van jelentkezve
       _authStatus = AuthStatus.loggedIn;
       _deviceAccess = DeviceAccess.loading;
+      _termsAccepted = true;       // Optimista kezdet
       debugPrint('[SessionGuard] loggedIn -> start device check');
       notifyListeners();
 
@@ -84,9 +88,18 @@ class SessionGuard extends ChangeNotifier {
     final data = snapshot.data();
     if (data == null) {
       _deviceAccess = DeviceAccess.loading;
+      _termsAccepted = true;
       debugPrint('[SessionGuard] user doc null -> loading');
       notifyListeners();
       return;
+    }
+
+    // ÁSZF elfogadás ellenőrzése
+    final bool accepted = data['termsAccepted'] as bool? ?? false;
+    _termsAccepted = accepted;
+    if (!_termsAccepted) {
+      debugPrint('[SessionGuard] terms not accepted');
+      notifyListeners();
     }
 
     // Admin esetén ne korlátozzuk az eszközt
@@ -94,6 +107,13 @@ class SessionGuard extends ChangeNotifier {
     final isAdmin = userType == 'admin';
     if (isAdmin) {
       _deviceAccess = DeviceAccess.allowed;
+      // Adminnak is el kell fogadnia a feltételeket, ha nincs meg
+      if (!_termsAccepted) {
+        debugPrint('[SessionGuard] admin user -> device allowed BUT terms NOT accepted');
+        // Itt hagyjuk, hogy a router döntsön a termsAccepted alapján
+        notifyListeners();
+        return;
+      }
       debugPrint('[SessionGuard] admin user -> allowed');
       notifyListeners();
       return;

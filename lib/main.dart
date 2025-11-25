@@ -29,6 +29,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/reset_password_screen.dart';
 import 'screens/change_password_screen.dart';
+import 'screens/terms_acceptance_screen.dart';
 import 'services/version_check_service.dart';
 
 /// Az alkalmazás fő belépési pontja.
@@ -84,6 +85,7 @@ final _router = GoRouter(
 
     final auth = SessionGuard.instance.authStatus;
     final device = SessionGuard.instance.deviceAccess;
+    final termsAccepted = SessionGuard.instance.termsAccepted;
     final shouldUseBaseParams = {
       '/',
       '/reset-password',
@@ -136,6 +138,11 @@ final _router = GoRouter(
     // Csak akkor nézzük meg, ha NEM payment callback
     if (paymentParam == null && device == DeviceAccess.loading) {
       return loc == '/guard' ? null : '/guard';
+    }
+
+    // ÁSZF elfogadás ellenőrzése (ha be van lépve és nem loading)
+    if (!termsAccepted) {
+      return loc == '/terms-acceptance' ? null : '/terms-acceptance';
     }
 
     if (device == DeviceAccess.denied) {
@@ -273,6 +280,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/change-password',
       builder: (context, state) => const ChangePasswordScreen(),
+    ),
+    GoRoute(
+      path: '/terms-acceptance',
+      builder: (context, state) => const TermsAcceptanceScreen(),
     ),
   ],
 );
