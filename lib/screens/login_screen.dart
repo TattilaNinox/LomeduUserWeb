@@ -370,20 +370,30 @@ class LoginScreenState extends State<LoginScreen> {
                           FutureBuilder<PackageInfo>(
                             future: _packageInfoFuture,
                             builder: (context, snapshot) {
-                              String versionText = 'v1.0.1'; // Fallback verzió
-                              
+                              // Ha van adat, azt használjuk, egyébként '...' töltésjelző, majd fallback
                               if (snapshot.hasData) {
-                                versionText = 'v${snapshot.data!.version}';
-                                if (snapshot.data!.buildNumber.isNotEmpty) {
-                                  versionText += '+${snapshot.data!.buildNumber}';
-                                }
-                              } else if (snapshot.hasError) {
-                                debugPrint('PackageInfo error: ${snapshot.error}');
-                                // Hiba esetén is a fallback-et használjuk, nem 'v?'-et
+                                String versionText = 'v${snapshot.data!.version}';
+                                // Build számot web-en ritkán használunk, de ha van, megjelenhet
+                                // if (snapshot.data!.buildNumber.isNotEmpty) {
+                                //   versionText += '+${snapshot.data!.buildNumber}';
+                                // }
+                                return Text(
+                                  versionText,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w400,
+                                    color: Colors.black.withValues(alpha: 0.4),
+                                    letterSpacing: 0.3,
+                                  ),
+                                );
                               }
-
+                              
+                              // Töltés vagy hiba esetén egyelőre ne írjunk ki semmit (vagy a fallback-et)
+                              // De mivel a package_info_plus web-en néha lassú vagy nem ad vissza semmit dev módban,
+                              // érdemes lehet egy konstanst is beállítani, ha a pubspec nem elérhető.
                               return Text(
-                                versionText,
+                                'v1.0.11', // Manuális fallback a pubspec.yaml alapján
                                 style: TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 11,
