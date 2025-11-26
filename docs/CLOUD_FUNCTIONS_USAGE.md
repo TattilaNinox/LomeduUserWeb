@@ -2,7 +2,7 @@
 
 Ez a dokumentum felsorolja az összes Firebase Cloud Function-t a projektben, típusukat és azt, hogy melyik alkalmazás használja őket.
 
-Utolsó frissítés: 2025-10-20
+Utolsó frissítés: 2025-11-26
 
 ---
 
@@ -18,6 +18,7 @@ Utolsó frissítés: 2025-10-20
 | `confirmWebPayment` | callable | Nincs közvetlen hívás | Fizetés lezárása SimplePay QUERY API-val (jelenleg nem használt közvetlenül). |
 | `processWebPaymentWebhook` | callable | Nincs közvetlen hívás | SimplePay webhook feldolgozás (jelenleg nem használt közvetlenül, az `onWebPaymentWrite` trigger használatos helyette). |
 | `checkSubscriptionExpiryScheduled` | scheduled (cron: `0 2 * * *`) | Automatikus (Firebase Scheduler) | Naponta 02:00-kor előfizetési emlékeztetők küldése. |
+| `checkTrialExpiryScheduled` | scheduled (cron: `0 10 * * *`) | Automatikus (Firebase Scheduler) | Naponta 10:00-kor próbaidő lejárat emlékeztetők küldése. |
 | `reconcileWebPaymentsScheduled` | scheduled (cron: `*/2 * * * *`) | Automatikus (Firebase Scheduler) | 2 percenként INITIATED státuszú web_payments rekordok lezárása SimplePay QUERY API-val. |
 | `onWebPaymentWrite` | firestore trigger (`web_payments/{orderRef}`) | Automatikus (Firestore trigger) | Fizetés státuszváltozás esetén előfizetés aktiválása és SimplePay FINISH hívás. |
 | `simplepayWebhook` | https (onRequest) | SimplePay (külső webhookból) | SimplePay webhook fogadása HTTP végponton, aláírás ellenőrzéssel. |
@@ -82,6 +83,17 @@ Utolsó frissítés: 2025-10-20
 - **Input:** -
 - **Output:** -
 
+#### `checkTrialExpiryScheduled`
+- **Típus:** scheduled (cron: `0 10 * * *`)
+- **Használja:** Automatikus (Firebase Scheduler)
+- **Leírás:** Naponta 10:00-kor (Europe/Budapest) automatikusan ellenőrzi a **próbaidő** lejáratát.
+  - 3 nappal lejárat előtt figyelmeztetést küld.
+  - A lejárat napján értesítést küld a lejáratról.
+  - Csak azoknak küld, akiknek nincs aktív előfizetése.
+  - Duplikátum védelemmel rendelkezik (`lastReminder.trial_expiry_warning`, `lastReminder.trial_expired`).
+- **Input:** -
+- **Output:** -
+
 ---
 
 ### Webes Fizetés (SimplePay v2)
@@ -118,7 +130,7 @@ Utolsó frissítés: 2025-10-20
 #### `onWebPaymentWrite`
 - **Típus:** firestore trigger (`web_payments/{orderRef}`)
 - **Használja:** Automatikus (Firestore trigger)
-- **Leírás:** Amikor egy `web_payments` dokumentum módosul, ellenőrzi a státuszt. Ha INITIATED, megpróbálja lezárni SimplePay QUERY API-val. Ha SUCCESS/COMPLETED, aktiválja a felhasználó előfizetését.
+- **Leírás:** Amikor egy `web_payments` dokumentum módosul, ellenőrzi a státuszt. Ha INITIATED, megpróbálja lezárni a fizetést SimplePay QUERY API-val (10 próbálkozás, 1 mp-es poll). Ha SUCCESS/COMPLETED, aktiválja a felhasználó előfizetését.
 
 #### `reconcileWebPaymentsScheduled`
 - **Típus:** scheduled (cron: `*/2 * * * *`)
@@ -210,6 +222,7 @@ Utolsó frissítés: 2025-10-20
 
 **Scheduled funkciók:**
 - `checkSubscriptionExpiryScheduled` - naponta 02:00-kor előfizetés lejárat ellenőrzés
+- `checkTrialExpiryScheduled` - naponta 10:00-kor próbaidő lejárat ellenőrzés
 - `reconcileWebPaymentsScheduled` - 2 percenként INITIATED fizetések lezárása
 
 **Firestore triggerek:**
@@ -260,6 +273,14 @@ Az alábbi funkciók jelenleg placeholder implementációval rendelkeznek (csak 
   - Megkeresi a már lejárt előfizetéseket → `expired` email.
   - Duplikátum védelem: csak egyszer küld emailt minden típusból (lastReminder mező).
 
+### `checkTrialExpiryScheduled`
+- **Ütemezés:** Naponta 10:00-kor (Europe/Budapest)
+- **Timeout:** 540 másodperc (9 perc)
+- **Működés:**
+  - 3 nappal a próbaidő lejárta előtt figyelmeztető email (`trial_expiry_warning`).
+  - A próbaidő lejártának napján értesítő email (`trial_expired`).
+  - Csak akkor küld emailt, ha nincs aktív előfizetés (`isSubscriptionActive == false`).
+
 ### `reconcileWebPaymentsScheduled`
 - **Ütemezés:** 2 percenként
 - **Timeout:** 240 másodperc (4 perc)
@@ -295,8 +316,7 @@ Ha új Cloud Function-t adsz hozzá, vagy új alkalmazást fejlesztesz, kérlek,
 
 ---
 
-**Verzió:** 1.0  
+**Verzió:** 1.1  
 **Létrehozva:** 2025-10-20  
+**Frissítve:** 2025-11-26
 **Projekt:** orlomed-f8f9f
-
-
