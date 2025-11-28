@@ -28,15 +28,22 @@ class NoteCardGrid extends StatefulWidget {
 
 class _NoteCardGridState extends State<NoteCardGrid> {
   bool _checkPremiumAccess(Map<String, dynamic> userData) {
-    final bool isActive = userData['isSubscriptionActive'] ?? false;
+    // Próbaidő ellenőrzése
     final trialEndDate = userData['freeTrialEndDate'] as Timestamp?;
-
-    if (isActive) {
-      return true; // Subscription is active
-    }
-
     if (trialEndDate != null && trialEndDate.toDate().isAfter(DateTime.now())) {
       return true; // Trial period is active
+    }
+
+    // Előfizetés ellenőrzése
+    final bool isActive = userData['isSubscriptionActive'] ?? false;
+    if (isActive) {
+      // Ha van subscriptionEndDate, azt is ellenőrizni kell
+      final subscriptionEndDate = userData['subscriptionEndDate'] as Timestamp?;
+      if (subscriptionEndDate != null) {
+        return subscriptionEndDate.toDate().isAfter(DateTime.now());
+      }
+      // Ha nincs subscriptionEndDate, akkor az isSubscriptionActive dönt (visszafelé kompatibilitás)
+      return true;
     }
 
     return false;

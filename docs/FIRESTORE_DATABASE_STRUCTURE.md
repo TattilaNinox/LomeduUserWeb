@@ -442,8 +442,24 @@ function isAdmin() {
 // Prémium hozzáférés
 function hasPremiumAccess() {
   let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-  return userData.isSubscriptionActive == true || 
-         (userData.freeTrialEndDate != null && userData.freeTrialEndDate > request.time);
+  let now = request.time;
+  
+  // Próbaidő ellenőrzése
+  if (userData.freeTrialEndDate != null && userData.freeTrialEndDate > now) {
+    return true;
+  }
+  
+  // Előfizetés ellenőrzése
+  if (userData.isSubscriptionActive == true) {
+    // Ha van subscriptionEndDate, azt is ellenőrizni kell
+    if (userData.subscriptionEndDate != null) {
+      return userData.subscriptionEndDate > now;
+    }
+    // Ha nincs subscriptionEndDate, akkor az isSubscriptionActive dönt (visszafelé kompatibilitás)
+    return true;
+  }
+  
+  return false;
 }
 ```
 

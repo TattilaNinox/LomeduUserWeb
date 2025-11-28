@@ -15,9 +15,15 @@ service cloud.firestore {
     function hasPremiumAccess() {
       let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
       let now = request.time;
-      // The isSubscriptionActive field provides a simple, reliable check
-      return userData.isSubscriptionActive == true || 
-             (userData.freeTrialEndDate != null && userData.freeTrialEndDate > now);
+      
+      // Próbaidő ellenőrzése: ha van freeTrialEndDate és még nem járt le
+      let hasActiveTrial = userData.freeTrialEndDate != null && userData.freeTrialEndDate > now;
+      
+      // Előfizetés ellenőrzése: ha aktív, akkor ellenőrizzük a subscriptionEndDate-et is
+      let hasActiveSubscription = userData.isSubscriptionActive == true && 
+        (userData.subscriptionEndDate == null || userData.subscriptionEndDate > now);
+      
+      return hasActiveTrial || hasActiveSubscription;
     }
 
     // ────────── Felhasználók (+ alsó-gyűjtemények) ──────────
