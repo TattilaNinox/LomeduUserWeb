@@ -403,7 +403,7 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
       
       if (!userDoc.exists) {
         debugPrint('[WebPaymentPlans] ❌ User document does not exist');
-        _showError('Kerjuk, toltsd ki a szallitasi adatokat!');
+        _showError('Kérjük, töltsd ki a szállítási adatokat!');
         return;
       }
 
@@ -444,14 +444,14 @@ class _WebPaymentPlansState extends State<WebPaymentPlans> {
       // HA NEM ÉRVÉNYES → BLOKKOLJUK A FIZETÉST
       if (!isValid) {
         debugPrint('[WebPaymentPlans] ❌❌❌ BLOCKING PAYMENT - Shipping address invalid or missing');
-        _showError('Kerjuk, toltsd ki a szallitasi adatokat!');
+        _showError('Kérjük, töltsd ki a szállítási adatokat!');
         return;
       }
       
       debugPrint('[WebPaymentPlans] ✅ Shipping address validation PASSED');
     } catch (e) {
       debugPrint('[WebPaymentPlans] ❌ Error checking shipping address: $e');
-      _showError('Kerjuk, toltsd ki a szallitasi adatokat!');
+      _showError('Kérjük, töltsd ki a szállítási adatokat!');
       return;
     }
 

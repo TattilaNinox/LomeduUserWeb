@@ -300,7 +300,7 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Kerjuk, toltsd ki a szallitasi adatokat!'),
+                content: Text('Kérjük, töltsd ki a szállítási adatokat!'),
               ),
             );
           }
@@ -347,11 +347,11 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text(
-                  'Kerjuk, toltsd ki a szallitasi adatokat!',
+                  'Kérjük, töltsd ki a szállítási adatokat!',
                 ),
                 backgroundColor: Colors.red,
                 action: SnackBarAction(
-                  label: 'Szallitasi cim',
+                  label: 'Szállítási cím',
                   textColor: Colors.white,
                   onPressed: () {
                     if (mounted) {
@@ -371,16 +371,16 @@ class _SubscriptionRenewalButtonState extends State<SubscriptionRenewalButton> {
       } catch (e) {
         debugPrint('[SubscriptionRenewalButton] Error checking shipping address: $e');
         // Csak akkor jelenítjük meg a figyelmeztetést, ha nem validation hiba volt
-        if (!e.toString().contains('Szallitasi cim nem toltve ki')) {
+        if (!e.toString().contains('Szállítási cím nem töltve ki')) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text(
-                  'Kerjuk, toltsd ki a szallitasi adatokat!',
+                  'Kérjük, töltsd ki a szállítási adatokat!',
                 ),
                 backgroundColor: Colors.red,
                 action: SnackBarAction(
-                  label: 'Szallitasi cim',
+                  label: 'Szállítási cím',
                   textColor: Colors.white,
                   onPressed: () {
                     if (mounted) {

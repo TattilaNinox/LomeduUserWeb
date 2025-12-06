@@ -103,20 +103,20 @@ function sleep(ms) {
 
 const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'https://lomedu-user-web.web.app';
 
-// Fizet├ęsi csomagok
+// Fizetési csomagok
 const PAYMENT_PLANS = {
-  // Kanonikus azonos├şt├│
+  // Kanonikus azonosító
   monthly_premium_prepaid: {
-    name: 'Havi el┼Ĺfizet├ęs',
+    name: '30 napos előfizetés',
     price: 4350,
-    description: 'Teljes hozz├íf├ęr├ęs minden funkci├│hoz',
+    description: 'Teljes hozzáférés minden funkcióhoz',
     subscriptionDays: 30,
   },
-  // R├ęgi alias a visszafel├ę kompatibilit├ís├ęrt
+  // Régi alias a visszafelé kompatibilitásért
   monthly_web: {
-    name: 'Havi el┼Ĺfizet├ęs',
+    name: '30 napos előfizetés',
     price: 4350,
-    description: 'Teljes hozz├íf├ęr├ęs minden funkci├│hoz',
+    description: 'Teljes hozzáférés minden funkcióhoz',
     subscriptionDays: 30,
   },
 };
@@ -310,6 +310,17 @@ exports.initiateWebPayment = onCall({
 
     const userData = userDoc.data();
     
+    // Admin ellenőrzés - admin számára 5 forint az ár
+    const isAdmin = (userData.isAdmin === true) || (userData.email === 'tattila.ninox@gmail.com');
+    const finalPrice = isAdmin ? 5 : plan.price;
+    
+    console.log('[initiateWebPayment] Admin check:', { 
+      userId, 
+      isAdmin, 
+      originalPrice: plan.price, 
+      finalPrice 
+    });
+    
     // SZERVER OLDALI ELLEN┼ÉRZ├ëS: Adattov├íbb├şt├ísi nyilatkozat elfogad├ísa
     if (!userData.dataTransferConsentLastAcceptedDate) {
       console.log('[initiateWebPayment] HIBA: Adattov├íbb├şt├ísi nyilatkozat nincs elfogadva', { userId });
@@ -369,7 +380,7 @@ exports.initiateWebPayment = onCall({
         title: plan.name,
         description: plan.description,
         amount: 1,
-        price: plan.price,
+        price: finalPrice,
       }],
     };
     
@@ -432,7 +443,7 @@ exports.initiateWebPayment = onCall({
         orderRef,
         action: 'PAYMENT_INITIATION_FAILED',
         planId: canonicalPlanId,
-        amount: plan.price,
+        amount: finalPrice,
         environment: SIMPLEPAY_CONFIG.env,
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
         metadata: {
@@ -454,7 +465,7 @@ exports.initiateWebPayment = onCall({
       planId: canonicalPlanId,
       orderRef,
       simplePayTransactionId: paymentData.transactionId || null,
-      amount: plan.price,
+      amount: finalPrice,
       status: 'INITIATED',
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -466,7 +477,7 @@ exports.initiateWebPayment = onCall({
       orderRef,
       action: 'PAYMENT_INITIATED',
       planId: canonicalPlanId,
-      amount: plan.price,
+      amount: finalPrice,
       environment: SIMPLEPAY_CONFIG.env,
       paymentUrl: paymentData.paymentUrl,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
