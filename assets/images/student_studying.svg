@@ -1,0 +1,66 @@
+<svg width="800" height="600" viewBox="0 0 800 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Desk -->
+  <rect x="100" y="400" width="600" height="20" rx="4" fill="#9E9E9E" opacity="0.3"/>
+  
+  <!-- Student sitting -->
+  <!-- Head -->
+  <circle cx="400" cy="200" r="35" stroke="#9E9E9E" stroke-width="2" fill="none"/>
+  
+  <!-- Body (torso) -->
+  <rect x="375" y="235" width="50" height="80" rx="8" stroke="#9E9E9E" stroke-width="2" fill="none"/>
+  
+  <!-- Arms -->
+  <!-- Left arm (holding book) -->
+  <path d="M 375 260 Q 340 280 320 300" stroke="#9E9E9E" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <circle cx="320" cy="300" r="8" stroke="#9E9E9E" stroke-width="2" fill="none"/>
+  
+  <!-- Right arm (on desk) -->
+  <path d="M 425 260 Q 450 280 470 300" stroke="#9E9E9E" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <circle cx="470" cy="300" r="8" stroke="#9E9E9E" stroke-width="2" fill="none"/>
+  
+  <!-- Book on desk -->
+  <rect x="280" y="320" width="80" height="60" rx="2" stroke="#9E9E9E" stroke-width="2" fill="none"/>
+  <line x1="320" y1="320" x2="320" y2="380" stroke="#9E9E9E" stroke-width="1.5"/>
+  
+  <!-- Book pages/lines -->
+  <line x1="290" y1="340" x2="310" y2="340" stroke="#9E9E9E" stroke-width="1" opacity="0.6"/>
+  <line x1="290" y1="350" x2="310" y2="350" stroke="#9E9E9E" stroke-width="1" opacity="0.6"/>
+  <line x1="290" y1="360" x2="305" y2="360" stroke="#9E9E9E" stroke-width="1" opacity="0.6"/>
+  
+  <!-- Right side of book -->
+  <line x1="330" y1="340" x2="350" y2="340" stroke="#9E9E9E" stroke-width="1" opacity="0.6"/>
+  <line x1="330" y1="350" x2="350" y2="350" stroke="#9E9E9E" stroke-width="1" opacity="0.6"/>
+  <line x1="330" y1="360" x2="345" y2="360" stroke="#9E9E9E" stroke-width="1" opacity="0.6"/>
+  
+  <!-- Glasses -->
+  <circle cx="385" cy="205" r="10" stroke="#9E9E9E" stroke-width="1.5" fill="none"/>
+  <circle cx="415" cy="205" r="10" stroke="#9E9E9E" stroke-width="1.5" fill="none"/>
+  <line x1="395" y1="205" x2="405" y2="205" stroke="#9E9E9E" stroke-width="1.5"/>
+  
+  <!-- Legs -->
+  <path d="M 390 315 L 390 380 L 400 380" stroke="#9E9E9E" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M 410 315 L 410 380 L 400 380" stroke="#9E9E9E" stroke-width="2" fill="none" stroke-linecap="round"/>
+  
+  <!-- Chair back -->
+  <rect x="380" y="280" width="40" height="8" rx="2" stroke="#9E9E9E" stroke-width="1.5" fill="none" opacity="0.5"/>
+  
+  <!-- Desk items -->
+  <!-- Pencil -->
+  <line x1="500" y1="380" x2="520" y2="360" stroke="#9E9E9E" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <circle cx="520" cy="360" r="3" fill="#9E9E9E" opacity="0.5"/>
+  
+  <!-- Notebook -->
+  <rect x="540" y="350" width="50" height="70" rx="2" stroke="#9E9E9E" stroke-width="1.5" fill="none" opacity="0.4"/>
+  <line x1="565" y1="350" x2="565" y2="420" stroke="#9E9E9E" stroke-width="1" opacity="0.3"/>
+  
+  <!-- Lamp -->
+  <line x1="600" y1="400" x2="600" y2="300" stroke="#9E9E9E" stroke-width="2" opacity="0.4"/>
+  <circle cx="600" cy="300" r="25" stroke="#9E9E9E" stroke-width="1.5" fill="none" opacity="0.4"/>
+  
+  <!-- Light rays from lamp -->
+  <path d="M 580 320 Q 550 340 530 360" stroke="#9E9E9E" stroke-width="1" fill="none" opacity="0.2" stroke-dasharray="2,2"/>
+  <path d="M 620 320 Q 650 340 670 360" stroke="#9E9E9E" stroke-width="1" fill="none" opacity="0.2" stroke-dasharray="2,2"/>
+</svg>
+
+
+

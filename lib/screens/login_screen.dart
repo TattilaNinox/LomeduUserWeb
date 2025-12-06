@@ -2,7 +2,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-// import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../core/session_guard.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -21,12 +21,27 @@ class LoginScreen extends StatefulWidget {
 }
 
 /// A `LoginScreen` widget állapotát kezelő osztály.
-class LoginScreenState extends State<LoginScreen> {
+class LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
   // A beviteli mezők vezérlői (controller), amelyekkel elérhető és módosítható
   // a mezők tartalma.
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _passwordVisible = false;
+  bool _isLoading = false;
+  
+  // Focus nodes az input mezők animációihoz
+  final _emailFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
+  
+  // Animációk
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _backgroundOpacityAnimation;
+  late Animation<Color?> _gradientAnimation;
+  
+  // Input mezők border color animációihoz
+  Color _emailBorderColor = const Color(0xFF6B7280);
+  Color _passwordBorderColor = const Color(0xFF6B7280);
 
   // Magyar Firebase Auth hibaüzenetek
   static const Map<String, String> _firebaseErrorHu = {
@@ -51,6 +66,59 @@ class LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _packageInfoFuture = PackageInfo.fromPlatform();
+    
+    // Animáció controller inicializálása
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    
+    // Fade-in animáció a panelnek
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+    ));
+    
+    // Background opacity animáció
+    _backgroundOpacityAnimation = Tween<double>(
+      begin: 0.0,
+      end: 0.15,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.0, 0.8, curve: Curves.easeIn),
+    ));
+    
+    // Gradient color animáció
+    _gradientAnimation = ColorTween(
+      begin: const Color(0xFFE3F2FD),
+      end: const Color(0xFFBBDEFB),
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+    
+    // Animáció indítása
+    _animationController.forward();
+    
+    // Focus listeners az input mezők animációihoz
+    _emailFocusNode.addListener(() {
+      setState(() {
+        _emailBorderColor = _emailFocusNode.hasFocus 
+            ? const Color(0xFF1E3A8A) 
+            : const Color(0xFF6B7280);
+      });
+    });
+    
+    _passwordFocusNode.addListener(() {
+      setState(() {
+        _passwordBorderColor = _passwordFocusNode.hasFocus 
+            ? const Color(0xFF1E3A8A) 
+            : const Color(0xFF6B7280);
+      });
+    });
   }
 
   /// A bejelentkezési folyamatot kezelő aszinkron metódus.
@@ -62,6 +130,7 @@ class LoginScreenState extends State<LoginScreen> {
 
       setState(() {
         _errorMessage = null;
+        _isLoading = true;
       });
 
       // Megpróbál bejelentkezni a Firebase Authentication szolgáltatással,
@@ -97,15 +166,18 @@ class LoginScreenState extends State<LoginScreen> {
       // hibaüzenetet, ami ezután megjelenik a UI-n.
       setState(() {
         _errorMessage = _firebaseErrorHu[e.code] ?? 'Ismeretlen hiba történt.';
+        _isLoading = false;
       });
     } on TypeError catch (e) {
       debugPrint("MFA TypeError during login (nem kritikus): $e");
       setState(() {
         _errorMessage = 'Bejelentkezési hiba történt. Kérlek próbáld újra.';
+        _isLoading = false;
       });
     } catch (e) {
       setState(() {
         _errorMessage = 'Hiba történt a bejelentkezés során: $e';
+        _isLoading = false;
       });
     }
   }
@@ -119,6 +191,9 @@ class LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -149,13 +224,60 @@ class LoginScreenState extends State<LoginScreen> {
       backgroundColor: const Color(0xFFF5F5F5),
       // Görgethető, biztonságos terület a kisebb kijelzők és a billentyűzet miatt.
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Center(
-            // A bejelentkezési panel konténere.
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 500),
-              child: Container(
+        child: Stack(
+          children: [
+            // Animated background gradient
+            AnimatedBuilder(
+              animation: _gradientAnimation,
+              builder: (context, child) {
+                return Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        _gradientAnimation.value ?? const Color(0xFFE3F2FD),
+                        const Color(0xFFF5F5F5),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            // Background illustration
+            AnimatedBuilder(
+              animation: _backgroundOpacityAnimation,
+              builder: (context, child) {
+                return Positioned.fill(
+                  child: Opacity(
+                    opacity: _backgroundOpacityAnimation.value,
+                    child: Center(
+                      child: SvgPicture.asset(
+                        'assets/images/education_background.svg',
+                        width: MediaQuery.of(context).size.width * 0.8,
+                        height: MediaQuery.of(context).size.height * 0.8,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+            // Main content
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Center(
+                // A bejelentkezési panel konténere.
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 500),
+                  child: AnimatedBuilder(
+                    animation: _fadeAnimation,
+                    builder: (context, child) {
+                      return Opacity(
+                        opacity: _fadeAnimation.value,
+                        child: Transform.translate(
+                          offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                          child: Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -168,28 +290,54 @@ class LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
-                // A `Column` widget a gyermekeit függőlegesen rendezi el.
-                child: Column(
-                  // A `mainAxisSize: MainAxisSize.min` biztosítja, hogy a `Column`
-                  // csak annyi helyet foglaljon, amennyi a tartalmához szükséges.
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Cím
-                    Image.asset(
-                      'assets/images/login_LOGO.png',
-                      height: 180,
-                      fit: BoxFit.contain,
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Lomedu Belépés',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1E3A8A),
-                      ),
-                    ),
+                            // A `Column` widget a gyermekeit függőlegesen rendezi el.
+                            child: Column(
+                              // A `mainAxisSize: MainAxisSize.min` biztosítja, hogy a `Column`
+                              // csak annyi helyet foglaljon, amennyi a tartalmához szükséges.
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Cím
+                                TweenAnimationBuilder<double>(
+                                  tween: Tween(begin: 0.0, end: 1.0),
+                                  duration: const Duration(milliseconds: 600),
+                                  curve: Curves.easeOut,
+                                  builder: (context, value, child) {
+                                    return Opacity(
+                                      opacity: value,
+                                      child: Transform.translate(
+                                        offset: Offset(0, 20 * (1 - value)),
+                                        child: Image.asset(
+                                          'assets/images/login_LOGO.png',
+                                          height: 180,
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                TweenAnimationBuilder<double>(
+                                  tween: Tween(begin: 0.0, end: 1.0),
+                                  duration: const Duration(milliseconds: 600),
+                                  curve: Curves.easeOut,
+                                  builder: (context, value, child) {
+                                    return Opacity(
+                                      opacity: value,
+                                      child: Transform.translate(
+                                        offset: Offset(0, 15 * (1 - value)),
+                                        child: const Text(
+                                          'Lomedu Belépés',
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFF1E3A8A),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
                       child: Center(
@@ -228,54 +376,106 @@ class LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    // E-mail beviteli mező
-                    TextField(
-                      controller: _emailController,
-                      decoration: InputDecoration(
-                        labelText: 'E-mail',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide:
-                              const BorderSide(color: Color(0xFF6B7280)),
-                        ),
-                        prefixIcon:
-                            const Icon(Icons.email, color: Color(0xFF6B7280)),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      autofillHints: const [AutofillHints.email],
-                    ),
-                    const SizedBox(height: 16),
-                    // Jelszó beviteli mező
-                    TextField(
-                      controller: _passwordController,
-                      obscureText:
-                          !_passwordVisible, // Elrejti a beírt karaktereket
-                      decoration: InputDecoration(
-                        labelText: 'Jelszó',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide:
-                              const BorderSide(color: Color(0xFF6B7280)),
-                        ),
-                        prefixIcon:
-                            const Icon(Icons.lock, color: Color(0xFF6B7280)),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _passwordVisible
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: const Color(0xFF6B7280),
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _passwordVisible = !_passwordVisible;
-                            });
-                          },
-                        ),
-                      ),
-                      autofillHints: const [AutofillHints.password],
-                    ),
+                                const SizedBox(height: 8),
+                                // E-mail beviteli mező
+                                TweenAnimationBuilder<double>(
+                                  tween: Tween(begin: 0.0, end: 1.0),
+                                  duration: const Duration(milliseconds: 600),
+                                  curve: Curves.easeOut,
+                                  builder: (context, value, child) {
+                                    return Opacity(
+                                      opacity: value,
+                                      child: Transform.translate(
+                                        offset: Offset(0, 10 * (1 - value)),
+                                        child: AnimatedContainer(
+                                          duration: const Duration(milliseconds: 200),
+                                          child: TextField(
+                                            controller: _emailController,
+                                            focusNode: _emailFocusNode,
+                                            decoration: InputDecoration(
+                                              labelText: 'E-mail',
+                                              border: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(4),
+                                                borderSide: BorderSide(color: _emailBorderColor),
+                                              ),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(4),
+                                                borderSide: BorderSide(color: _emailBorderColor),
+                                              ),
+                                              focusedBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(4),
+                                                borderSide: const BorderSide(color: Color(0xFF1E3A8A), width: 2),
+                                              ),
+                                              prefixIcon: Icon(
+                                                Icons.email,
+                                                color: _emailBorderColor,
+                                              ),
+                                            ),
+                                            keyboardType: TextInputType.emailAddress,
+                                            autofillHints: const [AutofillHints.email],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                // Jelszó beviteli mező
+                                TweenAnimationBuilder<double>(
+                                  tween: Tween(begin: 0.0, end: 1.0),
+                                  duration: const Duration(milliseconds: 600),
+                                  curve: Curves.easeOut,
+                                  builder: (context, value, child) {
+                                    return Opacity(
+                                      opacity: value,
+                                      child: Transform.translate(
+                                        offset: Offset(0, 10 * (1 - value)),
+                                        child: AnimatedContainer(
+                                          duration: const Duration(milliseconds: 200),
+                                          child: TextField(
+                                            controller: _passwordController,
+                                            focusNode: _passwordFocusNode,
+                                            obscureText:
+                                                !_passwordVisible, // Elrejti a beírt karaktereket
+                                            decoration: InputDecoration(
+                                              labelText: 'Jelszó',
+                                              border: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(4),
+                                                borderSide: BorderSide(color: _passwordBorderColor),
+                                              ),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(4),
+                                                borderSide: BorderSide(color: _passwordBorderColor),
+                                              ),
+                                              focusedBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(4),
+                                                borderSide: const BorderSide(color: Color(0xFF1E3A8A), width: 2),
+                                              ),
+                                              prefixIcon: Icon(
+                                                Icons.lock,
+                                                color: _passwordBorderColor,
+                                              ),
+                                              suffixIcon: IconButton(
+                                                icon: Icon(
+                                                  _passwordVisible
+                                                      ? Icons.visibility_off
+                                                      : Icons.visibility,
+                                                  color: _passwordBorderColor,
+                                                ),
+                                                onPressed: () {
+                                                  setState(() {
+                                                    _passwordVisible = !_passwordVisible;
+                                                  });
+                                                },
+                                              ),
+                                            ),
+                                            autofillHints: const [AutofillHints.password],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                     // Hibaüzenet megjelenítése, ha van.
                     // A feltételes `if` a collection-ön belül csak akkor adja hozzá
                     // a `SizedBox`-ot és a `Text`-et a widget-listához, ha az
@@ -302,116 +502,148 @@ class LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                     ],
-                    const SizedBox(height: 24),
-                    // Bejelentkezés gomb
-                    ElevatedButton(
-                      onPressed:
-                          _signIn, // A gomb lenyomásakor a `_signIn` metódus hívódik meg.
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1E3A8A),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      child: const Text(
-                        'Bejelentkezés',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        TextButton(
-                          onPressed: () => context.go('/forgot-password'),
-                          child: const Text('Elfelejtett jelszó?'),
-                        ),
-                        TextButton(
-                          onPressed: () => context.go('/register'),
-                          child: const Text('Regisztráció'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton.icon(
-                      onPressed: () {
-                        // Synchronous logout and navigation
-                        FirebaseAuth.instance.signOut();
-                        context.go('/device-change');
-                      },
-                      icon: const Icon(
-                        Icons.devices,
-                        size: 16,
-                        color: Color(0xFF1E3A8A),
-                      ),
-                      label: const Text('Eszköz regisztráció'),
-                    ),
-                    const SizedBox(height: 24),
-                    // Verzió megjelenítés - bal alsó sarok
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            size: 13,
-                            color:
-                                const Color(0xFF1E3A8A).withValues(alpha: 0.5),
-                          ),
-                          const SizedBox(width: 6),
-                          FutureBuilder<PackageInfo>(
-                            future: _packageInfoFuture,
-                            builder: (context, snapshot) {
-                              // Ha van adat, azt használjuk, egyébként '...' töltésjelző, majd fallback
-                              if (snapshot.hasData) {
-                                String versionText = 'v${snapshot.data!.version}';
-                                // Build számot web-en ritkán használunk, de ha van, megjelenhet
-                                // if (snapshot.data!.buildNumber.isNotEmpty) {
-                                //   versionText += '+${snapshot.data!.buildNumber}';
-                                // }
-                                return Text(
-                                  versionText,
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w400,
-                                    color: Colors.black.withValues(alpha: 0.4),
-                                    letterSpacing: 0.3,
-                                  ),
-                                );
-                              }
-                              
-                              // Töltés vagy hiba esetén egyelőre ne írjunk ki semmit (vagy a fallback-et)
-                              // De mivel a package_info_plus web-en néha lassú vagy nem ad vissza semmit dev módban,
-                              // érdemes lehet egy konstanst is beállítani, ha a pubspec nem elérhető.
-                              return Text(
-                                'v1.0.11', // Manuális fallback a pubspec.yaml alapján
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w400,
-                                  color: Colors.black.withValues(alpha: 0.4),
-                                  letterSpacing: 0.3,
+                                const SizedBox(height: 24),
+                                // Bejelentkezés gomb
+                                TweenAnimationBuilder<double>(
+                                  tween: Tween(begin: 0.0, end: 1.0),
+                                  duration: const Duration(milliseconds: 600),
+                                  curve: Curves.easeOut,
+                                  builder: (context, value, child) {
+                                    return Opacity(
+                                      opacity: value,
+                                      child: Transform.translate(
+                                        offset: Offset(0, 10 * (1 - value)),
+                                        child: AnimatedContainer(
+                                          duration: const Duration(milliseconds: 200),
+                                          child: ElevatedButton(
+                                            onPressed: _isLoading ? null : _signIn,
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: const Color(0xFF1E3A8A),
+                                              foregroundColor: Colors.white,
+                                              disabledBackgroundColor: const Color(0xFF1E3A8A).withOpacity(0.6),
+                                              padding: const EdgeInsets.symmetric(
+                                                  horizontal: 24, vertical: 12),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              elevation: _isLoading ? 2 : 4,
+                                            ),
+                                            child: _isLoading
+                                                ? const SizedBox(
+                                                    height: 20,
+                                                    width: 20,
+                                                    child: CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                                    ),
+                                                  )
+                                                : const Text(
+                                                    'Bejelentkezés',
+                                                    style: TextStyle(
+                                                      fontFamily: 'Inter',
+                                                      fontSize: 14,
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
+                                                  ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
-                              );
-                            },
+                                const SizedBox(height: 16),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    TextButton(
+                                      onPressed: () => context.go('/forgot-password'),
+                                      child: const Text('Elfelejtett jelszó?'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => context.go('/register'),
+                                      child: const Text('Regisztráció'),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                TextButton.icon(
+                                  onPressed: () {
+                                    // Synchronous logout and navigation
+                                    FirebaseAuth.instance.signOut();
+                                    context.go('/device-change');
+                                  },
+                                  icon: const Icon(
+                                    Icons.devices,
+                                    size: 16,
+                                    color: Color(0xFF1E3A8A),
+                                  ),
+                                  label: const Text('Eszköz regisztráció'),
+                                ),
+                                const SizedBox(height: 24),
+                                // Verzió megjelenítés - bal alsó sarok
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.info_outline,
+                                        size: 13,
+                                        color:
+                                            const Color(0xFF1E3A8A).withValues(alpha: 0.5),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      FutureBuilder<PackageInfo>(
+                                        future: _packageInfoFuture,
+                                        builder: (context, snapshot) {
+                                          // Ha van adat, azt használjuk, egyébként '...' töltésjelző, majd fallback
+                                          if (snapshot.hasData) {
+                                            String versionText = 'v${snapshot.data!.version}';
+                                            // Build számot web-en ritkán használunk, de ha van, megjelenhet
+                                            // if (snapshot.data!.buildNumber.isNotEmpty) {
+                                            //   versionText += '+${snapshot.data!.buildNumber}';
+                                            // }
+                                            return Text(
+                                              versionText,
+                                              style: TextStyle(
+                                                fontFamily: 'Inter',
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w400,
+                                                color: Colors.black.withValues(alpha: 0.4),
+                                                letterSpacing: 0.3,
+                                              ),
+                                            );
+                                          }
+                                          
+                                          // Töltés vagy hiba esetén egyelőre ne írjunk ki semmit (vagy a fallback-et)
+                                          // De mivel a package_info_plus web-en néha lassú vagy nem ad vissza semmit dev módban,
+                                          // érdemes lehet egy konstanst is beállítani, ha a pubspec nem elérhető.
+                                          return Text(
+                                            'v1.0.11', // Manuális fallback a pubspec.yaml alapján
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w400,
+                                              color: Colors.black.withValues(alpha: 0.4),
+                                              letterSpacing: 0.3,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );

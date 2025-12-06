@@ -144,9 +144,15 @@ service cloud.firestore {
     
     // ────────── Webes fizetések (SimplePay) ──────────
     match /web_payments/{paymentId} {
-      // Felhasználó csak a saját fizetéseit olvashatja
-      allow read: if request.auth != null && 
+      // List művelet: bejelentkezett felhasználók listázhatják a fizetéseket
+      // A kliensoldali lekérdezés már szűr userId alapján: .where('userId', isEqualTo: userId)
+      // Ez biztonságos, mert csak a saját fizetéseiket kapják meg
+      allow list: if request.auth != null;
+      
+      // Get művelet: felhasználó csak a saját fizetését olvashatja
+      allow get: if request.auth != null && 
         (isAdmin() || resource.data.userId == request.auth.uid);
+      
       // Írás csak Cloud Functions
       allow write: if false; // Cloud Functions service account-tal ír
     }

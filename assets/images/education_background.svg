@@ -1,0 +1,47 @@
+<svg width="600" height="600" viewBox="0 0 600 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="300" cy="300" r="250" fill="#E3F2FD" opacity="0.5"/>
+  
+  <!-- Student character - simplified Google Material Design style -->
+  <!-- Head -->
+  <circle cx="300" cy="180" r="45" fill="#64B5F6"/>
+  
+  <!-- Body -->
+  <path d="M280 240 L320 240 L320 380 L280 380 Z" fill="#42A5F5"/>
+  
+  <!-- Book -->
+  <rect x="240" y="280" width="80" height="60" rx="4" fill="#FFB74D"/>
+  <rect x="245" y="285" width="70" height="50" rx="2" fill="#FFF9C4"/>
+  <line x1="280" y1="285" x2="280" y2="335" stroke="#FFB74D" stroke-width="2"/>
+  
+  <!-- Reading lines on book -->
+  <line x1="250" y1="300" x2="270" y2="300" stroke="#BDBDBD" stroke-width="1.5"/>
+  <line x1="250" y1="310" x2="270" y2="310" stroke="#BDBDBD" stroke-width="1.5"/>
+  <line x1="250" y1="320" x2="265" y2="320" stroke="#BDBDBD" stroke-width="1.5"/>
+  
+  <!-- Glasses -->
+  <circle cx="285" cy="185" r="12" fill="none" stroke="#424242" stroke-width="2"/>
+  <circle cx="315" cy="185" r="12" fill="none" stroke="#424242" stroke-width="2"/>
+  <line x1="297" y1="185" x2="303" y2="185" stroke="#424242" stroke-width="2"/>
+  
+  <!-- Arms holding book -->
+  <path d="M280 250 Q260 270 250 290" stroke="#42A5F5" stroke-width="12" stroke-linecap="round" fill="none"/>
+  <path d="M320 250 Q340 270 350 290" stroke="#42A5F5" stroke-width="12" stroke-linecap="round" fill="none"/>
+  
+  <!-- Legs -->
+  <path d="M290 380 L290 420 L300 420" stroke="#1976D2" stroke-width="14" stroke-linecap="round" fill="none"/>
+  <path d="M310 380 L310 420 L300 420" stroke="#1976D2" stroke-width="14" stroke-linecap="round" fill="none"/>
+  
+  <!-- Decorative elements - floating shapes -->
+  <circle cx="150" cy="150" r="20" fill="#90CAF9" opacity="0.4"/>
+  <circle cx="450" cy="200" r="15" fill="#81C784" opacity="0.4"/>
+  <circle cx="500" cy="400" r="25" fill="#FFB74D" opacity="0.3"/>
+  <circle cx="100" cy="450" r="18" fill="#64B5F6" opacity="0.4"/>
+  
+  <!-- Stars/Sparkles -->
+  <path d="M200 120 L205 130 L215 130 L207 137 L210 147 L200 140 L190 147 L193 137 L185 130 L195 130 Z" fill="#FFD54F" opacity="0.6"/>
+  <path d="M400 350 L403 357 L410 357 L404 362 L407 369 L400 364 L393 369 L396 362 L390 357 L397 357 Z" fill="#FFD54F" opacity="0.6"/>
+</svg>
+
+
+

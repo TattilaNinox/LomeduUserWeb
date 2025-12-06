@@ -1,6 +1,6 @@
 name: orlomed_admin_web
 description: Admin web interface for OrLomed
-version: 1.0.1+10
+version: 1.0.11
 environment:
   sdk: '>=3.0.0 <4.0.0'
 
@@ -15,10 +15,10 @@ dependencies:
   firebase_core: ^2.32.0
   cloud_firestore: ^4.17.5
   firebase_storage: ^11.7.7
-  provider: ^6.1.2
-  file_selector: ^1.0.3
-  audioplayers: ^6.4.0
-  video_player: ^2.8.6
+  provider: ^6.1.5
+  file_selector: ^1.1.0
+  audioplayers: ^6.5.1
+  video_player: ^2.10.1
   url_launcher: ^6.3.0
   firebase_app_check: ^0.2.2+6
   flutter_quill: ^9.2.3
@@ -29,17 +29,17 @@ dependencies:
   html: ^0.15.4
   web: ^0.5.1
   flutter_otp_text_field: ^1.5.1+1
-  dart_jsonwebtoken: ^3.2.0
+  dart_jsonwebtoken: ^3.3.1
   otp: ^3.2.0
   base32: ^2.2.0
   qr_flutter: ^4.1.0
-  pinput: ^5.0.1
-  http: ^1.1.0
+  pinput: ^5.0.2
+  http: ^1.6.0
   printing: ^5.13.1
   pdf: ^3.11.1
   cloud_functions: ^4.7.6
   shared_preferences: ^2.5.3
-  flutter_svg: ^2.2.1
+  flutter_svg: ^2.2.3
   intl: ^0.20.2
 
   device_info_plus: ^9.1.2
@@ -64,4 +64,6 @@ flutter:
     - assets/images/login_LOGO.png
     - assets/images/simplepay_bankcard_logos_top_02_new.png
     - assets/images/simplepay_bankcard_logos_left_482x40_new.jpg
+    - assets/images/education_background.svg
+    - assets/images/student_studying.svg
     - assets/postal_codes.json
